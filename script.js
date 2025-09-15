@@ -5,7 +5,8 @@ let userSession = JSON.parse(localStorage.getItem('userSession')) || null;
 
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
-const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user&redirect_uri=${window.location.origin}`;
+const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
+const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 
 // DOM elements
 const calendarBtn = document.getElementById('calendar-btn');
@@ -401,6 +402,8 @@ function updateLoginButton() {
 
 // Handle login
 function handleLogin() {
+    console.log('Attempting GitHub login with URL:', GITHUB_AUTH_URL);
+    console.log('Current location origin:', window.location.origin);
     window.location.href = GITHUB_AUTH_URL;
 }
 
