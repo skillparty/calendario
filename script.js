@@ -513,34 +513,60 @@ function checkNotifications() {
 // Handle OAuth callback
 function handleOAuthCallback() {
     const hash = window.location.hash;
+    console.log('handleOAuthCallback called with hash:', hash);
+
     if (hash.includes('access_token')) {
+        console.log('Access token found in hash');
         const params = new URLSearchParams(hash.substring(1));
         const token = params.get('access_token');
+        console.log('Token extracted:', token ? 'Present' : 'Missing');
+
         if (token) {
             userSession = { token, loginTime: Date.now() };
             localStorage.setItem('userSession', JSON.stringify(userSession));
+            console.log('User session stored:', userSession);
             window.location.hash = ''; // Clean URL
             fetchUserInfo(token);
+        } else {
+            console.log('No token found in URL parameters');
         }
+    } else {
+        console.log('No access_token found in hash');
     }
 }
 
 // Fetch user info from GitHub
 async function fetchUserInfo(token) {
+    console.log('fetchUserInfo called with token');
     try {
+        console.log('Making API call to GitHub...');
         const response = await fetch('https://api.github.com/user', {
             headers: { Authorization: `token ${token}` }
         });
+
+        console.log('GitHub API response status:', response.status);
+
+        if (!response.ok) {
+            console.error('GitHub API error:', response.status, response.statusText);
+            return;
+        }
+
         const user = await response.json();
+        console.log('GitHub user data received:', user);
+
         userSession.user = user;
         localStorage.setItem('userSession', JSON.stringify(userSession));
+        console.log('User session updated with user data');
 
         // Load tasks from Gist after successful login
         await loadTasksFromGist();
 
+        console.log('Calling updateLoginButton...');
         updateLoginButton();
+
         // Refresh the UI to show loaded data
         showCalendar();
+        console.log('UI refreshed after login');
     } catch (error) {
         console.error('Error fetching user info:', error);
     }
@@ -550,8 +576,13 @@ async function fetchUserInfo(token) {
 function updateLoginButton() {
     const userStatus = document.getElementById('user-status');
 
+    console.log('updateLoginButton called');
+    console.log('userSession:', userSession);
+    console.log('userSession.user:', userSession?.user);
+
     if (userSession && userSession.user) {
         // User is logged in - show user info
+        console.log('User is logged in, updating UI');
         loginBtn.classList.add('hidden');
         userInfo.classList.remove('hidden');
         userInfo.classList.add('show');
@@ -559,20 +590,22 @@ function updateLoginButton() {
         if (userSession.user.avatar_url) {
             userAvatar.src = userSession.user.avatar_url;
             userAvatar.classList.remove('hidden');
+            console.log('Avatar URL set:', userSession.user.avatar_url);
         } else {
             userAvatar.classList.add('hidden');
+            console.log('No avatar URL available');
         }
 
         userName.textContent = userSession.user.name || userSession.user.login;
-        console.log('User logged in:', userSession.user.login, 'Avatar:', userSession.user.avatar_url);
+        console.log('User name set to:', userSession.user.name || userSession.user.login);
     } else {
         // User is not logged in - show login button
+        console.log('User is not logged in, showing login button');
         loginBtn.classList.remove('hidden');
         userInfo.classList.add('hidden');
         userInfo.classList.remove('show');
         userAvatar.classList.add('hidden');
         userName.textContent = '';
-        console.log('User logged out - showing login button');
     }
 }
 
