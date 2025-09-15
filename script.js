@@ -3,8 +3,8 @@ let currentDate = new Date();
 let tasks = JSON.parse(localStorage.getItem('calendarTasks')) || {};
 let userSession = JSON.parse(localStorage.getItem('userSession')) || null;
 
-// GitHub OAuth constants (replace with your actual client ID)
-const GITHUB_CLIENT_ID = 'your-github-client-id';
+// GitHub OAuth constants
+const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user&redirect_uri=${window.location.origin}`;
 
 // DOM elements
