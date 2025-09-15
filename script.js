@@ -2,16 +2,21 @@
 let currentDate = new Date();
 let tasks = JSON.parse(localStorage.getItem('calendarTasks')) || {};
 let userSession = JSON.parse(localStorage.getItem('userSession')) || null;
+let userGistId = localStorage.getItem('userGistId') || null;
 
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
 const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
-const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
+const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 
 // DOM elements
 const calendarBtn = document.getElementById('calendar-btn');
 const agendaBtn = document.getElementById('agenda-btn');
 const loginBtn = document.getElementById('login-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const userInfo = document.getElementById('user-info');
+const userAvatar = document.getElementById('user-avatar');
+const userName = document.getElementById('user-name');
 const calendarView = document.getElementById('calendar-view');
 const agendaView = document.getElementById('agenda-view');
 
@@ -19,6 +24,7 @@ const agendaView = document.getElementById('agenda-view');
 calendarBtn.addEventListener('click', showCalendar);
 agendaBtn.addEventListener('click', showAgenda);
 loginBtn.addEventListener('click', handleLogin);
+logoutBtn.addEventListener('click', handleLogout);
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -312,9 +318,102 @@ function toggleTask(id) {
     renderCalendar(); // Update calendar to reflect new task count
 }
 
-// Save tasks to localStorage
-function saveTasks() {
+// Save tasks to localStorage and sync to GitHub Gist
+async function saveTasks() {
     localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+
+    // Sync to GitHub Gist if user is logged in
+    if (userSession && userSession.token) {
+        await syncTasksToGist();
+    }
+}
+
+// Load tasks from GitHub Gist
+async function loadTasksFromGist() {
+    if (!userSession || !userSession.token || !userGistId) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(`https://api.github.com/gists/${userGistId}`, {
+            headers: {
+                'Authorization': `token ${userSession.token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+
+        if (response.ok) {
+            const gist = await response.json();
+            const tasksData = gist.files['calendar-tasks.json'];
+
+            if (tasksData && tasksData.content) {
+                const remoteTasks = JSON.parse(tasksData.content);
+                // Merge remote tasks with local tasks (remote takes precedence for conflicts)
+                tasks = { ...tasks, ...remoteTasks };
+                localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                return true;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading tasks from Gist:', error);
+    }
+
+    return false;
+}
+
+// Sync tasks to GitHub Gist
+async function syncTasksToGist() {
+    if (!userSession || !userSession.token) {
+        return;
+    }
+
+    try {
+        const gistData = {
+            description: 'Calendario Digital - Tasks Data',
+            public: false,
+            files: {
+                'calendar-tasks.json': {
+                    content: JSON.stringify(tasks, null, 2)
+                }
+            }
+        };
+
+        let response;
+        if (userGistId) {
+            // Update existing gist
+            response = await fetch(`https://api.github.com/gists/${userGistId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `token ${userSession.token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify(gistData)
+            });
+        } else {
+            // Create new gist
+            response = await fetch('https://api.github.com/gists', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${userSession.token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify(gistData)
+            });
+        }
+
+        if (response.ok) {
+            const gist = await response.json();
+            userGistId = gist.id;
+            localStorage.setItem('userGistId', userGistId);
+            console.log('Tasks synced to Gist successfully');
+        } else {
+            console.error('Failed to sync tasks to Gist:', response.status);
+        }
+    } catch (error) {
+        console.error('Error syncing tasks to Gist:', error);
+    }
 }
 
 // Helper functions
@@ -383,7 +482,13 @@ async function fetchUserInfo(token) {
         const user = await response.json();
         userSession.user = user;
         localStorage.setItem('userSession', JSON.stringify(userSession));
+
+        // Load tasks from Gist after successful login
+        await loadTasksFromGist();
+
         updateLoginButton();
+        // Refresh the UI to show loaded data
+        showCalendar();
     } catch (error) {
         console.error('Error fetching user info:', error);
     }
@@ -392,11 +497,21 @@ async function fetchUserInfo(token) {
 // Update login button
 function updateLoginButton() {
     if (userSession && userSession.user) {
-        loginBtn.textContent = `Cerrar Sesión (${userSession.user.login})`;
-        loginBtn.onclick = handleLogout;
+        // User is logged in - show user info
+        loginBtn.style.display = 'none';
+        userInfo.style.display = 'flex';
+
+        if (userSession.user.avatar_url) {
+            userAvatar.src = userSession.user.avatar_url;
+            userAvatar.style.display = 'block';
+        }
+
+        userName.textContent = userSession.user.name || userSession.user.login;
     } else {
-        loginBtn.textContent = 'Iniciar Sesión con GitHub';
-        loginBtn.onclick = handleLogin;
+        // User is not logged in - show login button
+        loginBtn.style.display = 'flex';
+        userInfo.style.display = 'none';
+        userAvatar.style.display = 'none';
     }
 }
 
@@ -410,8 +525,14 @@ function handleLogin() {
 // Handle logout
 function handleLogout() {
     userSession = null;
+    userGistId = null;
     localStorage.removeItem('userSession');
+    localStorage.removeItem('userGistId');
+    // Clear tasks and reload from localStorage only
+    tasks = JSON.parse(localStorage.getItem('calendarTasks')) || {};
     updateLoginButton();
+    // Refresh the UI
+    showCalendar();
 }
 
 // Show tasks for a specific day

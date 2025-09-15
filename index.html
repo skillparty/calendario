@@ -12,7 +12,17 @@
         <nav>
             <button id="calendar-btn">Calendario</button>
             <button id="agenda-btn">Agenda</button>
-            <button id="login-btn">Iniciar Sesión con GitHub</button>
+            <div id="user-status">
+                <button id="login-btn">
+                    <span id="login-icon">👤</span>
+                    <span id="login-text">Iniciar Sesión</span>
+                </button>
+                <div id="user-info" style="display: none;">
+                    <img id="user-avatar" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; margin-right: 8px;">
+                    <span id="user-name"></span>
+                    <button id="logout-btn" style="margin-left: 8px; background: none; border: 1px solid #829399ff; color: #545f66ff; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Salir</button>
+                </div>
+            </div>
         </nav>
     </header>
     <main>

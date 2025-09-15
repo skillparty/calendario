@@ -63,8 +63,26 @@ h1 {
 nav {
     margin-top: var(--spacing-lg);
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
+    align-items: center;
     gap: var(--spacing-md);
+}
+
+#user-status {
+    display: flex;
+    align-items: center;
+}
+
+#user-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+#login-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
 }
 
 button {
