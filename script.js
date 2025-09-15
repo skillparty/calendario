@@ -7,7 +7,10 @@ let userGistId = localStorage.getItem('userGistId') || null;
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
 const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
-const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}&response_type=token`;
+// Deprecated implicit flow URL retained for fallback/debug; main flow uses Device Flow below
+const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
+const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
+const GITHUB_DEVICE_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 
 // DOM elements - will be initialized after DOM loads
 let calendarBtn, agendaBtn, loginBtn, logoutBtn, userInfo, userAvatar, userName, calendarView, agendaView;
@@ -681,8 +684,9 @@ async function fetchUserInfo(token) {
         localStorage.setItem('userSession', JSON.stringify(userSession));
         console.log('User session updated with user data');
 
-        // Load tasks from Gist after successful login
-        await loadTasksFromGist();
+    // Discover existing gist and load tasks after successful login
+    await findExistingGist();
+    await loadTasksFromGist();
 
         console.log('Calling updateLoginButton...');
         updateLoginButton();
@@ -793,9 +797,12 @@ function updateLoginButton() {
 
 // Handle login
 function handleLogin() {
-    console.log('Attempting GitHub login with URL:', GITHUB_AUTH_URL);
-    console.log('Current location origin:', window.location.origin);
-    window.location.href = GITHUB_AUTH_URL;
+    console.log('Starting GitHub Device Flow login...');
+    startDeviceFlowLogin().catch(err => {
+        console.error('Device Flow failed, falling back to classic auth redirect.', err);
+        // Fallback to classic authorize page (will not return token client-side on modern GitHub)
+        window.location.href = GITHUB_AUTH_URL;
+    });
 }
 
 // Handle logout
@@ -896,4 +903,164 @@ function formatDateForDisplay(dateString) {
     const date = new Date(dateString + 'T00:00:00'); // Ensure consistent timezone
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('es-ES', options);
+}
+
+// ===== OAuth Device Flow (for static sites) =====
+async function startDeviceFlowLogin() {
+    // Request a device code
+    const params = new URLSearchParams();
+    params.set('client_id', GITHUB_CLIENT_ID);
+    params.set('scope', 'user,gist');
+
+    const res = await fetch(GITHUB_DEVICE_CODE_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+        },
+        body: params
+    });
+
+    if (!res.ok) throw new Error('No se pudo iniciar el Device Flow');
+    const data = await res.json();
+    // Expected: { device_code, user_code, verification_uri, expires_in, interval }
+    showAuthModal(data);
+    await pollForDeviceToken(data);
+}
+
+function showAuthModal(data) {
+    // Reuse modal styling
+    const existing = document.getElementById('auth-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'auth-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 520px;">
+            <span class="close-btn" title="Cerrar">&times;</span>
+            <h3>Inicia sesión con GitHub</h3>
+            <p>1) Abre GitHub para autorizar el acceso</p>
+            <p>2) Cuando se te solicite, ingresa este código:</p>
+            <div style="display:flex;align-items:center;gap:8px;margin:8px 0;">
+                <code id="df-user-code" style="font-size:1.1rem;background:#f2f2f7;padding:6px 10px;border-radius:8px;">${data.user_code}</code>
+                <button id="df-copy" style="background:#edae49;color:#fff;border:none;padding:6px 10px;border-radius:8px;cursor:pointer;">Copiar</button>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button id="df-open" style="background:#edae49;color:#fff;border:none;padding:8px 14px;border-radius:10px;cursor:pointer;">Abrir GitHub</button>
+                <button id="df-cancel" style="background:#d1495b;color:#fff;border:none;padding:8px 14px;border-radius:10px;cursor:pointer;">Cancelar</button>
+            </div>
+            <p id="df-status" style="color:#829399;margin-top:10px;">Esperando autorización…</p>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const close = () => { modal.remove(); };
+    modal.querySelector('.close-btn').onclick = (e) => { e.stopPropagation(); close(); };
+    modal.onclick = (e) => { if (e.target === modal) close(); };
+    document.getElementById('df-cancel').onclick = close;
+    document.getElementById('df-open').onclick = () => {
+        window.open(data.verification_uri || 'https://github.com/login/device', '_blank');
+    };
+    document.getElementById('df-copy').onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(data.user_code);
+            setDfStatus('Código copiado al portapapeles');
+        } catch (_) {
+            setDfStatus('No se pudo copiar, cópialo manualmente');
+        }
+    };
+
+    function setDfStatus(msg) {
+        const el = document.getElementById('df-status');
+        if (el) el.textContent = msg;
+    }
+}
+
+async function pollForDeviceToken({ device_code, interval }) {
+    let pollInterval = Math.max(5, interval || 5);
+    const maxWaitMs = 10 * 60 * 1000; // 10 minutes
+    const start = Date.now();
+
+    while (Date.now() - start < maxWaitMs) {
+        await new Promise(r => setTimeout(r, pollInterval * 1000));
+
+        const params = new URLSearchParams();
+        params.set('client_id', GITHUB_CLIENT_ID);
+        params.set('device_code', device_code);
+        params.set('grant_type', 'urn:ietf:params:oauth:grant-type:device_code');
+
+        const res = await fetch(GITHUB_DEVICE_TOKEN_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
+            body: params
+        });
+
+        if (!res.ok) {
+            console.error('Error al solicitar token (HTTP):', res.status);
+            continue;
+        }
+
+        const data = await res.json();
+        if (data.error) {
+            if (data.error === 'authorization_pending') {
+                // keep polling
+                continue;
+            }
+            if (data.error === 'slow_down') {
+                pollInterval += 5;
+                continue;
+            }
+            if (data.error === 'expired_token' || data.error === 'access_denied') {
+                const statusEl = document.getElementById('df-status');
+                if (statusEl) statusEl.textContent = 'Autorización cancelada o expirada';
+                throw new Error(data.error);
+            }
+            console.error('Device flow error:', data);
+            continue;
+        }
+
+        if (data.access_token) {
+            userSession = { token: data.access_token, loginTime: Date.now() };
+            localStorage.setItem('userSession', JSON.stringify(userSession));
+            const modal = document.getElementById('auth-modal');
+            if (modal) modal.remove();
+
+            await fetchUserInfo(data.access_token);
+            await findExistingGist();
+            await loadTasksFromGist();
+            updateLoginButton();
+            showCalendar();
+            return;
+        }
+    }
+
+    const statusEl = document.getElementById('df-status');
+    if (statusEl) statusEl.textContent = 'Tiempo de espera agotado';
+    throw new Error('Device flow timeout');
+}
+
+// Search for an existing gist with our file to enable roaming across devices
+async function findExistingGist() {
+    if (!userSession || !userSession.token || userGistId) return;
+    try {
+        const res = await fetch('https://api.github.com/gists?per_page=100', {
+            headers: {
+                'Authorization': `token ${userSession.token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        if (!res.ok) return;
+        const gists = await res.json();
+        const match = (gists || []).find(g => g.files && g.files['calendar-tasks.json']);
+        if (match && match.id) {
+            userGistId = match.id;
+            localStorage.setItem('userGistId', userGistId);
+        }
+    } catch (e) {
+        console.error('Error discovering existing gist:', e);
+    }
 }
