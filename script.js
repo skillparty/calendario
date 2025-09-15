@@ -496,29 +496,31 @@ async function fetchUserInfo(token) {
 
 // Update login button
 function updateLoginButton() {
+    const userStatus = document.getElementById('user-status');
+
     if (userSession && userSession.user) {
         // User is logged in - show user info
-        loginBtn.style.display = 'none';
-        userInfo.style.display = 'flex';
+        loginBtn.classList.add('hidden');
+        userInfo.classList.remove('hidden');
         userInfo.classList.add('show');
 
         if (userSession.user.avatar_url) {
             userAvatar.src = userSession.user.avatar_url;
-            userAvatar.style.display = 'block';
+            userAvatar.classList.remove('hidden');
         } else {
-            userAvatar.style.display = 'none';
+            userAvatar.classList.add('hidden');
         }
 
         userName.textContent = userSession.user.name || userSession.user.login;
-        console.log('User logged in:', userSession.user.login);
+        console.log('User logged in:', userSession.user.login, 'Avatar:', userSession.user.avatar_url);
     } else {
         // User is not logged in - show login button
-        loginBtn.style.display = 'flex';
-        userInfo.style.display = 'none';
+        loginBtn.classList.remove('hidden');
+        userInfo.classList.add('hidden');
         userInfo.classList.remove('show');
-        userAvatar.style.display = 'none';
+        userAvatar.classList.add('hidden');
         userName.textContent = '';
-        console.log('User logged out');
+        console.log('User logged out - showing login button');
     }
 }
 

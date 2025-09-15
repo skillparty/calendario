@@ -71,11 +71,13 @@ nav {
 #user-status {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: var(--spacing-md);
+    min-height: 40px;
 }
 
 #user-info {
-    display: flex;
+    display: none;
     align-items: center;
     gap: var(--spacing-sm);
     opacity: 0;
@@ -93,6 +95,17 @@ nav {
     align-items: center;
     gap: var(--spacing-xs);
     transition: all 0.3s ease;
+    background-color: var(--hunyadi-yellow);
+    color: var(--bg-primary);
+    border: 1px solid var(--hunyadi-yellow);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+}
+
+#login-btn:hover {
+    background-color: var(--bg-primary);
+    color: var(--hunyadi-yellow);
 }
 
 #user-avatar {
@@ -160,6 +173,18 @@ main {
 }
 
 .hidden {
+    display: none !important;
+}
+
+#user-info.hidden {
+    display: none !important;
+}
+
+#login-btn.hidden {
+    display: none !important;
+}
+
+#user-avatar.hidden {
     display: none !important;
 }
 
