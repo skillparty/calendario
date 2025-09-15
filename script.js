@@ -16,6 +16,9 @@ const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const GITHUB_DEVICE_TOKEN_URL = 'https://github.com/login/oauth/access_token';
+// Optional lightweight exchange proxy (serverless) you must deploy; leave blank to skip
+// Expected POST JSON: { code, redirect_uri } -> returns { access_token }
+const OAUTH_PROXY_URL = '';
 
 // DOM elements - will be initialized after DOM loads
 let calendarBtn, agendaBtn, loginBtn, logoutBtn, userInfo, userAvatar, userName, calendarView, agendaView;
@@ -632,7 +635,37 @@ function checkNotifications() {
 // Handle OAuth callback
 function handleOAuthCallback() {
     const hash = window.location.hash;
-    console.log('🔍 handleOAuthCallback called with hash:', hash);
+    const search = window.location.search;
+    console.log('🔍 handleOAuthCallback called with hash:', hash, ' search:', search);
+
+    // Authorization Code Flow (requires proxy to exchange)
+    const searchParams = new URLSearchParams(search);
+    const authCode = searchParams.get('code');
+    if (authCode && !userSession) {
+        console.log('📥 Found authorization code in URL');
+        if (OAUTH_PROXY_URL) {
+            showAuthStatus('Intercambiando código por token…');
+            exchangeCodeForToken(authCode)
+                .then(token => {
+                    if (token) {
+                        userSession = { token, loginTime: Date.now() };
+                        localStorage.setItem('userSession', JSON.stringify(userSession));
+                        // Limpia el parámetro code de la URL
+                        const cleanUrl = window.location.origin + window.location.pathname;
+                        window.history.replaceState({}, document.title, cleanUrl);
+                        fetchUserInfo(token);
+                    }
+                })
+                .catch(err => {
+                    console.error('Code exchange failed:', err);
+                    showAuthStatus('Error al intercambiar el código (ver consola)', true);
+                });
+            return; // Stop further hash handling until token arrives
+        } else {
+            console.warn('OAUTH_PROXY_URL no configurado; no se puede usar el Authorization Code Flow sin backend.');
+            showAuthStatus('No hay backend para intercambio de código. Usando Device Flow.', true);
+        }
+    }
 
     if (hash.includes('access_token')) {
         console.log('✅ Access token found in hash');
@@ -684,6 +717,52 @@ function handleOAuthCallback() {
             }
         }
     }
+}
+
+async function exchangeCodeForToken(code) {
+    if (!OAUTH_PROXY_URL) return null;
+    try {
+        const res = await fetch(OAUTH_PROXY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ code, redirect_uri: GITHUB_REDIRECT_URI })
+        });
+        if (!res.ok) {
+            throw new Error('Proxy HTTP ' + res.status);
+        }
+        const data = await res.json();
+        if (data.error) throw new Error(data.error_description || data.error);
+        return data.access_token;
+    } catch (e) {
+        console.error('exchangeCodeForToken error:', e);
+        return null;
+    }
+}
+
+function showAuthStatus(message, isError = false) {
+    let el = document.getElementById('auth-status-banner');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'auth-status-banner';
+        el.style.position = 'fixed';
+        el.style.top = '0';
+        el.style.left = '50%';
+        el.style.transform = 'translateX(-50%)';
+        el.style.padding = '6px 14px';
+        el.style.fontSize = '12px';
+        el.style.fontFamily = 'JetBrains Mono, monospace';
+        el.style.borderRadius = '0 0 8px 8px';
+        el.style.zIndex = '99999';
+        el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+        document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.style.background = isError ? '#d1495b' : '#545f66';
+    el.style.color = '#fff';
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(() => {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }, isError ? 6000 : 3500);
 }
 
 // Fetch user info from GitHub

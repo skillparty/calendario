@@ -47,6 +47,42 @@ Notas:
 - Este flujo funciona 100% en cliente (GitHub Pages), sin backend.
 - Si GitHub cambia el comportamiento del flujo implícito, hay un fallback que redirige a la página clásica de autorización.
 
+### Opción alternativa: Authorization Code Flow (con proxy)
+
+Si deseas usar el flujo estándar (Authorization Code) para obtener el token directamente:
+
+1. Despliega un endpoint (Cloudflare Worker / Vercel / Netlify Function) que reciba `{ code, redirect_uri }` y llame a `https://github.com/login/oauth/access_token` con `client_id` y `client_secret`.
+2. Responde JSON: `{ access_token: "..." }`.
+3. Configura `OAUTH_PROXY_URL` en `script.js` con la URL de ese endpoint.
+4. Entonces, cuando GitHub redirija con `?code=...`, la app hará el intercambio automáticamente.
+
+Ejemplo (pseudo Worker):
+```js
+export default async (req) => {
+	const { code, redirect_uri } = await req.json();
+	const r = await fetch('https://github.com/login/oauth/access_token', {
+		method: 'POST',
+		headers: { 'Accept': 'application/json' },
+		body: new URLSearchParams({
+			client_id: GITHUB_CLIENT_ID,
+			client_secret: GITHUB_CLIENT_SECRET,
+			code,
+			redirect_uri
+		})
+	});
+	return new Response(r.body, { headers: { 'Content-Type': 'application/json' } });
+}
+```
+
+Importante: Nunca expongas el `client_secret` en el frontend. Por eso se usa un proxy.
+
+### Solución de problemas de login
+
+- Veo un código `?code=` pero nunca se completa el login: Configura `OAUTH_PROXY_URL` o usa el Device Flow (botón inicial) y sigue los pasos.
+- El modal de Device Flow se queda en “Esperando autorización…”: Asegúrate de abrir la URL y pegar el código exacto; revisa consola por errores de red.
+- 404 en sourcemaps o CSP warnings: Son de GitHub; ignóralos si el flujo continúa.
+- Token invalido luego de obtenerlo: Revoca la App en GitHub Settings > Applications y vuelve a autorizar.
+
 ### Almacenamiento de datos
 
 - Localmente: `localStorage` bajo la clave `calendarTasks`.
