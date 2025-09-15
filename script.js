@@ -54,18 +54,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add a global test function for debugging
     window.testLoginUI = function() {
-        console.log('🧪 Testing login UI...');
+        console.log('🧪 Testing login UI with mock data...');
         userSession = {
-            token: 'test-token',
+            token: 'test-token-' + Date.now(),
             loginTime: Date.now(),
             user: {
-                login: 'testuser',
-                name: 'Test User',
+                login: 'usuario-demo',
+                name: 'Usuario de Prueba',
                 avatar_url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM2MjY0NjciLz4KPHBhdGggZD0iTTIwIDIwaC00djRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNFoiIGZpbGw9IiNmZmYiLz4KPHBhdGggZD0iTTIyIDI0SDR2LTJjMC0yLjIgMS44LTQgNC00aDEwdjRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNFoiIGZpbGw9IiNmZmYiLz4KPC9zdmc+'
             }
         };
+        localStorage.setItem('userSession', JSON.stringify(userSession));
         updateLoginButton();
-        console.log('✅ Test login UI applied');
+        console.log('✅ Test login UI applied - You should now see avatar, name, logout button, and online indicator');
     };
 
     window.clearTestLogin = function() {
