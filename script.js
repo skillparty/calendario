@@ -9,28 +9,40 @@ const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
 const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 
-// DOM elements
-const calendarBtn = document.getElementById('calendar-btn');
-const agendaBtn = document.getElementById('agenda-btn');
-const loginBtn = document.getElementById('login-btn');
-const logoutBtn = document.getElementById('logout-btn');
-const userInfo = document.getElementById('user-info');
-const userAvatar = document.getElementById('user-avatar');
-const userName = document.getElementById('user-name');
-const calendarView = document.getElementById('calendar-view');
-const agendaView = document.getElementById('agenda-view');
-
-// Event listeners
-calendarBtn.addEventListener('click', showCalendar);
-agendaBtn.addEventListener('click', showAgenda);
-loginBtn.addEventListener('click', handleLogin);
-logoutBtn.addEventListener('click', handleLogout);
+// DOM elements - will be initialized after DOM loads
+let calendarBtn, agendaBtn, loginBtn, logoutBtn, userInfo, userAvatar, userName, calendarView, agendaView;
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     console.log('App initializing...');
     console.log('Current URL:', window.location.href);
     console.log('URL hash:', window.location.hash);
+
+    // Initialize DOM elements
+    calendarBtn = document.getElementById('calendar-btn');
+    agendaBtn = document.getElementById('agenda-btn');
+    loginBtn = document.getElementById('login-btn');
+    logoutBtn = document.getElementById('logout-btn');
+    userInfo = document.getElementById('user-info');
+    userAvatar = document.getElementById('user-avatar');
+    userName = document.getElementById('user-name');
+    calendarView = document.getElementById('calendar-view');
+    agendaView = document.getElementById('agenda-view');
+
+    console.log('DOM elements found:', {
+        calendarBtn: !!calendarBtn,
+        agendaBtn: !!agendaBtn,
+        loginBtn: !!loginBtn,
+        logoutBtn: !!logoutBtn,
+        userInfo: !!userInfo,
+        userAvatar: !!userAvatar,
+        userName: !!userName
+    });
+
+    // Add event listeners
+    if (calendarBtn) calendarBtn.addEventListener('click', showCalendar);
+    if (agendaBtn) agendaBtn.addEventListener('click', showAgenda);
+    if (loginBtn) loginBtn.addEventListener('click', handleLogin);
 
     handleOAuthCallback();
     updateLoginButton();
@@ -574,38 +586,68 @@ async function fetchUserInfo(token) {
 
 // Update login button
 function updateLoginButton() {
-    const userStatus = document.getElementById('user-status');
-
     console.log('updateLoginButton called');
     console.log('userSession:', userSession);
     console.log('userSession.user:', userSession?.user);
 
+    // Get fresh references to DOM elements
+    const loginBtn = document.getElementById('login-btn');
+    const userInfo = document.getElementById('user-info');
+    const userAvatar = document.getElementById('user-avatar');
+    const userName = document.getElementById('user-name');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    console.log('DOM elements check:', {
+        loginBtn: !!loginBtn,
+        userInfo: !!userInfo,
+        userAvatar: !!userAvatar,
+        userName: !!userName,
+        logoutBtn: !!logoutBtn
+    });
+
     if (userSession && userSession.user) {
         // User is logged in - show user info
         console.log('User is logged in, updating UI');
-        loginBtn.classList.add('hidden');
-        userInfo.classList.remove('hidden');
-        userInfo.classList.add('show');
-
-        if (userSession.user.avatar_url) {
-            userAvatar.src = userSession.user.avatar_url;
-            userAvatar.classList.remove('hidden');
-            console.log('Avatar URL set:', userSession.user.avatar_url);
-        } else {
-            userAvatar.classList.add('hidden');
-            console.log('No avatar URL available');
+        
+        if (loginBtn) {
+            loginBtn.style.display = 'none';
+            console.log('Login button hidden');
+        }
+        
+        if (userInfo) {
+            userInfo.style.display = 'flex';
+            console.log('User info shown');
         }
 
-        userName.textContent = userSession.user.name || userSession.user.login;
-        console.log('User name set to:', userSession.user.name || userSession.user.login);
+        if (userAvatar && userSession.user.avatar_url) {
+            userAvatar.src = userSession.user.avatar_url;
+            userAvatar.style.display = 'block';
+            console.log('Avatar URL set:', userSession.user.avatar_url);
+        }
+
+        if (userName) {
+            userName.textContent = userSession.user.name || userSession.user.login;
+            console.log('User name set to:', userSession.user.name || userSession.user.login);
+        }
+
+        // Add logout event listener
+        if (logoutBtn) {
+            logoutBtn.onclick = handleLogout;
+            console.log('Logout button event listener added');
+        }
     } else {
         // User is not logged in - show login button
         console.log('User is not logged in, showing login button');
-        loginBtn.classList.remove('hidden');
-        userInfo.classList.add('hidden');
-        userInfo.classList.remove('show');
-        userAvatar.classList.add('hidden');
-        userName.textContent = '';
+        
+        if (loginBtn) {
+            loginBtn.style.display = 'flex';
+            console.log('Login button shown');
+        }
+        
+        if (userInfo) {
+            userInfo.style.display = 'none';
+            console.log('User info hidden');
+        }
     }
 }
 
