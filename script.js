@@ -9,6 +9,9 @@ let baseSyncIntervalMs = 120000; // 2 minutes
 let currentSyncIntervalMs = baseSyncIntervalMs;
 const maxSyncIntervalMs = 600000; // 10 minutes cap
 
+// Backend API base URL
+const API_BASE_URL = 'https://calendario-backend-v2.fly.dev';
+
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
 const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
@@ -16,9 +19,20 @@ const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const GITHUB_DEVICE_TOKEN_URL = 'https://github.com/login/oauth/access_token';
-// Optional lightweight exchange proxy (serverless) you must deploy; leave blank to skip
-// Expected POST JSON: { code, redirect_uri } -> returns { access_token }
-const OAUTH_PROXY_URL = '';
+// Use backend to exchange authorization code -> JWT + user
+// Expected POST JSON: { code, redirect_uri } -> returns { success, token, user }
+const OAUTH_PROXY_URL = API_BASE_URL + '/api/auth/github';
+
+// Helper: API fetch with JWT
+async function apiFetch(path, options = {}) {
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+    if (userSession && userSession.jwt) {
+        headers['Authorization'] = `Bearer ${userSession.jwt}`;
+    }
+    const init = Object.assign({}, options, { headers });
+    const res = await fetch(API_BASE_URL + path, init);
+    return res;
+}
 
 // DOM elements - will be initialized after DOM loads
 let calendarBtn, agendaBtn, loginBtn, logoutBtn, userInfo, userAvatar, userName, calendarView, agendaView;
@@ -350,8 +364,41 @@ function addTask(date) {
         };
         if (!tasks[date]) tasks[date] = [];
         tasks[date].push(task);
-        saveTasks();
-        renderCalendar();
+        // Persist
+        if (userSession && userSession.jwt) {
+            showSyncStatus('Guardando en servidor…');
+            apiFetch('/api/tasks', {
+                method: 'POST',
+                body: JSON.stringify({
+                    title: task.title,
+                    description: null,
+                    date: task.date,
+                    completed: task.completed,
+                    is_reminder: task.isReminder,
+                    priority: task.priority || 1,
+                    tags: task.tags || []
+                })
+            }).then(async (res) => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const created = await res.json();
+                // Use server id if available
+                if (created && created.data && created.data.id) {
+                    const newId = String(created.data.id);
+                    const idx = tasks[date].findIndex(t => t.id === task.id);
+                    if (idx !== -1) tasks[date][idx].id = newId;
+                }
+                localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                showSyncStatus('Guardado ✅');
+            }).catch(err => {
+                console.error('Create task failed:', err);
+                showSyncStatus('Fallo al guardar', true);
+            }).finally(() => {
+                renderCalendar();
+            });
+        } else {
+            saveTasks();
+            renderCalendar();
+        }
 
         // Request notification permission for reminders
         if ('Notification' in window) {
@@ -432,7 +479,36 @@ function toggleTask(id) {
             task.completed = !task.completed;
         }
     });
-    saveTasks();
+    // Persist
+    if (userSession && userSession.jwt) {
+        // Find the task with its date and possible numeric server id
+        let found = null;
+        let foundDate = null;
+        Object.entries(tasks).some(([date, list]) => {
+            const t = list.find(x => x.id === id);
+            if (t) { found = t; foundDate = date; return true; }
+            return false;
+        });
+        if (found) {
+            showSyncStatus('Actualizando en servidor…');
+            const serverId = /^\d+$/.test(found.id) ? found.id : null;
+            // If no server id yet (string timestamp), fallback to reconcile
+            const doUpdate = serverId ? apiFetch(`/api/tasks/${serverId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ completed: found.completed })
+            }) : pushTasksToBackend();
+            Promise.resolve(doUpdate).then(res => {
+                if (res && !res.ok) throw new Error('HTTP ' + res.status);
+                localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                showSyncStatus('Actualizado ✅');
+            }).catch(err => {
+                console.error('Toggle task failed:', err);
+                showSyncStatus('Fallo al actualizar', true);
+            });
+        }
+    } else {
+        saveTasks();
+    }
 
     // Get current filter values and re-render agenda with them
     const monthFilter = document.getElementById('month-filter');
@@ -456,7 +532,23 @@ function deleteTask(id) {
             }
         });
 
-        saveTasks();
+        // Persist
+        if (userSession && userSession.jwt) {
+            // Locate server id if present
+            const serverId = id && /^\d+$/.test(id) ? id : null;
+            showSyncStatus('Eliminando en servidor…');
+            const doDelete = serverId ? apiFetch(`/api/tasks/${serverId}`, { method: 'DELETE' }) : pushTasksToBackend();
+            Promise.resolve(doDelete).then(res => {
+                if (res && !res.ok) throw new Error('HTTP ' + res.status);
+                localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                showSyncStatus('Eliminado ✅');
+            }).catch(err => {
+                console.error('Delete task failed:', err);
+                showSyncStatus('Fallo al eliminar', true);
+            });
+        } else {
+            saveTasks();
+        }
 
         // Get current filter values and re-render agenda with them
         const monthFilter = document.getElementById('month-filter');
@@ -485,12 +577,13 @@ function deleteTask(id) {
     }
 }
 
-// Save tasks to localStorage and sync to GitHub Gist
+// Save tasks to localStorage and sync to GitHub Gist when applicable.
+// When logged-in with backend JWT, per-action API calls handle persistence; avoid bulk reconcile here.
 async function saveTasks() {
     localStorage.setItem('calendarTasks', JSON.stringify(tasks));
-
-    // Sync to GitHub Gist if user is logged in
-    if (userSession && userSession.token) {
+    if (userSession && userSession.jwt) {
+        return; // per-action backend sync already performed where needed
+    } else if (userSession && userSession.token) {
         await syncTasksToGist();
     }
 }
@@ -529,6 +622,97 @@ async function loadTasksFromGist() {
     }
 
     return false;
+}
+
+// Load tasks from backend
+async function loadTasksFromBackend() {
+    if (!userSession || !userSession.jwt) return;
+    try {
+        const res = await apiFetch('/api/tasks?limit=1000&offset=0');
+        if (!res.ok) throw new Error('Tasks list HTTP ' + res.status);
+        const data = await res.json();
+        const list = data.data || [];
+        const byDate = {};
+        list.forEach(t => {
+            const dateKey = (t.date || '').slice(0,10);
+            if (!byDate[dateKey]) byDate[dateKey] = [];
+            byDate[dateKey].push({
+                id: String(t.id),
+                title: t.title,
+                description: t.description || '',
+                date: dateKey,
+                completed: !!t.completed,
+                isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
+                priority: t.priority || 1,
+                tags: t.tags || []
+            });
+        });
+        tasks = byDate;
+        localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+        renderCalendar();
+        return true;
+    } catch (e) {
+        console.error('Error loading tasks from backend:', e);
+        return false;
+    }
+}
+
+// Push local tasks to backend by reconciling with server
+async function pushTasksToBackend() {
+    try {
+        const res = await apiFetch('/api/tasks?limit=1000&offset=0');
+        const server = res.ok ? (await res.json()).data : [];
+        const serverById = new Map(server.map(t => [String(t.id), t]));
+
+        // Build local flat list
+        const localList = Object.entries(tasks).flatMap(([date, list]) => list.map(t => ({...t, date})));
+        const localById = new Map(localList.map(t => [String(t.id), t]));
+
+        // Create or update
+        for (const t of localList) {
+            const existing = serverById.get(String(t.id));
+            if (!existing) {
+                await apiFetch('/api/tasks', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title: t.title,
+                        description: t.description || null,
+                        date: t.date,
+                        completed: !!t.completed,
+                        is_reminder: t.isReminder !== undefined ? t.isReminder : true,
+                        priority: t.priority || 1,
+                        tags: t.tags || []
+                    })
+                });
+            } else {
+                const diff = {};
+                if (existing.title !== t.title) diff.title = t.title;
+                if ((existing.description||'') !== (t.description||'')) diff.description = t.description || null;
+                const exDate = (existing.date||'').slice(0,10);
+                if (exDate !== t.date) diff.date = t.date;
+                if (!!existing.completed !== !!t.completed) diff.completed = !!t.completed;
+                const exRem = existing.is_reminder !== undefined ? existing.is_reminder : true;
+                const loRem = t.isReminder !== undefined ? t.isReminder : true;
+                if (exRem !== loRem) diff.is_reminder = loRem;
+                if ((existing.priority||1) !== (t.priority||1)) diff.priority = t.priority || 1;
+                const exTags = JSON.stringify(existing.tags||[]);
+                const loTags = JSON.stringify(t.tags||[]);
+                if (exTags !== loTags) diff.tags = t.tags||[];
+                if (Object.keys(diff).length > 0) {
+                    await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff) });
+                }
+            }
+        }
+
+        // Delete removed on server
+        for (const s of server) {
+            if (!localById.has(String(s.id))) {
+                await apiFetch(`/api/tasks/${s.id}`, { method: 'DELETE' });
+            }
+        }
+    } catch (e) {
+        console.error('Error pushing tasks to backend:', e);
+    }
 }
 
 // Sync tasks to GitHub Gist
@@ -643,24 +827,49 @@ function handleOAuthCallback() {
     const authCode = searchParams.get('code');
     if (authCode && !userSession) {
         console.log('📥 Found authorization code in URL');
+        // CSRF check: state must match
+        const returnedState = searchParams.get('state');
+        const storedState = localStorage.getItem('oauth_state');
+        if (storedState && returnedState && returnedState !== storedState) {
+            console.error('OAuth state mismatch');
+            showAuthStatus('Autenticación inválida. Intenta nuevamente.', true);
+            return;
+        }
+        if (storedState) localStorage.removeItem('oauth_state');
         if (OAUTH_PROXY_URL) {
             showAuthStatus('Intercambiando código por token…');
-            exchangeCodeForToken(authCode)
-                .then(token => {
-                    if (token) {
-                        userSession = { token, loginTime: Date.now() };
-                        localStorage.setItem('userSession', JSON.stringify(userSession));
-                        // Limpia el parámetro code de la URL
-                        const cleanUrl = window.location.origin + window.location.pathname;
-                        window.history.replaceState({}, document.title, cleanUrl);
-                        fetchUserInfo(token);
-                    }
-                })
-                .catch(err => {
-                    console.error('Code exchange failed:', err);
-                    showAuthStatus('Error al intercambiar el código (ver consola)', true);
+            // Backend: POST /api/auth/github -> { success, token, user }
+            fetch(OAUTH_PROXY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ code: authCode, redirect_uri: GITHUB_REDIRECT_URI })
+            })
+            .then(async (res) => {
+                if (!res.ok) throw new Error('Auth HTTP ' + res.status);
+                return res.json();
+            })
+            .then((data) => {
+                if (!data || !data.success || !data.token || !data.user) throw new Error('Auth payload inválido');
+                userSession = {
+                    jwt: data.token,
+                    user: data.user,
+                    loginTime: Date.now()
+                };
+                localStorage.setItem('userSession', JSON.stringify(userSession));
+                const cleanUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+                updateLoginButton();
+                // Load tasks from backend
+                loadTasksFromBackend().then(() => {
+                    scheduleBackgroundSync();
+                    showAuthStatus('Inicio de sesión exitoso');
                 });
-            return; // Stop further hash handling until token arrives
+            })
+            .catch(err => {
+                console.error('Code exchange failed:', err);
+                showAuthStatus('Error al intercambiar el código (ver consola)', true);
+            });
+            return; // Stop further handling
         } else {
             console.warn('OAUTH_PROXY_URL no configurado; no se puede usar el Authorization Code Flow sin backend.');
             showAuthStatus('No hay backend para intercambio de código. Usando Device Flow.', true);
@@ -703,9 +912,13 @@ function handleOAuthCallback() {
                 if (userSession && userSession.user) {
                     console.log('👤 User already logged in, updating UI');
                     updateLoginButton();
-                    findExistingGist().then(loadTasksFromGist).then(() => {
-                        scheduleBackgroundSync();
-                    });
+                    if (userSession.jwt) {
+                        loadTasksFromBackend().then(() => scheduleBackgroundSync());
+                    } else {
+                        findExistingGist().then(loadTasksFromGist).then(() => {
+                            scheduleBackgroundSync();
+                        });
+                    }
                 } else if (userSession && userSession.token) {
                     fetchUserInfo(userSession.token).then(() => {
                         scheduleBackgroundSync();
@@ -765,24 +978,59 @@ function showAuthStatus(message, isError = false) {
     }, isError ? 6000 : 3500);
 }
 
-// Fetch user info from GitHub
+// Small banner for sync operations
+function showSyncStatus(message, isError = false) {
+    let el = document.getElementById('sync-status-banner');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'sync-status-banner';
+        el.style.position = 'fixed';
+        el.style.bottom = '16px';
+        el.style.left = '16px';
+        el.style.padding = '6px 12px';
+        el.style.fontSize = '12px';
+        el.style.fontFamily = 'JetBrains Mono, monospace';
+        el.style.borderRadius = '8px';
+        el.style.zIndex = '99999';
+        el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+        el.style.maxWidth = '60vw';
+        el.style.whiteSpace = 'nowrap';
+        el.style.overflow = 'hidden';
+        el.style.textOverflow = 'ellipsis';
+        document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.style.background = isError ? '#d1495b' : '#829399';
+    el.style.color = '#fff';
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(() => {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }, isError ? 5000 : 2200);
+}
+
+// Fetch user info
 async function fetchUserInfo(token) {
     console.log('fetchUserInfo called with token');
     try {
-        console.log('Making API call to GitHub...');
-        const response = await fetch('https://api.github.com/user', {
-            headers: { Authorization: `token ${token}` }
-        });
-
-        console.log('GitHub API response status:', response.status);
-
-        if (!response.ok) {
-            console.error('GitHub API error:', response.status, response.statusText);
-            return;
+        let user;
+        if (userSession && userSession.jwt) {
+            const res = await apiFetch('/api/auth/me');
+            if (!res.ok) throw new Error('Auth/me HTTP ' + res.status);
+            const data = await res.json();
+            user = data.user;
+        } else {
+            console.log('Making API call to GitHub...');
+            const response = await fetch('https://api.github.com/user', {
+                headers: { Authorization: `token ${token}` }
+            });
+            console.log('GitHub API response status:', response.status);
+            if (!response.ok) {
+                console.error('GitHub API error:', response.status, response.statusText);
+                return;
+            }
+            user = await response.json();
+            console.log('GitHub user data received:', user);
         }
-
-        const user = await response.json();
-        console.log('GitHub user data received:', user);
 
         userSession.user = user;
         localStorage.setItem('userSession', JSON.stringify(userSession));
@@ -901,14 +1149,14 @@ function updateLoginButton() {
     }
 }
 
-// Handle login
+// Handle login (Authorization Code Flow with state)
 function handleLogin() {
-    console.log('Starting GitHub Device Flow login...');
-    startDeviceFlowLogin().catch(err => {
-        console.error('Device Flow failed, falling back to classic auth redirect.', err);
-        // Fallback to classic authorize page (will not return token client-side on modern GitHub)
-        window.location.href = GITHUB_AUTH_URL;
-    });
+    console.log('Redirecting to GitHub for Authorization Code Flow...');
+    const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('oauth_state', state);
+    const url = new URL(GITHUB_AUTH_URL);
+    url.searchParams.set('state', state);
+    window.location.href = url.toString();
 }
 
 // Handle logout
@@ -1199,6 +1447,8 @@ function mergeTasksById(localData, remoteData) {
 // Background sync: periodically pull from Gist if it changed
 function scheduleBackgroundSync() {
     if (backgroundSyncTimer) return;
+    // Only schedule Gist background pulls when using Gist mode
+    if (userSession && userSession.jwt) return; // backend has server source of truth
     if (!userSession || !userSession.token || !userGistId) return;
     backgroundSyncTimer = setInterval(checkAndPullGist, currentSyncIntervalMs);
 }
