@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario Digital</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Calendario Digital</h1>
+        <nav>
+            <button id="calendar-btn">Calendario</button>
+            <button id="agenda-btn">Agenda</button>
+            <button id="login-btn">Iniciar Sesión con GitHub</button>
+        </nav>
+    </header>
+    <main>
+        <div id="calendar-view" class="view">
+            <!-- Calendar will be rendered here -->
+        </div>
+        <div id="agenda-view" class="view hidden">
+            <!-- Agenda list will be rendered here -->
+        </div>
+    </main>
+
+    <!-- Modal for day tasks -->
+    <div id="day-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn" title="Cerrar">&times;</span>
+            <h3 id="modal-date"></h3>
+            <div id="modal-tasks"></div>
+            <button id="add-task-modal-btn">Agregar Tarea</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
