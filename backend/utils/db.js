@@ -1,6 +1,6 @@
 const pg = require('pg');
 const dotenv = require('dotenv');
-const { logger } = require('./logger.js');
+const logger = require('./logger.js');
 
 dotenv.config();
 
