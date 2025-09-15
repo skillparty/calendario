@@ -34,6 +34,15 @@
         </div>
     </main>
 
+    <!-- Debug Panel (remove in production) -->
+    <div id="debug-panel" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-size: 12px; z-index: 9999;">
+        <div>Debug Tools:</div>
+        <button onclick="forceShowLoginUI()" style="margin: 2px; padding: 2px 5px; font-size: 11px;">Show Login UI</button>
+        <button onclick="forceHideLoginUI()" style="margin: 2px; padding: 2px 5px; font-size: 11px;">Hide Login UI</button>
+        <button onclick="testLoginUI()" style="margin: 2px; padding: 2px 5px; font-size: 11px;">Test Login</button>
+        <button onclick="clearTestLogin()" style="margin: 2px; padding: 2px 5px; font-size: 11px;">Clear Test</button>
+    </div>
+
     <!-- Modal for day tasks -->
     <div id="day-modal" class="modal hidden">
         <div class="modal-content">
