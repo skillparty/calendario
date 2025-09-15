@@ -500,18 +500,25 @@ function updateLoginButton() {
         // User is logged in - show user info
         loginBtn.style.display = 'none';
         userInfo.style.display = 'flex';
+        userInfo.classList.add('show');
 
         if (userSession.user.avatar_url) {
             userAvatar.src = userSession.user.avatar_url;
             userAvatar.style.display = 'block';
+        } else {
+            userAvatar.style.display = 'none';
         }
 
         userName.textContent = userSession.user.name || userSession.user.login;
+        console.log('User logged in:', userSession.user.login);
     } else {
         // User is not logged in - show login button
         loginBtn.style.display = 'flex';
         userInfo.style.display = 'none';
+        userInfo.classList.remove('show');
         userAvatar.style.display = 'none';
+        userName.textContent = '';
+        console.log('User logged out');
     }
 }
 
@@ -524,6 +531,7 @@ function handleLogin() {
 
 // Handle logout
 function handleLogout() {
+    console.log('Logging out user...');
     userSession = null;
     userGistId = null;
     localStorage.removeItem('userSession');
@@ -533,6 +541,7 @@ function handleLogout() {
     updateLoginButton();
     // Refresh the UI
     showCalendar();
+    console.log('User logged out successfully');
 }
 
 // Show tasks for a specific day

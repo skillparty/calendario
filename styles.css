@@ -71,18 +71,53 @@ nav {
 #user-status {
     display: flex;
     align-items: center;
+    gap: var(--spacing-md);
 }
 
 #user-info {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.3s ease;
+}
+
+#user-info.show {
+    opacity: 1;
+    transform: scale(1);
 }
 
 #login-btn {
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
+    transition: all 0.3s ease;
+}
+
+#user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-primary);
+    box-shadow: var(--shadow-light);
+}
+
+#logout-btn {
+    background-color: var(--amaranth);
+    color: var(--bg-primary);
+    border: 1px solid var(--amaranth);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#logout-btn:hover {
+    background-color: var(--bg-primary);
+    color: var(--amaranth);
 }
 
 button {
