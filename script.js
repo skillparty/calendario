@@ -28,11 +28,17 @@ logoutBtn.addEventListener('click', handleLogout);
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('App initializing...');
+    console.log('Current URL:', window.location.href);
+    console.log('URL hash:', window.location.hash);
+
     handleOAuthCallback();
     updateLoginButton();
     showCalendar(); // Default view
     checkNotifications();
     setInterval(checkNotifications, 60000); // Check every minute
+
+    console.log('App initialized');
 });
 
 // Show calendar view
@@ -191,8 +197,13 @@ function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
         const completedClass = task.completed ? ' completed' : '';
         const formattedDate = formatDateForDisplay(task.date);
         html += `<li class="task${completedClass}">
-            <span>${task.title} - ${formattedDate}</span>
-            <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')">${task.completed ? 'Desmarcar' : 'Marcar como hecho'}</button>
+            <div class="task-info">
+                <span>${task.title} - ${formattedDate}</span>
+                <div class="task-buttons">
+                    <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')">${task.completed ? 'Desmarcar' : 'Marcar como hecho'}</button>
+                    <button onclick="deleteTask('${task.id}')" class="delete-btn">🗑️ Eliminar</button>
+                </div>
+            </div>
         </li>`;
     });
     html += '</ul>';
@@ -316,6 +327,47 @@ function toggleTask(id) {
 
     renderAgenda(currentMonthFilter, currentStatusFilter);
     renderCalendar(); // Update calendar to reflect new task count
+}
+
+// Delete task
+function deleteTask(id) {
+    if (confirm('¿Estás seguro de que quieres eliminar este recordatorio?')) {
+        // Remove from tasks object
+        Object.keys(tasks).forEach(date => {
+            tasks[date] = tasks[date].filter(task => task.id !== id);
+            // Remove empty date arrays
+            if (tasks[date].length === 0) {
+                delete tasks[date];
+            }
+        });
+
+        saveTasks();
+
+        // Get current filter values and re-render agenda with them
+        const monthFilter = document.getElementById('month-filter');
+        const statusFilter = document.getElementById('status-filter');
+        const currentMonthFilter = monthFilter ? monthFilter.value : 'all';
+        const currentStatusFilter = statusFilter ? statusFilter.value : 'all';
+
+        renderAgenda(currentMonthFilter, currentStatusFilter);
+        renderCalendar(); // Update calendar to reflect new task count
+
+        // If we're in the modal, close it or refresh it
+        const modal = document.getElementById('day-modal');
+        if (modal && !modal.classList.contains('hidden')) {
+            const date = modal.querySelector('#modal-date').textContent;
+            // Try to parse the date and refresh the modal
+            const dateMatch = date.match(/(\d{1,2}) de (\w+) de (\d{4})/);
+            if (dateMatch) {
+                const day = dateMatch[1].padStart(2, '0');
+                const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+                const month = (monthNames.indexOf(dateMatch[2].toLowerCase()) + 1).toString().padStart(2, '0');
+                const year = dateMatch[3];
+                const formattedDate = `${year}-${month}-${day}`;
+                showDayTasks(formattedDate);
+            }
+        }
+    }
 }
 
 // Save tasks to localStorage and sync to GitHub Gist
@@ -569,10 +621,17 @@ function showDayTasks(date) {
             const taskDiv = document.createElement('div');
             taskDiv.className = `modal-task ${task.completed ? 'completed' : 'pending'}`;
             taskDiv.innerHTML = `
-                <strong>${task.title}</strong>
-                <button onclick="toggleTask('${task.id}'); setTimeout(() => showDayTasks('${date}'), 100)">
-                    ${task.completed ? 'Desmarcar' : 'Marcar como hecho'}
-                </button>
+                <div class="task-content">
+                    <strong>${task.title}</strong>
+                    <div class="task-actions">
+                        <button onclick="toggleTask('${task.id}'); setTimeout(() => showDayTasks('${date}'), 100)">
+                            ${task.completed ? 'Desmarcar' : 'Marcar como hecho'}
+                        </button>
+                        <button onclick="deleteTask('${task.id}')" class="delete-btn">
+                            🗑️ Eliminar
+                        </button>
+                    </div>
+                </div>
             `;
             modalTasks.appendChild(taskDiv);
         });

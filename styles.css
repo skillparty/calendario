@@ -348,9 +348,6 @@ main {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     margin-bottom: var(--spacing-sm);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     background-color: var(--bg-primary);
     transition: all 0.2s ease;
     border-left: 3px solid;
@@ -383,6 +380,26 @@ main {
     color: var(--text-primary);
 }
 
+.task-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.task-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.task-actions, .task-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
 .task button {
     background-color: var(--hunyadi-yellow);
     color: var(--bg-primary);
@@ -401,6 +418,17 @@ main {
     background-color: var(--amaranth);
     transform: translateY(-1px);
     box-shadow: var(--shadow-medium);
+}
+
+.delete-btn {
+    background-color: var(--amaranth) !important;
+    border-color: var(--amaranth) !important;
+    color: var(--bg-primary) !important;
+}
+
+.delete-btn:hover {
+    background-color: var(--bg-primary) !important;
+    color: var(--amaranth) !important;
 }
 
 /* Modal Styles - Apple Design */
