@@ -5,6 +5,9 @@ let userSession = JSON.parse(localStorage.getItem('userSession')) || null;
 let userGistId = localStorage.getItem('userGistId') || null;
 let lastGistUpdatedAt = localStorage.getItem('lastGistUpdatedAt') || null;
 let backgroundSyncTimer = null;
+let baseSyncIntervalMs = 120000; // 2 minutes
+let currentSyncIntervalMs = baseSyncIntervalMs;
+const maxSyncIntervalMs = 600000; // 10 minutes cap
 
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
@@ -56,6 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(checkNotifications, 60000); // Check every minute
 
     console.log('App initialized');
+    // Visibility-based pull: when returning to tab, check updates
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            checkAndPullGist();
+        }
+    });
 
     // Add a global test function for debugging
     window.testLoginUI = function() {
@@ -1112,7 +1121,7 @@ function mergeTasksById(localData, remoteData) {
 function scheduleBackgroundSync() {
     if (backgroundSyncTimer) return;
     if (!userSession || !userSession.token || !userGistId) return;
-    backgroundSyncTimer = setInterval(checkAndPullGist, 60000);
+    backgroundSyncTimer = setInterval(checkAndPullGist, currentSyncIntervalMs);
 }
 
 async function checkAndPullGist() {
@@ -1124,7 +1133,12 @@ async function checkAndPullGist() {
                 'Accept': 'application/vnd.github.v3+json'
             }
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+            // Backoff on errors
+            currentSyncIntervalMs = Math.min(maxSyncIntervalMs, currentSyncIntervalMs * 2);
+            resetBackgroundTimer();
+            return;
+        }
         const gist = await res.json();
         const updated = gist.updated_at || null;
         if (!updated || updated === lastGistUpdatedAt) return; // no change
@@ -1149,8 +1163,26 @@ async function checkAndPullGist() {
             }
             lastGistUpdatedAt = updated;
             localStorage.setItem('lastGistUpdatedAt', lastGistUpdatedAt);
+            // Success: reset backoff to base interval
+            if (currentSyncIntervalMs !== baseSyncIntervalMs) {
+                currentSyncIntervalMs = baseSyncIntervalMs;
+                resetBackgroundTimer();
+            }
         }
     } catch (e) {
         console.error('Background sync error:', e);
+        // Backoff on exceptions
+        currentSyncIntervalMs = Math.min(maxSyncIntervalMs, currentSyncIntervalMs * 2);
+        resetBackgroundTimer();
+    }
+}
+
+function resetBackgroundTimer() {
+    if (backgroundSyncTimer) {
+        clearInterval(backgroundSyncTimer);
+        backgroundSyncTimer = null;
+    }
+    if (userSession && userSession.token && userGistId) {
+        backgroundSyncTimer = setInterval(checkAndPullGist, currentSyncIntervalMs);
     }
 }
