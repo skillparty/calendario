@@ -7,7 +7,7 @@ let userGistId = localStorage.getItem('userGistId') || null;
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
 const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
-const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
+const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}&response_type=token`;
 
 // DOM elements - will be initialized after DOM loads
 let calendarBtn, agendaBtn, loginBtn, logoutBtn, userInfo, userAvatar, userName, calendarView, agendaView;
@@ -614,7 +614,8 @@ function handleOAuthCallback() {
 
     if (hash.includes('access_token')) {
         console.log('✅ Access token found in hash');
-        const params = new URLSearchParams(hash.substring(1));
+        const hashParams = hash.substring(1); // Remove the #
+        const params = new URLSearchParams(hashParams);
         const token = params.get('access_token');
         console.log('🔑 Token extracted:', token ? 'Present' : 'Missing');
 
@@ -622,7 +623,9 @@ function handleOAuthCallback() {
             userSession = { token, loginTime: Date.now() };
             localStorage.setItem('userSession', JSON.stringify(userSession));
             console.log('💾 User session stored:', userSession);
-            window.location.hash = ''; // Clean URL
+
+            // Clean URL by removing hash
+            window.location.hash = '';
 
             // Update URL without hash
             const newUrl = window.location.pathname + window.location.search;
