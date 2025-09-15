@@ -51,6 +51,30 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(checkNotifications, 60000); // Check every minute
 
     console.log('App initialized');
+
+    // Add a global test function for debugging
+    window.testLoginUI = function() {
+        console.log('🧪 Testing login UI...');
+        userSession = {
+            token: 'test-token',
+            loginTime: Date.now(),
+            user: {
+                login: 'testuser',
+                name: 'Test User',
+                avatar_url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM2MjY0NjciLz4KPHBhdGggZD0iTTIwIDIwaC00djRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNFoiIGZpbGw9IiNmZmYiLz4KPHBhdGggZD0iTTIyIDI0SDR2LTJjMC0yLjIgMS44LTQgNC00aDEwdjRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNFoiIGZpbGw9IiNmZmYiLz4KPC9zdmc+'
+            }
+        };
+        updateLoginButton();
+        console.log('✅ Test login UI applied');
+    };
+
+    window.clearTestLogin = function() {
+        console.log('🧹 Clearing test login...');
+        userSession = null;
+        localStorage.removeItem('userSession');
+        updateLoginButton();
+        console.log('✅ Test login cleared');
+    };
 });
 
 // Show calendar view
@@ -525,25 +549,47 @@ function checkNotifications() {
 // Handle OAuth callback
 function handleOAuthCallback() {
     const hash = window.location.hash;
-    console.log('handleOAuthCallback called with hash:', hash);
+    console.log('🔍 handleOAuthCallback called with hash:', hash);
 
     if (hash.includes('access_token')) {
-        console.log('Access token found in hash');
+        console.log('✅ Access token found in hash');
         const params = new URLSearchParams(hash.substring(1));
         const token = params.get('access_token');
-        console.log('Token extracted:', token ? 'Present' : 'Missing');
+        console.log('🔑 Token extracted:', token ? 'Present' : 'Missing');
 
         if (token) {
             userSession = { token, loginTime: Date.now() };
             localStorage.setItem('userSession', JSON.stringify(userSession));
-            console.log('User session stored:', userSession);
+            console.log('💾 User session stored:', userSession);
             window.location.hash = ''; // Clean URL
+
+            // Update URL without hash
+            const newUrl = window.location.pathname + window.location.search;
+            window.history.replaceState({}, document.title, newUrl);
+
+            console.log('🚀 Calling fetchUserInfo...');
             fetchUserInfo(token);
         } else {
-            console.log('No token found in URL parameters');
+            console.log('❌ No token found in URL parameters');
         }
     } else {
-        console.log('No access_token found in hash');
+        console.log('❌ No access_token found in hash');
+
+        // Check if we have a stored session
+        const storedSession = localStorage.getItem('userSession');
+        if (storedSession) {
+            try {
+                userSession = JSON.parse(storedSession);
+                console.log('📦 Loaded stored session:', userSession);
+                if (userSession && userSession.user) {
+                    console.log('👤 User already logged in, updating UI');
+                    updateLoginButton();
+                }
+            } catch (e) {
+                console.error('❌ Error parsing stored session:', e);
+                localStorage.removeItem('userSession');
+            }
+        }
     }
 }
 
@@ -586,9 +632,9 @@ async function fetchUserInfo(token) {
 
 // Update login button
 function updateLoginButton() {
-    console.log('updateLoginButton called');
-    console.log('userSession:', userSession);
-    console.log('userSession.user:', userSession?.user);
+    console.log('🔄 updateLoginButton called');
+    console.log('👤 userSession:', userSession);
+    console.log('👤 userSession.user:', userSession?.user);
 
     // Get fresh references to DOM elements
     const loginBtn = document.getElementById('login-btn');
@@ -597,7 +643,7 @@ function updateLoginButton() {
     const userName = document.getElementById('user-name');
     const logoutBtn = document.getElementById('logout-btn');
 
-    console.log('DOM elements check:', {
+    console.log('🔍 DOM elements check:', {
         loginBtn: !!loginBtn,
         userInfo: !!userInfo,
         userAvatar: !!userAvatar,
@@ -607,46 +653,75 @@ function updateLoginButton() {
 
     if (userSession && userSession.user) {
         // User is logged in - show user info
-        console.log('User is logged in, updating UI');
-        
+        console.log('✅ User is logged in, updating UI');
+
         if (loginBtn) {
             loginBtn.style.display = 'none';
-            console.log('Login button hidden');
-        }
-        
-        if (userInfo) {
-            userInfo.style.display = 'flex';
-            console.log('User info shown');
+            console.log('🙈 Login button hidden');
         }
 
-        if (userAvatar && userSession.user.avatar_url) {
-            userAvatar.src = userSession.user.avatar_url;
-            userAvatar.style.display = 'block';
-            console.log('Avatar URL set:', userSession.user.avatar_url);
+        if (userInfo) {
+            userInfo.style.display = 'flex';
+            console.log('👁️ User info shown');
+        }
+
+        if (userAvatar) {
+            if (userSession.user.avatar_url) {
+                userAvatar.src = userSession.user.avatar_url;
+                userAvatar.style.display = 'block';
+                userAvatar.onerror = function() {
+                    console.log('❌ Avatar failed to load, using fallback');
+                    userAvatar.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM2MjY0NjciLz4KPHBhdGggZD0iTTIwIDIwaC00djRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNFoiIGZpbGw9IiNmZmYiLz4KPHBhdGggZD0iTTIyIDI0SDR2LTJjMC0yLjIgMS44LTQgNC00aDEwdjRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNFoiIGZpbGw9IiNmZmYiLz4KPC9zdmc+';
+                };
+                console.log('🖼️ Avatar URL set:', userSession.user.avatar_url);
+            } else {
+                // Fallback avatar
+                userAvatar.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM2MjY0NjciLz4KPHBhdGggZD0iTTIwIDIwaC00djRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNFoiIGZpbGw9IiNmZmYiLz4KPHBhdGggZD0iTTIyIDI0SDR2LTJjMC0yLjIgMS44LTQgNC00aDEwdjRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNFoiIGZpbGw9IiNmZmYiLz4KPC9zdmc+';
+                userAvatar.style.display = 'block';
+                console.log('🖼️ Using fallback avatar');
+            }
         }
 
         if (userName) {
-            userName.textContent = userSession.user.name || userSession.user.login;
-            console.log('User name set to:', userSession.user.name || userSession.user.login);
+            userName.textContent = userSession.user.name || userSession.user.login || 'Usuario';
+            console.log('📝 User name set to:', userSession.user.name || userSession.user.login);
         }
 
         // Add logout event listener
         if (logoutBtn) {
             logoutBtn.onclick = handleLogout;
-            console.log('Logout button event listener added');
+            logoutBtn.style.display = 'inline-block';
+            console.log('🚪 Logout button event listener added');
         }
+
+        // Add online status indicator
+        const userStatus = document.getElementById('user-status');
+        if (userStatus && !userStatus.querySelector('.online-indicator')) {
+            const onlineIndicator = document.createElement('span');
+            onlineIndicator.className = 'online-indicator';
+            onlineIndicator.textContent = '●';
+            onlineIndicator.title = 'En línea';
+            userInfo.appendChild(onlineIndicator);
+        }
+
     } else {
         // User is not logged in - show login button
-        console.log('User is not logged in, showing login button');
-        
+        console.log('❌ User is not logged in, showing login button');
+
         if (loginBtn) {
             loginBtn.style.display = 'flex';
-            console.log('Login button shown');
+            console.log('👁️ Login button shown');
         }
-        
+
         if (userInfo) {
             userInfo.style.display = 'none';
-            console.log('User info hidden');
+            console.log('🙈 User info hidden');
+        }
+
+        // Remove online indicator if exists
+        const onlineIndicator = document.querySelector('.online-indicator');
+        if (onlineIndicator) {
+            onlineIndicator.remove();
         }
     }
 }
