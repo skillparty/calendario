@@ -3,6 +3,8 @@ let currentDate = new Date();
 let tasks = JSON.parse(localStorage.getItem('calendarTasks')) || {};
 let userSession = JSON.parse(localStorage.getItem('userSession')) || null;
 let userGistId = localStorage.getItem('userGistId') || null;
+let lastGistUpdatedAt = localStorage.getItem('lastGistUpdatedAt') || null;
+let backgroundSyncTimer = null;
 
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
@@ -501,9 +503,12 @@ async function loadTasksFromGist() {
 
             if (tasksData && tasksData.content) {
                 const remoteTasks = JSON.parse(tasksData.content);
-                // Merge remote tasks with local tasks (remote takes precedence for conflicts)
-                tasks = { ...tasks, ...remoteTasks };
+                tasks = mergeTasksById(tasks, remoteTasks);
                 localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                if (gist.updated_at) {
+                    lastGistUpdatedAt = gist.updated_at;
+                    localStorage.setItem('lastGistUpdatedAt', lastGistUpdatedAt);
+                }
                 return true;
             }
         }
@@ -560,6 +565,10 @@ async function syncTasksToGist() {
             const gist = await response.json();
             userGistId = gist.id;
             localStorage.setItem('userGistId', userGistId);
+            if (gist.updated_at) {
+                lastGistUpdatedAt = gist.updated_at;
+                localStorage.setItem('lastGistUpdatedAt', lastGistUpdatedAt);
+            }
             console.log('Tasks synced to Gist successfully');
         } else {
             console.error('Failed to sync tasks to Gist:', response.status);
@@ -652,6 +661,13 @@ function handleOAuthCallback() {
                 if (userSession && userSession.user) {
                     console.log('👤 User already logged in, updating UI');
                     updateLoginButton();
+                    findExistingGist().then(loadTasksFromGist).then(() => {
+                        scheduleBackgroundSync();
+                    });
+                } else if (userSession && userSession.token) {
+                    fetchUserInfo(userSession.token).then(() => {
+                        scheduleBackgroundSync();
+                    });
                 }
             } catch (e) {
                 console.error('❌ Error parsing stored session:', e);
@@ -691,8 +707,10 @@ async function fetchUserInfo(token) {
         console.log('Calling updateLoginButton...');
         updateLoginButton();
 
-        // Refresh the UI to show loaded data
-        showCalendar();
+    // Refresh the UI to show loaded data
+    showCalendar();
+    // Start background sync
+    scheduleBackgroundSync();
         console.log('UI refreshed after login');
     } catch (error) {
         console.error('Error fetching user info:', error);
@@ -1034,6 +1052,7 @@ async function pollForDeviceToken({ device_code, interval }) {
             await loadTasksFromGist();
             updateLoginButton();
             showCalendar();
+            scheduleBackgroundSync();
             return;
         }
     }
@@ -1059,8 +1078,79 @@ async function findExistingGist() {
         if (match && match.id) {
             userGistId = match.id;
             localStorage.setItem('userGistId', userGistId);
+            if (match.updated_at) {
+                lastGistUpdatedAt = match.updated_at;
+                localStorage.setItem('lastGistUpdatedAt', lastGistUpdatedAt);
+            }
         }
     } catch (e) {
         console.error('Error discovering existing gist:', e);
+    }
+}
+
+// Merge tasks objects combining arrays by id per date, remote precedence on same id
+function mergeTasksById(localData, remoteData) {
+    const result = { ...localData };
+    const allDates = new Set([...Object.keys(localData || {}), ...Object.keys(remoteData || {})]);
+    allDates.forEach(date => {
+        const l = (localData && localData[date]) ? localData[date] : [];
+        const r = (remoteData && remoteData[date]) ? remoteData[date] : [];
+        const byId = new Map();
+        l.forEach(t => byId.set(t.id, t));
+        r.forEach(t => byId.set(t.id, { ...byId.get(t.id), ...t })); // remote overwrites same id
+        const merged = Array.from(byId.values());
+        if (merged.length > 0) {
+            result[date] = merged;
+        } else if (result[date]) {
+            delete result[date];
+        }
+    });
+    return result;
+}
+
+// Background sync: periodically pull from Gist if it changed
+function scheduleBackgroundSync() {
+    if (backgroundSyncTimer) return;
+    if (!userSession || !userSession.token || !userGistId) return;
+    backgroundSyncTimer = setInterval(checkAndPullGist, 60000);
+}
+
+async function checkAndPullGist() {
+    if (!userSession || !userSession.token || !userGistId) return;
+    try {
+        const res = await fetch(`https://api.github.com/gists/${userGistId}`, {
+            headers: {
+                'Authorization': `token ${userSession.token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        if (!res.ok) return;
+        const gist = await res.json();
+        const updated = gist.updated_at || null;
+        if (!updated || updated === lastGistUpdatedAt) return; // no change
+        const tasksFile = gist.files && gist.files['calendar-tasks.json'];
+        if (tasksFile && tasksFile.content) {
+            const remoteTasks = JSON.parse(tasksFile.content);
+            const merged = mergeTasksById(tasks, remoteTasks);
+            // Only update if something changed
+            const localStr = JSON.stringify(tasks);
+            const mergedStr = JSON.stringify(merged);
+            if (localStr !== mergedStr) {
+                tasks = merged;
+                localStorage.setItem('calendarTasks', mergedStr);
+                // Re-render active view
+                if (calendarView && !calendarView.classList.contains('hidden')) {
+                    renderCalendar();
+                } else if (agendaView && !agendaView.classList.contains('hidden')) {
+                    const m = (document.getElementById('month-filter') || {}).value || 'all';
+                    const s = (document.getElementById('status-filter') || {}).value || 'all';
+                    renderAgenda(m, s);
+                }
+            }
+            lastGistUpdatedAt = updated;
+            localStorage.setItem('lastGistUpdatedAt', lastGistUpdatedAt);
+        }
+    } catch (e) {
+        console.error('Background sync error:', e);
     }
 }
