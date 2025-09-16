@@ -226,13 +226,36 @@ function renderCalendar() {
         const dayClass = date.getMonth() === month ? 'day' : 'day other-month';
         const todayClass = isToday(date) ? ' today' : '';
         const dateKey = formatDate(date);
-        const pendingTasks = tasks[dateKey] ? tasks[dateKey].filter(task => !task.completed).length : 0;
-        const completedTasks = tasks[dateKey] ? tasks[dateKey].filter(task => task.completed).length : 0;
+        const dayTasks = tasks[dateKey] || [];
+        const pendingTasks = dayTasks.filter(task => !task.completed).length;
+        const completedTasks = dayTasks.filter(task => task.completed).length;
         const totalTasks = pendingTasks + completedTasks;
+        
+        // Generate task preview with times
+        let taskPreview = '';
+        if (dayTasks.length > 0) {
+            const sortedTasks = dayTasks
+                .filter(task => !task.completed)
+                .sort((a, b) => {
+                    if (!a.time && !b.time) return 0;
+                    if (!a.time) return 1;
+                    if (!b.time) return -1;
+                    return a.time.localeCompare(b.time);
+                })
+                .slice(0, 2); // Show max 2 tasks
+            
+            taskPreview = sortedTasks.map(task => {
+                const timeStr = task.time ? `${task.time} - ` : '';
+                const title = task.title.length > 15 ? task.title.substring(0, 15) + '...' : task.title;
+                return `<div class="task-preview" style="font-size: 10px; color: #666; margin: 1px 0;">${timeStr}${title}</div>`;
+            }).join('');
+        }
+        
         html += `<div class="${dayClass}${todayClass}" data-date="${dateKey}">
             <div class="day-content">
                 <span class="day-number">${date.getDate()}</span>
                 ${totalTasks > 0 ? `<small class="task-count">${pendingTasks} pendiente(s)</small>` : ''}
+                ${taskPreview}
                 <button class="day-add-btn" data-date="${dateKey}" title="Agregar recordatorio">+</button>
             </div>
         </div>`;
@@ -302,12 +325,24 @@ function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                 <option value="completed">Completadas</option>
             </select>
         </div>
+        <div style="margin: 15px 0;">
+            <button onclick="showTaskInputModal()" 
+                    style="background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px;">
+                ➕ Agregar Tarea Rápida
+            </button>
+        </div>
         <ul>
     `;
 
     let allTasks = Object.entries(tasks).flatMap(([date, taskList]) =>
-        taskList.map(task => ({ ...task, date }))
-    ).sort((a, b) => new Date(a.date) - new Date(b.date));
+        taskList.map(task => ({ ...task, date: date === 'undated' ? null : date }))
+    ).sort((a, b) => {
+        // Sort undated tasks first, then by date
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return -1;
+        if (!b.date) return 1;
+        return new Date(a.date) - new Date(b.date);
+    });
 
     // Apply filters
     if (filterMonth !== 'all') {
@@ -324,13 +359,26 @@ function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
 
     allTasks.forEach(task => {
         const completedClass = task.completed ? ' completed' : '';
-        const formattedDate = formatDateForDisplay(task.date);
+        const formattedDate = task.date ? formatDateForDisplay(task.date) : 'Sin fecha';
+        const timeDisplay = task.time ? ` a las ${task.time}` : '';
+        const dateStyle = !task.date ? 'color: #999; font-style: italic;' : '';
+        
         html += `<li class="task${completedClass}">
             <div class="task-info">
-                <span>${task.title} - ${formattedDate}</span>
+                <span>${task.title} - <span style="${dateStyle}">${formattedDate}${timeDisplay}</span></span>
                 <div class="task-buttons">
-                    <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')">${task.completed ? 'Desmarcar' : 'Marcar como hecho'}</button>
-                    <button onclick="deleteTask('${task.id}')" class="delete-btn">🗑️ Eliminar</button>
+                    <button onclick="showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})" 
+                            style="background: #2196F3; color: white; border: none; padding: 4px 8px; margin-right: 4px; cursor: pointer; border-radius: 3px; font-size: 12px;">
+                        ✏️ Editar
+                    </button>
+                    <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')"
+                            style="background: ${task.completed ? '#FF9800' : '#4CAF50'}; color: white; border: none; padding: 4px 8px; margin-right: 4px; cursor: pointer; border-radius: 3px; font-size: 12px;">
+                        ${task.completed ? 'Desmarcar' : 'Completar'}
+                    </button>
+                    <button onclick="deleteTask('${task.id}')" class="delete-btn"
+                            style="background: #f44336; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 12px;">
+                        🗑️ Eliminar
+                    </button>
                 </div>
             </div>
         </li>`;
@@ -352,13 +400,244 @@ function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
 
 // Add task
 function addTask(date) {
-    // Create a custom input dialog instead of using browser prompt
+    // Create a modal for task input with time option
+    showTaskInputModal(date);
+}
+
+// Show task input modal
+function showTaskInputModal(date = null, existingTask = null) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close-btn" onclick="this.parentElement.parentElement.remove()">&times;</span>
+            <h3>${existingTask ? 'Editar Tarea' : (date ? 'Nueva Tarea' : 'Nueva Tarea Rápida')}</h3>
+            <div style="margin: 15px 0;">
+                <label for="task-title-input">Título:</label>
+                <input type="text" id="task-title-input" placeholder="Ingrese el título de la tarea" 
+                       value="${existingTask ? existingTask.title : ''}" 
+                       style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            ${!date ? `
+            <div style="margin: 15px 0;">
+                <label for="task-date-input">Fecha (opcional):</label>
+                <input type="date" id="task-date-input" 
+                       value="${existingTask && existingTask.date ? existingTask.date : ''}"
+                       style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            ` : ''}
+            <div style="margin: 15px 0;">
+                <label for="task-time-input">Hora (opcional):</label>
+                <input type="time" id="task-time-input" 
+                       value="${existingTask && existingTask.time ? existingTask.time : ''}"
+                       style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="margin: 15px 0;">
+                <label>
+                    <input type="checkbox" id="task-reminder-input" ${existingTask ? (existingTask.isReminder ? 'checked' : '') : 'checked'}>
+                    Es un recordatorio
+                </label>
+            </div>
+            <div style="text-align: right; margin-top: 20px;">
+                <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                        style="background: #f44336; color: white; border: none; padding: 8px 16px; margin-right: 8px; cursor: pointer; border-radius: 4px;">
+                    Cancelar
+                </button>
+                <button onclick="saveTaskFromModal('${date || ''}', ${existingTask ? `'${existingTask.id}'` : 'null'})" 
+                        style="background: #4CAF50; color: white; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px;">
+                    ${existingTask ? 'Actualizar' : 'Guardar'}
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.getElementById('task-title-input').focus();
+}
+
+// Save task from modal
+function saveTaskFromModal(originalDate, existingTaskId) {
+    const titleInput = document.getElementById('task-title-input');
+    const dateInput = document.getElementById('task-date-input');
+    const timeInput = document.getElementById('task-time-input');
+    const reminderInput = document.getElementById('task-reminder-input');
+    
+    const title = titleInput.value.trim();
+    if (!title) {
+        alert('Por favor ingrese un título para la tarea');
+        return;
+    }
+    
+    const taskDate = dateInput ? dateInput.value : originalDate;
+    const time = timeInput.value || null;
+    const isReminder = reminderInput.checked;
+    
+    if (existingTaskId) {
+        // Update existing task
+        updateExistingTask(existingTaskId, title, taskDate, time, isReminder);
+    } else {
+        // Create new task
+        const task = {
+            id: Date.now().toString(),
+            title: title,
+            date: taskDate,
+            time: time,
+            completed: false,
+            isReminder: isReminder
+        };
+        
+        if (taskDate) {
+            // Task with date - add to calendar
+            if (!tasks[taskDate]) tasks[taskDate] = [];
+            tasks[taskDate].push(task);
+        } else {
+            // Undated task - add to special undated tasks array
+            if (!tasks['undated']) tasks['undated'] = [];
+            tasks['undated'].push(task);
+        }
+        
+        // Persist to backend or localStorage
+        if (userSession && userSession.jwt) {
+            showSyncStatus('Guardando en servidor…');
+            apiFetch('/api/tasks', {
+                method: 'POST',
+                body: JSON.stringify({
+                    title: task.title,
+                    description: null,
+                    date: task.date || null,
+                    time: task.time,
+                    completed: task.completed,
+                    is_reminder: task.isReminder,
+                    priority: task.priority || 1,
+                    tags: task.tags || []
+                })
+            }).then(async (res) => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const created = await res.json();
+                if (created && created.data && created.data.id) {
+                    const newId = String(created.data.id);
+                    if (taskDate) {
+                        const idx = tasks[taskDate].findIndex(t => t.id === task.id);
+                        if (idx !== -1) tasks[taskDate][idx].id = newId;
+                    } else {
+                        const idx = tasks['undated'].findIndex(t => t.id === task.id);
+                        if (idx !== -1) tasks['undated'][idx].id = newId;
+                    }
+                }
+                localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                showSyncStatus('Guardado ✅');
+            }).catch(err => {
+                console.error('Create task failed:', err);
+                showSyncStatus('Fallo al guardar', true);
+            }).finally(() => {
+                renderCalendar();
+                if (document.querySelector('#agenda-view:not(.hidden)')) {
+                    renderAgenda();
+                }
+            });
+        } else {
+            saveTasks();
+            renderCalendar();
+            if (document.querySelector('#agenda-view:not(.hidden)')) {
+                renderAgenda();
+            }
+        }
+        
+        // Request notification permission for reminders
+        if (isReminder && 'Notification' in window) {
+            requestNotificationPermission();
+        }
+    }
+    
+    // Close modal
+    document.querySelector('.modal').remove();
+}
+
+// Update existing task
+function updateExistingTask(taskId, title, newDate, time, isReminder) {
+    let taskFound = false;
+    let oldDate = null;
+    
+    // Find and update the task
+    Object.keys(tasks).forEach(date => {
+        const taskIndex = tasks[date].findIndex(t => t.id === taskId);
+        if (taskIndex !== -1) {
+            oldDate = date;
+            const task = tasks[date][taskIndex];
+            
+            // Update task properties
+            task.title = title;
+            task.time = time;
+            task.isReminder = isReminder;
+            
+            // If date changed, move task to new date
+            if (newDate !== oldDate) {
+                // Remove from old date
+                tasks[date].splice(taskIndex, 1);
+                if (tasks[date].length === 0 && date !== 'undated') {
+                    delete tasks[date];
+                }
+                
+                // Add to new date
+                task.date = newDate;
+                if (newDate) {
+                    if (!tasks[newDate]) tasks[newDate] = [];
+                    tasks[newDate].push(task);
+                } else {
+                    if (!tasks['undated']) tasks['undated'] = [];
+                    tasks['undated'].push(task);
+                }
+            }
+            
+            taskFound = true;
+        }
+    });
+    
+    if (taskFound) {
+        // Persist changes
+        if (userSession && userSession.jwt) {
+            showSyncStatus('Actualizando en servidor…');
+            const serverId = /^\d+$/.test(taskId) ? taskId : null;
+            if (serverId) {
+                apiFetch(`/api/tasks/${serverId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        title: title,
+                        date: newDate || null,
+                        time: time,
+                        is_reminder: isReminder
+                    })
+                }).then(res => {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                    showSyncStatus('Actualizado ✅');
+                }).catch(err => {
+                    console.error('Update task failed:', err);
+                    showSyncStatus('Fallo al actualizar', true);
+                });
+            } else {
+                pushTasksToBackend();
+            }
+        } else {
+            saveTasks();
+        }
+        
+        renderCalendar();
+        if (document.querySelector('#agenda-view:not(.hidden)')) {
+            renderAgenda();
+        }
+    }
+}
+
+// Legacy addTask function for compatibility
+function addTaskLegacy(date) {
     const title = prompt('Ingrese el título del recordatorio:');
     if (title && title.trim()) {
         const task = {
             id: Date.now().toString(),
             title: title.trim(),
             date,
+            time: null,
             completed: false,
             isReminder: true
         };

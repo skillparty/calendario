@@ -14,7 +14,8 @@ router.use(authenticate);
 const taskValidation = [
   body('title').trim().isLength({ min: 1, max: 500 }).withMessage('Title must be between 1 and 500 characters'),
   body('description').optional().isLength({ max: 2000 }).withMessage('Description must be less than 2000 characters'),
-  body('date').isISO8601().withMessage('Date must be in ISO format (YYYY-MM-DD)'),
+  body('date').optional().isISO8601().withMessage('Date must be in ISO format (YYYY-MM-DD)'),
+  body('time').optional().matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Time must be in HH:MM format'),
   body('completed').optional().isBoolean().withMessage('Completed must be a boolean'),
   body('is_reminder').optional().isBoolean().withMessage('Is_reminder must be a boolean'),
   body('priority').optional().isInt({ min: 1, max: 5 }).withMessage('Priority must be between 1 and 5'),
@@ -25,6 +26,7 @@ const updateTaskValidation = [
   body('title').optional().trim().isLength({ min: 1, max: 500 }).withMessage('Title must be between 1 and 500 characters'),
   body('description').optional().isLength({ max: 2000 }).withMessage('Description must be less than 2000 characters'),
   body('date').optional().isISO8601().withMessage('Date must be in ISO format (YYYY-MM-DD)'),
+  body('time').optional().matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Time must be in HH:MM format'),
   body('completed').optional().isBoolean().withMessage('Completed must be a boolean'),
   body('is_reminder').optional().isBoolean().withMessage('Is_reminder must be a boolean'),
   body('priority').optional().isInt({ min: 1, max: 5 }).withMessage('Priority must be between 1 and 5'),
@@ -67,7 +69,7 @@ router.get('/', queryValidation, handleValidationErrors, asyncHandler(async (req
   } = req.query;
 
   let queryText = `
-    SELECT id, title, description, date, completed, is_reminder, priority, tags, created_at, updated_at
+    SELECT id, title, description, date, time, completed, is_reminder, priority, tags, created_at, updated_at
     FROM tasks 
     WHERE user_id = $1
   `;
@@ -187,7 +189,8 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
   const {
     title,
     description = null,
-    date,
+    date = null,
+    time = null,
     completed = false,
     is_reminder = true,
     priority = 1,
@@ -195,10 +198,10 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
   } = req.body;
 
   const result = await query(
-    `INSERT INTO tasks (user_id, title, description, date, completed, is_reminder, priority, tags)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO tasks (user_id, title, description, date, time, completed, is_reminder, priority, tags)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
-    [userId, title, description, date, completed, is_reminder, priority, tags]
+    [userId, title, description, date, time, completed, is_reminder, priority, tags]
   );
 
   logger.info(`User ${userId} created task ${result.rows[0].id}`);
@@ -230,7 +233,7 @@ router.put('/:id', updateTaskValidation, handleValidationErrors, authorize(), as
   const values = [];
   let paramIndex = 1;
 
-  const allowedFields = ['title', 'description', 'date', 'completed', 'is_reminder', 'priority', 'tags'];
+  const allowedFields = ['title', 'description', 'date', 'time', 'completed', 'is_reminder', 'priority', 'tags'];
   
   for (const field of allowedFields) {
     if (req.body.hasOwnProperty(field)) {
