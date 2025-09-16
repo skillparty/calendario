@@ -628,7 +628,7 @@ async function loadTasksFromGist() {
 async function loadTasksFromBackend() {
     if (!userSession || !userSession.jwt) return;
     try {
-        const res = await apiFetch('/api/tasks?limit=1000&offset=0');
+        const res = await apiFetch('/api/tasks?limit=100&offset=0');
         if (!res.ok) throw new Error('Tasks list HTTP ' + res.status);
         const data = await res.json();
         const list = data.data || [];
@@ -660,7 +660,7 @@ async function loadTasksFromBackend() {
 // Push local tasks to backend by reconciling with server
 async function pushTasksToBackend() {
     try {
-        const res = await apiFetch('/api/tasks?limit=1000&offset=0');
+        const res = await apiFetch('/api/tasks?limit=100&offset=0');
         const server = res.ok ? (await res.json()).data : [];
         const serverById = new Map(server.map(t => [String(t.id), t]));
 
