@@ -462,12 +462,19 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 return;
             }
             
-            // SIMPLEST POSSIBLE DATA - ONLY REQUIRED FIELD
+            // Send all fields with proper defaults matching backend expectations
             const backendData = {
-                title: cleanTitle  // Only send the required field
+                title: cleanTitle,
+                description: null,  // Backend expects null, not undefined
+                date: null,  // Will be overridden if valid
+                time: null,  // Will be overridden if valid
+                completed: false,  // Boolean default
+                is_reminder: true,  // Boolean default (matches line 195 in backend)
+                priority: 1,  // Integer default (matches line 196 in backend)
+                tags: []  // Empty array default (matches line 197 in backend)
             };
             
-            // Add optional fields only if they have valid values
+            // Override with actual values if they are valid
             if (taskDate && taskDate !== '' && taskDate !== 'undefined' && taskDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
                 backendData.date = taskDate;
             }
@@ -475,6 +482,9 @@ function saveTaskFromModal(originalDate, existingTaskId) {
             if (time && time !== '' && time !== 'undefined' && time.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
                 backendData.time = time;
             }
+            
+            // Use the actual isReminder value from the form
+            backendData.is_reminder = isReminder;
             
             console.log('=== SENDING TO BACKEND ===');
             console.log('Raw JSON:', JSON.stringify(backendData));
