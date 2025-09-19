@@ -411,7 +411,10 @@ function saveTaskFromModal(originalDate, existingTaskId) {
             tasks['undated'].push(task);
         }
         
-        // Persist to backend or localStorage
+        // Always save to localStorage first for immediate persistence
+        localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+
+        // Then try to sync with backend if user is logged in
         if (userSession && userSession.jwt) {
             showSyncStatus('Guardando en servidor…');
             apiFetch('/api/tasks', {
@@ -431,19 +434,25 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 const created = await res.json();
                 if (created && created.data && created.data.id) {
                     const newId = String(created.data.id);
+                    // Update the task ID in memory and localStorage
                     if (taskDate) {
                         const idx = tasks[taskDate].findIndex(t => t.id === task.id);
-                        if (idx !== -1) tasks[taskDate][idx].id = newId;
+                        if (idx !== -1) {
+                            tasks[taskDate][idx].id = newId;
+                            localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                        }
                     } else {
                         const idx = tasks['undated'].findIndex(t => t.id === task.id);
-                        if (idx !== -1) tasks['undated'][idx].id = newId;
+                        if (idx !== -1) {
+                            tasks['undated'][idx].id = newId;
+                            localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                        }
                     }
                 }
-                localStorage.setItem('calendarTasks', JSON.stringify(tasks));
                 showSyncStatus('Guardado ✅');
             }).catch(err => {
                 console.error('Create task failed:', err);
-                showSyncStatus('Fallo al guardar', true);
+                showSyncStatus('Guardado localmente (sin conexión)', true);
             }).finally(() => {
                 renderCalendar();
                 if (document.querySelector('#agenda-view:not(.hidden)')) {
@@ -451,7 +460,7 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 }
             });
         } else {
-            saveTasks();
+            // For non-backend users, just save locally
             renderCalendar();
             if (document.querySelector('#agenda-view:not(.hidden)')) {
                 renderAgenda();
@@ -509,7 +518,10 @@ function updateExistingTask(taskId, title, newDate, time, isReminder) {
     });
     
     if (taskFound) {
-        // Persist changes
+        // Always save to localStorage first for immediate persistence
+        localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+
+        // Then try to sync with backend if user is logged in
         if (userSession && userSession.jwt) {
             showSyncStatus('Actualizando en servidor…');
             const serverId = /^\d+$/.test(taskId) ? taskId : null;
@@ -524,19 +536,16 @@ function updateExistingTask(taskId, title, newDate, time, isReminder) {
                     })
                 }).then(res => {
                     if (!res.ok) throw new Error('HTTP ' + res.status);
-                    localStorage.setItem('calendarTasks', JSON.stringify(tasks));
                     showSyncStatus('Actualizado ✅');
                 }).catch(err => {
                     console.error('Update task failed:', err);
-                    showSyncStatus('Fallo al actualizar', true);
+                    showSyncStatus('Actualizado localmente (sin conexión)', true);
                 });
             } else {
                 pushTasksToBackend();
             }
-        } else {
-            saveTasks();
         }
-        
+
         renderCalendar();
         if (document.querySelector('#agenda-view:not(.hidden)')) {
             renderAgenda();
@@ -558,7 +567,10 @@ function addTaskLegacy(date) {
         };
         if (!tasks[date]) tasks[date] = [];
         tasks[date].push(task);
-        // Persist
+        // Always save to localStorage first for immediate persistence
+        localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+
+        // Then try to sync with backend if user is logged in
         if (userSession && userSession.jwt) {
             showSyncStatus('Guardando en servidor…');
             apiFetch('/api/tasks', {
@@ -579,18 +591,19 @@ function addTaskLegacy(date) {
                 if (created && created.data && created.data.id) {
                     const newId = String(created.data.id);
                     const idx = tasks[date].findIndex(t => t.id === task.id);
-                    if (idx !== -1) tasks[date][idx].id = newId;
+                    if (idx !== -1) {
+                        tasks[date][idx].id = newId;
+                        localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                    }
                 }
-                localStorage.setItem('calendarTasks', JSON.stringify(tasks));
                 showSyncStatus('Guardado ✅');
             }).catch(err => {
                 console.error('Create task failed:', err);
-                showSyncStatus('Fallo al guardar', true);
+                showSyncStatus('Guardado localmente (sin conexión)', true);
             }).finally(() => {
                 renderCalendar();
             });
         } else {
-            saveTasks();
             renderCalendar();
         }
 
@@ -673,7 +686,10 @@ function toggleTask(id) {
             task.completed = !task.completed;
         }
     });
-    // Persist
+    // Always save to localStorage first for immediate persistence
+    localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+
+    // Then try to sync with backend if user is logged in
     if (userSession && userSession.jwt) {
         // Find the task with its date and possible numeric server id
         let found = null;
@@ -693,15 +709,12 @@ function toggleTask(id) {
             }) : pushTasksToBackend();
             Promise.resolve(doUpdate).then(res => {
                 if (res && !res.ok) throw new Error('HTTP ' + res.status);
-                localStorage.setItem('calendarTasks', JSON.stringify(tasks));
                 showSyncStatus('Actualizado ✅');
             }).catch(err => {
                 console.error('Toggle task failed:', err);
-                showSyncStatus('Fallo al actualizar', true);
+                showSyncStatus('Actualizado localmente (sin conexión)', true);
             });
         }
-    } else {
-        saveTasks();
     }
 
     // Get current filter values and re-render agenda with them
@@ -726,7 +739,10 @@ function deleteTask(id) {
             }
         });
 
-        // Persist
+        // Always save to localStorage first for immediate persistence
+        localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+
+        // Then try to sync with backend if user is logged in
         if (userSession && userSession.jwt) {
             // Locate server id if present
             const serverId = id && /^\d+$/.test(id) ? id : null;
@@ -734,14 +750,11 @@ function deleteTask(id) {
             const doDelete = serverId ? apiFetch(`/api/tasks/${serverId}`, { method: 'DELETE' }) : pushTasksToBackend();
             Promise.resolve(doDelete).then(res => {
                 if (res && !res.ok) throw new Error('HTTP ' + res.status);
-                localStorage.setItem('calendarTasks', JSON.stringify(tasks));
                 showSyncStatus('Eliminado ✅');
             }).catch(err => {
                 console.error('Delete task failed:', err);
-                showSyncStatus('Fallo al eliminar', true);
+                showSyncStatus('Eliminado localmente (sin conexión)', true);
             });
-        } else {
-            saveTasks();
         }
 
         // Get current filter values and re-render agenda with them
