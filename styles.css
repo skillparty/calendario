@@ -43,6 +43,9 @@ body {
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 header {
@@ -178,6 +181,7 @@ button:active {
 }
 
 main {
+    flex: 1;
     padding: var(--spacing-xl);
     max-width: 1200px;
     margin: 0 auto;
@@ -1099,6 +1103,183 @@ select:focus-visible {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+}
+
+/* ========================================
+   HEADER AND FOOTER STYLES
+   ======================================== */
+
+/* Header brand styling */
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.app-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-light);
+    object-fit: contain;
+}
+
+/* Footer styling */
+footer {
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-xl) var(--spacing-lg);
+    box-shadow: var(--shadow-light);
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.developer-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.developer-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-medium);
+    object-fit: contain;
+}
+
+.developer-details h3 {
+    margin: 0 0 var(--spacing-md) 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.contact-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    padding: var(--spacing-xs) 0;
+}
+
+.contact-link:hover {
+    color: var(--hunyadi-yellow);
+    transform: translateX(4px);
+}
+
+.contact-icon {
+    font-size: 1rem;
+    min-width: 20px;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.footer-bottom p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 400;
+}
+
+/* Mobile responsive for header and footer */
+@media (max-width: 768px) {
+    .header-brand {
+        justify-content: center;
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .app-logo {
+        width: 40px;
+        height: 40px;
+    }
+    
+    footer {
+        padding: var(--spacing-lg) var(--spacing-md);
+    }
+    
+    .developer-info {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-md);
+    }
+    
+    .developer-logo {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .developer-details h3 {
+        font-size: 1.125rem;
+        text-align: center;
+    }
+    
+    .contact-info {
+        align-items: center;
+    }
+    
+    .contact-link {
+        justify-content: center;
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-tertiary);
+        margin: var(--spacing-xs) 0;
+        min-height: 44px;
+        width: 100%;
+        max-width: 280px;
+    }
+    
+    .contact-link:hover {
+        background-color: var(--bg-secondary);
+        transform: translateY(-1px);
+    }
+    
+    .footer-bottom p {
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-logo {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .developer-logo {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .developer-details h3 {
+        font-size: 1rem;
+    }
+    
+    .contact-link {
+        font-size: 0.8rem;
+        max-width: 100%;
     }
 }
 

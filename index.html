@@ -6,14 +6,17 @@
     <meta name="theme-color" content="#edae49">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Calendario">
+    <meta name="apple-mobile-web-app-title" content="Calendar10">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23edae49'/><text y='70' font-size='70' text-anchor='middle' x='50'>📅</text></svg>">
-    <title>Calendario Digital</title>
+    <title>Calendar10 - Gestiona tus tareas y eventos</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header>
-        <h1>Calendario Digital</h1>
+        <div class="header-brand">
+            <img src="public/app.png" alt="Calendar10 Logo" class="app-logo">
+            <h1>Calendar10</h1>
+        </div>
         <nav>
             <div class="nav-buttons">
                 <button id="calendar-btn">📅 Calendario</button>
@@ -51,9 +54,38 @@
             <button id="add-task-modal-btn">Agregar Tarea</button>
         </div>
     </div>
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="developer-info">
+                <img src="public/logo.png" alt="skillparty Logo" class="developer-logo">
+                <div class="developer-details">
+                    <h3>Desarrollado por skillparty</h3>
+                    <div class="contact-info">
+                        <a href="https://github.com/skillparty" target="_blank" rel="noopener" class="contact-link">
+                            <span class="contact-icon">🔗</span>
+                            <span>GitHub: skillparty</span>
+                        </a>
+                        <a href="mailto:skillparty@outlook.com" class="contact-link">
+                            <span class="contact-icon">📧</span>
+                            <span>skillparty@outlook.com</span>
+                        </a>
+                        <a href="tel:+59160344144" class="contact-link">
+                            <span class="contact-icon">📱</span>
+                            <span>+591 60344144</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Calendar10 by skillparty. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
     <script>
         // Disable source maps to prevent 404 errors
-        console.log('Aplicación Calendario Digital cargada correctamente');
+        console.log('Aplicación Calendar10 cargada correctamente');
     </script>
     <script src="script.js"></script>
 </body>
