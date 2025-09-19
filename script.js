@@ -489,6 +489,16 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 if (!res.ok) {
                     const errorText = await res.text();
                     console.error('Backend error response:', errorText);
+                    
+                    // Check for authentication errors
+                    if (res.status === 401) {
+                        console.error('Authentication error - token expired or invalid');
+                        alert('Tu sesión ha expirado. Por favor, cierra sesión y vuelve a iniciar sesión.');
+                        // Optionally, auto-logout the user
+                        handleLogout();
+                        throw new Error('Authentication failed');
+                    }
+                    
                     try {
                         const errorData = JSON.parse(errorText);
                         console.error('Parsed error data:', errorData);
