@@ -437,9 +437,20 @@ function saveTaskFromModal(originalDate, existingTaskId) {
         if (userSession && userSession.jwt) {
             showSyncStatus('Guardando en servidor…');
             
+            // Validate data before sending
+            if (!task.title || task.title.trim().length === 0) {
+                alert('El título no puede estar vacío');
+                return;
+            }
+            
+            if (task.title.length > 500) {
+                alert('El título no puede tener más de 500 caracteres');
+                return;
+            }
+            
             // Prepare the data for backend - ensure no empty strings and correct types
             const backendData = {
-                title: task.title,
+                title: task.title.trim(),  // Ensure trimmed title
                 description: null,
                 date: (taskDate && taskDate !== '') ? taskDate : null,  // Ensure null, not empty string
                 time: (time && time !== '') ? time : null,  // Ensure null, not empty string
@@ -449,7 +460,30 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 tags: Array.isArray(task.tags) ? task.tags : []  // Ensure array
             };
             
+            // Additional validation
+            if (backendData.date && !backendData.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                console.error('Invalid date format:', backendData.date);
+                alert('Formato de fecha inválido. Debe ser YYYY-MM-DD');
+                return;
+            }
+            
+            if (backendData.time && !backendData.time.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+                console.error('Invalid time format:', backendData.time);
+                alert('Formato de hora inválido. Debe ser HH:MM');
+                return;
+            }
+            
             console.log('Sending to backend:', JSON.stringify(backendData, null, 2));
+            console.log('Data types:', {
+                title: typeof backendData.title,
+                description: typeof backendData.description,
+                date: typeof backendData.date,
+                time: typeof backendData.time,
+                completed: typeof backendData.completed,
+                is_reminder: typeof backendData.is_reminder,
+                priority: typeof backendData.priority,
+                tags: Array.isArray(backendData.tags) ? 'array' : typeof backendData.tags
+            });
             
             apiFetch('/api/tasks', {
                 method: 'POST',
