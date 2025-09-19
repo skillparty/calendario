@@ -55,14 +55,14 @@ async function initDatabase() {
       )
     `);
     
-    // Create tasks table
+    // Create tasks table (time column will be added by migration)
     await client.query(`
       CREATE TABLE IF NOT EXISTS tasks (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         title VARCHAR(500) NOT NULL,
         description TEXT,
-        date DATE NOT NULL,
+        date DATE,
         completed BOOLEAN DEFAULT FALSE,
         is_reminder BOOLEAN DEFAULT TRUE,
         priority INTEGER DEFAULT 1,
@@ -84,6 +84,11 @@ async function initDatabase() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, date);
     `);
+    
+    // Index for time column will be created by migration 004_add_time_column.sql
+    // await client.query(`
+    //   CREATE INDEX IF NOT EXISTS idx_tasks_time ON tasks(time);
+    // `);
     
     // Create updated_at trigger function
     await client.query(`

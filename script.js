@@ -462,12 +462,19 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 return;
             }
             
-            // Try sending ONLY the title - the absolute minimum
+            // Send complete task data to backend
             const backendData = {
-                title: cleanTitle
+                title: cleanTitle,
+                description: task.description || null,
+                date: taskDate || null,
+                time: time || null,
+                completed: false,
+                is_reminder: isReminder,
+                priority: 1,
+                tags: []
             };
             
-            console.log('=== SENDING TO BACKEND (MINIMAL) ===');
+            console.log('=== SENDING TO BACKEND (COMPLETE DATA) ===');
             console.log('Raw JSON:', JSON.stringify(backendData));
             console.log('Title type:', typeof backendData.title);
             console.log('Title length:', backendData.title.length);

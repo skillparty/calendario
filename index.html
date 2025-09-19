@@ -2,7 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#edae49">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Calendario">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23edae49'/><text y='70' font-size='70' text-anchor='middle' x='50'>📅</text></svg>">
     <title>Calendario Digital</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -10,8 +15,10 @@
     <header>
         <h1>Calendario Digital</h1>
         <nav>
-            <button id="calendar-btn">Calendario</button>
-            <button id="agenda-btn">Agenda</button>
+            <div class="nav-buttons">
+                <button id="calendar-btn">📅 Calendario</button>
+                <button id="agenda-btn">📋 Agenda</button>
+            </div>
             <div id="user-status">
                 <button id="login-btn">
                     <span id="login-icon">👤</span>

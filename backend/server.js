@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const { initDatabase } = require('./utils/db.js');
+const { runMigrations } = require('./run-migrations.js');
 const { errorHandler } = require('./middleware/errorHandler.js');
 const authRoutes = require('./routes/auth.js');
 const taskRoutes = require('./routes/tasks.js');
@@ -128,6 +129,10 @@ async function startServer() {
     // Initialize database
     await initDatabase();
     console.log('✅ Database initialized successfully');
+
+    // Run migrations
+    await runMigrations();
+    console.log('✅ Migrations completed successfully');
 
     // Start server
     app.listen(PORT, () => {

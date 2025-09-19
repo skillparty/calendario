@@ -610,3 +610,507 @@ main {
     transform: translateY(-1px);
     box-shadow: var(--shadow-medium);
 }
+
+/* ========================================
+   RESPONSIVE DESIGN - MOBILE OPTIMIZATIONS
+   ======================================== */
+
+/* Tablet and small desktop */
+@media (max-width: 1024px) {
+    main {
+        padding: var(--spacing-lg);
+    }
+    
+    .calendar-grid {
+        gap: var(--spacing-xs);
+    }
+    
+    .modal-content {
+        max-width: 90%;
+        padding: var(--spacing-lg);
+    }
+}
+
+/* Mobile devices */
+@media (max-width: 768px) {
+    /* Header optimizations */
+    header {
+        padding: var(--spacing-md) var(--spacing-md);
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+    
+    nav {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        margin-top: var(--spacing-md);
+    }
+    
+    /* Navigation buttons */
+    .nav-buttons {
+        display: flex;
+        width: 100%;
+        gap: var(--spacing-sm);
+    }
+    
+    #calendar-btn, #agenda-btn {
+        flex: 1;
+        padding: var(--spacing-md);
+        font-size: 1rem;
+        font-weight: 600;
+        min-height: 48px; /* Touch-friendly size */
+    }
+    
+    /* User status mobile layout */
+    #user-status {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    #login-btn {
+        width: 100%;
+        justify-content: center;
+        padding: var(--spacing-md);
+        font-size: 1rem;
+        min-height: 48px;
+    }
+    
+    #user-info {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+    }
+    
+    #user-name {
+        font-size: 0.875rem;
+        text-align: center;
+    }
+    
+    #logout-btn {
+        padding: var(--spacing-sm) var(--spacing-md);
+        min-height: 44px;
+    }
+    
+    /* Main content */
+    main {
+        padding: var(--spacing-md);
+    }
+    
+    /* Calendar mobile optimizations */
+    #calendar-view {
+        padding: var(--spacing-md);
+    }
+    
+    .calendar-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        text-align: center;
+    }
+    
+    .calendar-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .calendar-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .calendar-nav button {
+        min-height: 44px;
+        min-width: 44px;
+        font-size: 1.2rem;
+    }
+    
+    /* Calendar grid mobile */
+    .calendar-grid {
+        gap: 2px;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .day {
+        min-height: 60px;
+        aspect-ratio: 1;
+    }
+    
+    .day-content {
+        padding: var(--spacing-xs);
+    }
+    
+    .day-number {
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .task-count {
+        font-size: 0.625rem;
+    }
+    
+    .day-add-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 1rem;
+        top: 2px;
+        right: 2px;
+    }
+    
+    /* Agenda mobile optimizations */
+    #agenda-view {
+        padding: var(--spacing-md);
+    }
+    
+    #agenda-view h2 {
+        font-size: 1.25rem;
+        text-align: center;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .agenda-filters {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .agenda-filters select {
+        width: 100%;
+        min-width: unset;
+        padding: var(--spacing-md);
+        font-size: 1rem;
+        min-height: 48px;
+    }
+    
+    /* Task mobile layout */
+    .task {
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .task-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+    
+    .task-info {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+    }
+    
+    .task span {
+        font-size: 1rem;
+        line-height: 1.4;
+    }
+    
+    .task-actions, .task-buttons {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+    }
+    
+    .task button {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.875rem;
+        min-height: 44px;
+        flex: 1;
+        min-width: 80px;
+    }
+    
+    /* Modal mobile optimizations */
+    .modal {
+        padding: var(--spacing-md);
+        align-items: flex-start;
+        padding-top: 10vh;
+    }
+    
+    .modal-content {
+        width: 100%;
+        max-width: none;
+        max-height: 85vh;
+        padding: var(--spacing-lg);
+        margin: 0;
+        border-radius: var(--radius-md);
+    }
+    
+    .modal-content h3 {
+        font-size: 1.125rem;
+        text-align: center;
+        padding-right: var(--spacing-xl);
+    }
+    
+    .close-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.5rem;
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+    }
+    
+    .modal-task {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md);
+    }
+    
+    .modal-task strong {
+        font-size: 1rem;
+        line-height: 1.4;
+    }
+    
+    .modal-task button {
+        margin-left: 0;
+        width: 100%;
+        min-height: 44px;
+        padding: var(--spacing-sm);
+    }
+    
+    #add-task-modal-btn {
+        width: 100%;
+        padding: var(--spacing-md);
+        font-size: 1rem;
+        min-height: 48px;
+        margin-top: var(--spacing-lg);
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.25rem;
+    }
+    
+    .calendar-grid {
+        gap: 1px;
+    }
+    
+    .day {
+        min-height: 50px;
+    }
+    
+    .day-number {
+        font-size: 0.7rem;
+    }
+    
+    .task-count {
+        font-size: 0.6rem;
+    }
+    
+    .day-add-btn {
+        width: 20px;
+        height: 20px;
+        font-size: 0.875rem;
+    }
+    
+    .modal {
+        padding: var(--spacing-sm);
+        padding-top: 5vh;
+    }
+    
+    .modal-content {
+        padding: var(--spacing-md);
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    /* Remove hover effects on touch devices */
+    button:hover,
+    .day:hover,
+    .task:hover,
+    .modal-task:hover {
+        transform: none;
+        box-shadow: var(--shadow-light);
+    }
+    
+    /* Increase touch targets */
+    button {
+        min-height: 44px;
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+    
+    .day-content {
+        min-height: 44px;
+    }
+    
+    /* Add active states for better feedback */
+    button:active {
+        transform: scale(0.98);
+        background-color: var(--bg-tertiary);
+    }
+    
+    .day:active {
+        transform: scale(0.98);
+        background-color: var(--bg-tertiary);
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .modal {
+        padding-top: 2vh;
+    }
+    
+    .modal-content {
+        max-height: 90vh;
+    }
+    
+    .calendar-grid .day {
+        min-height: 45px;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    /* Optimize for retina displays */
+    .day-add-btn,
+    .close-btn,
+    button {
+        border: 0.5px solid transparent;
+    }
+}
+
+/* Form and input optimizations for mobile */
+input, textarea, select {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    min-height: 48px;
+    box-sizing: border-box;
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--hunyadi-yellow);
+    box-shadow: 0 0 0 3px rgba(237, 174, 73, 0.1);
+}
+
+@media (max-width: 768px) {
+    input, textarea, select {
+        font-size: 16px; /* Prevents zoom on iOS */
+        width: 100%;
+    }
+}
+
+/* Quick add task form mobile optimization */
+.quick-add-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .quick-add-form {
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md);
+    }
+    
+    .quick-add-form input {
+        min-height: 48px;
+        font-size: 16px;
+    }
+    
+    .quick-add-form button {
+        min-height: 48px;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+}
+
+/* Loading states for better UX */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--border-color);
+    border-top: 2px solid var(--hunyadi-yellow);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Swipe gestures hint for mobile */
+@media (max-width: 768px) {
+    .swipe-hint {
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        padding: var(--spacing-sm);
+        margin-bottom: var(--spacing-md);
+    }
+}
+
+/* Better focus indicators for accessibility */
+button:focus-visible,
+.day:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--hunyadi-yellow);
+    outline-offset: 2px;
+}
+
+/* Sticky header on mobile for better navigation */
+@media (max-width: 768px) {
+    header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #1c1c1e;
+        --bg-secondary: #000000;
+        --bg-tertiary: #2c2c2e;
+        --text-primary: #ffffff;
+        --text-secondary: #ebebf5;
+        --text-muted: #8e8e93;
+        --border-color: #38383a;
+    }
+}
