@@ -377,11 +377,23 @@ function saveTaskFromModal(originalDate, existingTaskId) {
     const timeInput = document.getElementById('task-time-input');
     const reminderInput = document.getElementById('task-reminder-input');
     
-    const title = titleInput.value.trim();
-    if (!title) {
+    // Get and validate title
+    if (!titleInput || !titleInput.value) {
         alert('Por favor ingrese un título para la tarea');
         return;
     }
+    
+    const title = titleInput.value.trim();
+    if (!title || title.length === 0) {
+        alert('Por favor ingrese un título para la tarea');
+        return;
+    }
+    
+    console.log('Title validation:', {
+        raw: titleInput.value,
+        trimmed: title,
+        length: title.length
+    });
     
     // Handle date properly - ensure we never send empty string
     let taskDate = null;
@@ -437,53 +449,38 @@ function saveTaskFromModal(originalDate, existingTaskId) {
         if (userSession && userSession.jwt) {
             showSyncStatus('Guardando en servidor…');
             
-            // Validate data before sending
-            if (!task.title || task.title.trim().length === 0) {
+            // Double-check title is valid
+            const cleanTitle = task.title.trim();
+            if (!cleanTitle || cleanTitle.length === 0) {
+                console.error('Title is empty after trim!');
                 alert('El título no puede estar vacío');
                 return;
             }
             
-            if (task.title.length > 500) {
+            if (cleanTitle.length > 500) {
                 alert('El título no puede tener más de 500 caracteres');
                 return;
             }
             
-            // Prepare the data for backend - ensure no empty strings and correct types
+            // SIMPLEST POSSIBLE DATA - ONLY REQUIRED FIELD
             const backendData = {
-                title: task.title.trim(),  // Ensure trimmed title
-                description: null,
-                date: (taskDate && taskDate !== '') ? taskDate : null,  // Ensure null, not empty string
-                time: (time && time !== '') ? time : null,  // Ensure null, not empty string
-                completed: Boolean(task.completed),  // Ensure boolean
-                is_reminder: Boolean(task.isReminder),  // Ensure boolean
-                priority: parseInt(task.priority || 1, 10),  // Ensure integer
-                tags: Array.isArray(task.tags) ? task.tags : []  // Ensure array
+                title: cleanTitle  // Only send the required field
             };
             
-            // Additional validation
-            if (backendData.date && !backendData.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                console.error('Invalid date format:', backendData.date);
-                alert('Formato de fecha inválido. Debe ser YYYY-MM-DD');
-                return;
+            // Add optional fields only if they have valid values
+            if (taskDate && taskDate !== '' && taskDate !== 'undefined' && taskDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                backendData.date = taskDate;
             }
             
-            if (backendData.time && !backendData.time.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-                console.error('Invalid time format:', backendData.time);
-                alert('Formato de hora inválido. Debe ser HH:MM');
-                return;
+            if (time && time !== '' && time !== 'undefined' && time.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+                backendData.time = time;
             }
             
-            console.log('Sending to backend:', JSON.stringify(backendData, null, 2));
-            console.log('Data types:', {
-                title: typeof backendData.title,
-                description: typeof backendData.description,
-                date: typeof backendData.date,
-                time: typeof backendData.time,
-                completed: typeof backendData.completed,
-                is_reminder: typeof backendData.is_reminder,
-                priority: typeof backendData.priority,
-                tags: Array.isArray(backendData.tags) ? 'array' : typeof backendData.tags
-            });
+            console.log('=== SENDING TO BACKEND ===');
+            console.log('Raw JSON:', JSON.stringify(backendData));
+            console.log('Parsed object:', backendData);
+            console.log('Title length:', backendData.title.length);
+            console.log('Title value:', `"${backendData.title}"`);
             
             apiFetch('/api/tasks', {
                 method: 'POST',
