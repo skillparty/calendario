@@ -462,32 +462,17 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 return;
             }
             
-            // Build the backend data object with only the required field first
+            // Use EXACT same format as addTaskLegacy which works (lines 659-673)
             const backendData = {
-                title: cleanTitle
+                title: cleanTitle,
+                description: null,
+                date: (taskDate && taskDate !== 'undated' && taskDate !== '') ? taskDate : null,
+                time: (time && time !== '') ? time : null,
+                completed: Boolean(false),
+                is_reminder: Boolean(isReminder),
+                priority: parseInt(1, 10),
+                tags: []
             };
-            
-            // Add optional fields only if they have valid, non-null values
-            // The backend will apply its own defaults for missing fields
-            
-            // Only add date if it's a valid date string
-            if (taskDate && taskDate !== '' && taskDate !== 'undefined' && taskDate !== 'undated') {
-                if (taskDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                    backendData.date = taskDate;
-                }
-            }
-            
-            // Only add time if it's a valid time string
-            if (time && time !== '' && time !== 'undefined') {
-                if (time.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-                    backendData.time = time;
-                }
-            }
-            
-            // Always include these boolean/number fields with proper types
-            backendData.completed = false;
-            backendData.is_reminder = Boolean(isReminder);
-            backendData.priority = 3;  // Medium priority as default
             
             console.log('=== SENDING TO BACKEND ===');
             console.log('Raw JSON:', JSON.stringify(backendData));
