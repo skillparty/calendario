@@ -462,29 +462,32 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 return;
             }
             
-            // Send all fields with proper defaults matching backend expectations
+            // Build the backend data object with only the required field first
             const backendData = {
-                title: cleanTitle,
-                description: null,  // Backend expects null, not undefined
-                date: null,  // Will be overridden if valid
-                time: null,  // Will be overridden if valid
-                completed: false,  // Boolean default
-                is_reminder: true,  // Boolean default (matches line 195 in backend)
-                priority: 1,  // Integer default (matches line 196 in backend)
-                tags: []  // Empty array default (matches line 197 in backend)
+                title: cleanTitle
             };
             
-            // Override with actual values if they are valid
-            if (taskDate && taskDate !== '' && taskDate !== 'undefined' && taskDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                backendData.date = taskDate;
+            // Add optional fields only if they have valid, non-null values
+            // The backend will apply its own defaults for missing fields
+            
+            // Only add date if it's a valid date string
+            if (taskDate && taskDate !== '' && taskDate !== 'undefined' && taskDate !== 'undated') {
+                if (taskDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    backendData.date = taskDate;
+                }
             }
             
-            if (time && time !== '' && time !== 'undefined' && time.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-                backendData.time = time;
+            // Only add time if it's a valid time string
+            if (time && time !== '' && time !== 'undefined') {
+                if (time.match(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+                    backendData.time = time;
+                }
             }
             
-            // Use the actual isReminder value from the form
-            backendData.is_reminder = isReminder;
+            // Always include these boolean/number fields with proper types
+            backendData.completed = false;
+            backendData.is_reminder = Boolean(isReminder);
+            backendData.priority = 3;  // Medium priority as default
             
             console.log('=== SENDING TO BACKEND ===');
             console.log('Raw JSON:', JSON.stringify(backendData));
