@@ -1371,6 +1371,8 @@ function updateLoginButton() {
 
         if (userInfo) {
             userInfo.style.display = 'flex';
+            userInfo.classList.remove('hidden');
+            userInfo.classList.add('show');
             console.log('👁️ User info shown');
         }
 
@@ -1424,6 +1426,8 @@ function updateLoginButton() {
 
         if (userInfo) {
             userInfo.style.display = 'none';
+            userInfo.classList.add('hidden');
+            userInfo.classList.remove('show');
             console.log('🙈 User info hidden');
         }
 
