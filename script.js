@@ -422,8 +422,8 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 body: JSON.stringify({
                     title: task.title,
                     description: null,
-                    date: task.date || null,
-                    time: task.time,
+                    date: (task.date && task.date !== 'undated') ? task.date : null,
+                    time: task.time || null,
                     completed: task.completed,
                     is_reminder: task.isReminder,
                     priority: task.priority || 1,
@@ -530,8 +530,8 @@ function updateExistingTask(taskId, title, newDate, time, isReminder) {
                     method: 'PUT',
                     body: JSON.stringify({
                         title: title,
-                        date: newDate || null,
-                        time: time,
+                        date: (newDate && newDate !== 'undated') ? newDate : null,
+                        time: time || null,
                         is_reminder: isReminder
                     })
                 }).then(res => {
@@ -578,7 +578,8 @@ function addTaskLegacy(date) {
                 body: JSON.stringify({
                     title: task.title,
                     description: null,
-                    date: task.date,
+                    date: (task.date && task.date !== 'undated') ? task.date : null,
+                    time: task.time || null,
                     completed: task.completed,
                     is_reminder: task.isReminder,
                     priority: task.priority || 1,
@@ -841,13 +842,14 @@ async function loadTasksFromBackend() {
         const list = data.data || [];
         const byDate = {};
         list.forEach(t => {
-            const dateKey = (t.date || '').slice(0,10);
+            const dateKey = (t.date || '').slice(0,10) || 'undated';
             if (!byDate[dateKey]) byDate[dateKey] = [];
             byDate[dateKey].push({
                 id: String(t.id),
                 title: t.title,
                 description: t.description || '',
-                date: dateKey,
+                date: dateKey === 'undated' ? null : dateKey,
+                time: t.time || null,
                 completed: !!t.completed,
                 isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
                 priority: t.priority || 1,
@@ -884,7 +886,8 @@ async function pushTasksToBackend() {
                     body: JSON.stringify({
                         title: t.title,
                         description: t.description || null,
-                        date: t.date,
+                        date: (t.date && t.date !== 'undated') ? t.date : null,
+                        time: t.time || null,
                         completed: !!t.completed,
                         is_reminder: t.isReminder !== undefined ? t.isReminder : true,
                         priority: t.priority || 1,
@@ -896,7 +899,8 @@ async function pushTasksToBackend() {
                 if (existing.title !== t.title) diff.title = t.title;
                 if ((existing.description||'') !== (t.description||'')) diff.description = t.description || null;
                 const exDate = (existing.date||'').slice(0,10);
-                if (exDate !== t.date) diff.date = t.date;
+                const taskDate = (t.date && t.date !== 'undated') ? t.date : null;
+                if (exDate !== taskDate) diff.date = taskDate;
                 if (!!existing.completed !== !!t.completed) diff.completed = !!t.completed;
                 const exRem = existing.is_reminder !== undefined ? existing.is_reminder : true;
                 const loRem = t.isReminder !== undefined ? t.isReminder : true;
