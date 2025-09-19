@@ -383,9 +383,28 @@ function saveTaskFromModal(originalDate, existingTaskId) {
         return;
     }
     
-    const taskDate = dateInput ? dateInput.value : originalDate;
+    // Handle date properly - ensure we never send empty string
+    let taskDate = null;
+    if (dateInput && dateInput.value && dateInput.value.trim() !== '') {
+        taskDate = dateInput.value;
+    } else if (originalDate && originalDate.trim() !== '') {
+        taskDate = originalDate;
+    }
+    // If taskDate is still empty string, set it to null
+    if (taskDate === '') {
+        taskDate = null;
+    }
+    
     const time = timeInput.value || null;
     const isReminder = reminderInput.checked;
+    
+    console.log('saveTaskFromModal - Raw values:', {
+        originalDate,
+        dateInputValue: dateInput ? dateInput.value : 'no input',
+        taskDate,
+        time,
+        isReminder
+    });
     
     if (existingTaskId) {
         // Update existing task
@@ -417,20 +436,30 @@ function saveTaskFromModal(originalDate, existingTaskId) {
         // Then try to sync with backend if user is logged in
         if (userSession && userSession.jwt) {
             showSyncStatus('Guardando en servidor…');
+            
+            // Prepare the data for backend - ensure no empty strings
+            const backendData = {
+                title: task.title,
+                description: null,
+                date: (taskDate && taskDate !== '') ? taskDate : null,  // Ensure null, not empty string
+                time: (time && time !== '') ? time : null,  // Ensure null, not empty string
+                completed: task.completed,
+                is_reminder: task.isReminder,
+                priority: task.priority || 1,
+                tags: task.tags || []
+            };
+            
+            console.log('Sending to backend:', JSON.stringify(backendData, null, 2));
+            
             apiFetch('/api/tasks', {
                 method: 'POST',
-                body: JSON.stringify({
-                    title: task.title,
-                    description: null,
-                    date: (task.date && task.date !== 'undated') ? task.date : null,
-                    time: task.time || null,
-                    completed: task.completed,
-                    is_reminder: task.isReminder,
-                    priority: task.priority || 1,
-                    tags: task.tags || []
-                })
+                body: JSON.stringify(backendData)
             }).then(async (res) => {
-                if (!res.ok) throw new Error('HTTP ' + res.status);
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    console.error('Backend error response:', errorText);
+                    throw new Error('HTTP ' + res.status);
+                }
                 const created = await res.json();
                 if (created && created.data && created.data.id) {
                     const newId = String(created.data.id);
@@ -530,8 +559,8 @@ function updateExistingTask(taskId, title, newDate, time, isReminder) {
                     method: 'PUT',
                     body: JSON.stringify({
                         title: title,
-                        date: (newDate && newDate !== 'undated') ? newDate : null,
-                        time: time || null,
+                        date: (newDate && newDate !== 'undated' && newDate !== '') ? newDate : null,
+                        time: (time && time !== '') ? time : null,
                         is_reminder: isReminder
                     })
                 }).then(res => {
@@ -578,8 +607,8 @@ function addTaskLegacy(date) {
                 body: JSON.stringify({
                     title: task.title,
                     description: null,
-                    date: (task.date && task.date !== 'undated') ? task.date : null,
-                    time: task.time || null,
+                    date: (task.date && task.date !== 'undated' && task.date !== '') ? task.date : null,
+                    time: (task.time && task.time !== '') ? task.time : null,
                     completed: task.completed,
                     is_reminder: task.isReminder,
                     priority: task.priority || 1,
@@ -886,8 +915,8 @@ async function pushTasksToBackend() {
                     body: JSON.stringify({
                         title: t.title,
                         description: t.description || null,
-                        date: (t.date && t.date !== 'undated') ? t.date : null,
-                        time: t.time || null,
+                        date: (t.date && t.date !== 'undated' && t.date !== '') ? t.date : null,
+                        time: (t.time && t.time !== '') ? t.time : null,
                         completed: !!t.completed,
                         is_reminder: t.isReminder !== undefined ? t.isReminder : true,
                         priority: t.priority || 1,
