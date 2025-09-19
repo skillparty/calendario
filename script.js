@@ -460,12 +460,18 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                     console.error('Backend error response:', errorText);
                     try {
                         const errorData = JSON.parse(errorText);
-                        console.error('Validation errors:', errorData);
+                        console.error('Parsed error data:', errorData);
+                        if (errorData.details) {
+                            console.error('Validation details:', errorData.details);
+                            errorData.details.forEach(detail => {
+                                console.error(`Field '${detail.path}': ${detail.msg}`);
+                            });
+                        }
                         if (errorData.errors) {
-                            console.error('Specific validation failures:', errorData.errors);
+                            console.error('Additional errors:', errorData.errors);
                         }
                     } catch (e) {
-                        console.error('Could not parse error response');
+                        console.error('Could not parse error response as JSON');
                     }
                     throw new Error('HTTP ' + res.status);
                 }
