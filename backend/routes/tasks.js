@@ -48,6 +48,9 @@ const queryValidation = [
 function handleValidationErrors(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    // Log validation errors for debugging
+    logger.error('Validation errors:', errors.array());
+    logger.error('Request body:', req.body);
     throw new AppError('Validation failed', 400, errors.array());
   }
   next();

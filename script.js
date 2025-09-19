@@ -462,23 +462,17 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 return;
             }
             
-            // Use EXACT same format as addTaskLegacy which works (lines 659-673)
+            // Try sending ONLY the title - the absolute minimum
             const backendData = {
-                title: cleanTitle,
-                description: null,
-                date: (taskDate && taskDate !== 'undated' && taskDate !== '') ? taskDate : null,
-                time: (time && time !== '') ? time : null,
-                completed: Boolean(false),
-                is_reminder: Boolean(isReminder),
-                priority: parseInt(1, 10),
-                tags: []
+                title: cleanTitle
             };
             
-            console.log('=== SENDING TO BACKEND ===');
+            console.log('=== SENDING TO BACKEND (MINIMAL) ===');
             console.log('Raw JSON:', JSON.stringify(backendData));
-            console.log('Parsed object:', backendData);
+            console.log('Title type:', typeof backendData.title);
             console.log('Title length:', backendData.title.length);
             console.log('Title value:', `"${backendData.title}"`);
+            console.log('Title charCodes:', Array.from(backendData.title).map(c => c.charCodeAt(0)));
             
             apiFetch('/api/tasks', {
                 method: 'POST',
