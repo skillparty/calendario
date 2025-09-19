@@ -437,16 +437,16 @@ function saveTaskFromModal(originalDate, existingTaskId) {
         if (userSession && userSession.jwt) {
             showSyncStatus('Guardando en servidor…');
             
-            // Prepare the data for backend - ensure no empty strings
+            // Prepare the data for backend - ensure no empty strings and correct types
             const backendData = {
                 title: task.title,
                 description: null,
                 date: (taskDate && taskDate !== '') ? taskDate : null,  // Ensure null, not empty string
                 time: (time && time !== '') ? time : null,  // Ensure null, not empty string
-                completed: task.completed,
-                is_reminder: task.isReminder,
-                priority: task.priority || 1,
-                tags: task.tags || []
+                completed: Boolean(task.completed),  // Ensure boolean
+                is_reminder: Boolean(task.isReminder),  // Ensure boolean
+                priority: parseInt(task.priority || 1, 10),  // Ensure integer
+                tags: Array.isArray(task.tags) ? task.tags : []  // Ensure array
             };
             
             console.log('Sending to backend:', JSON.stringify(backendData, null, 2));
@@ -458,6 +458,15 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 if (!res.ok) {
                     const errorText = await res.text();
                     console.error('Backend error response:', errorText);
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        console.error('Validation errors:', errorData);
+                        if (errorData.errors) {
+                            console.error('Specific validation failures:', errorData.errors);
+                        }
+                    } catch (e) {
+                        console.error('Could not parse error response');
+                    }
                     throw new Error('HTTP ' + res.status);
                 }
                 const created = await res.json();
@@ -609,10 +618,10 @@ function addTaskLegacy(date) {
                     description: null,
                     date: (task.date && task.date !== 'undated' && task.date !== '') ? task.date : null,
                     time: (task.time && task.time !== '') ? task.time : null,
-                    completed: task.completed,
-                    is_reminder: task.isReminder,
-                    priority: task.priority || 1,
-                    tags: task.tags || []
+                    completed: Boolean(task.completed),
+                    is_reminder: Boolean(task.isReminder),
+                    priority: parseInt(task.priority || 1, 10),
+                    tags: Array.isArray(task.tags) ? task.tags : []
                 })
             }).then(async (res) => {
                 if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -917,10 +926,10 @@ async function pushTasksToBackend() {
                         description: t.description || null,
                         date: (t.date && t.date !== 'undated' && t.date !== '') ? t.date : null,
                         time: (t.time && t.time !== '') ? t.time : null,
-                        completed: !!t.completed,
-                        is_reminder: t.isReminder !== undefined ? t.isReminder : true,
-                        priority: t.priority || 1,
-                        tags: t.tags || []
+                        completed: Boolean(t.completed),
+                        is_reminder: t.isReminder !== undefined ? Boolean(t.isReminder) : true,
+                        priority: parseInt(t.priority || 1, 10),
+                        tags: Array.isArray(t.tags) ? t.tags : []
                     })
                 });
             } else {
