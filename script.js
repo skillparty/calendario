@@ -68,6 +68,39 @@ document.addEventListener('DOMContentLoaded', () => {
     if (calendarBtn) calendarBtn.addEventListener('click', showCalendar);
     if (agendaBtn) agendaBtn.addEventListener('click', showAgenda);
     if (loginBtn) loginBtn.addEventListener('click', handleLogin);
+    
+    // Add global event delegation for calendar interactions
+    document.addEventListener('click', (e) => {
+        // Handle calendar day-add-btn clicks
+        if (e.target.classList.contains('day-add-btn')) {
+            e.stopPropagation();
+            const date = e.target.dataset.date;
+            if (date) {
+                // Check if the date is in the past
+                const selectedDate = new Date(date + 'T00:00:00');
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+                
+                if (selectedDate < today) {
+                    alert('No puedes agregar tareas a fechas pasadas. Por favor selecciona la fecha actual o una fecha futura.');
+                    return;
+                }
+                
+                addTask(date);
+            }
+            return;
+        }
+        
+        // Handle calendar day content clicks
+        if (e.target.closest('.day-content') && !e.target.classList.contains('day-add-btn')) {
+            const dayContent = e.target.closest('.day-content');
+            const day = dayContent.closest('.day:not(.other-month)');
+            if (day && day.dataset.date && calendarView && !calendarView.classList.contains('hidden')) {
+                e.stopPropagation();
+                showDayTasks(day.dataset.date);
+            }
+        }
+    });
 
     handleOAuthCallback();
     updateLoginButton();
@@ -89,6 +122,17 @@ document.addEventListener('DOMContentLoaded', () => {
 function showCalendar() {
     calendarView.classList.remove('hidden');
     agendaView.classList.add('hidden');
+    
+    // Update navigation button states
+    if (calendarBtn) {
+        calendarBtn.classList.add('active');
+        calendarBtn.setAttribute('aria-pressed', 'true');
+    }
+    if (agendaBtn) {
+        agendaBtn.classList.remove('active');
+        agendaBtn.setAttribute('aria-pressed', 'false');
+    }
+    
     renderCalendar();
 }
 
@@ -96,6 +140,16 @@ function showCalendar() {
 function showAgenda() {
     agendaView.classList.remove('hidden');
     calendarView.classList.add('hidden');
+    
+    // Update navigation button states
+    if (agendaBtn) {
+        agendaBtn.classList.add('active');
+        agendaBtn.setAttribute('aria-pressed', 'true');
+    }
+    if (calendarBtn) {
+        calendarBtn.classList.remove('active');
+        calendarBtn.setAttribute('aria-pressed', 'false');
+    }
 
     // Try to preserve existing filter values if they exist
     const existingMonthFilter = document.getElementById('month-filter');
@@ -122,10 +176,14 @@ function renderCalendar() {
     startDate.setDate(startDate.getDate() - firstDay.getDay());
 
     let html = `
-        <div class="calendar-header">
-            <button id="prev-month"><</button>
+        <div class="calendar-nav">
+            <button id="prev-month" title="Mes anterior">
+                ← ${getMonthName(month === 0 ? 11 : month - 1)}
+            </button>
             <h2>${getMonthName(month)} ${year}</h2>
-            <button id="next-month">></button>
+            <button id="next-month" title="Mes siguiente">
+                ${getMonthName(month === 11 ? 0 : month + 1)} →
+            </button>
         </div>
         <div class="calendar-grid">
             <div class="day">Dom</div>
@@ -137,9 +195,19 @@ function renderCalendar() {
             <div class="day">Sáb</div>
     `;
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
+    
     for (let date = new Date(startDate); date <= lastDay; date.setDate(date.getDate() + 1)) {
         const dayClass = date.getMonth() === month ? 'day' : 'day other-month';
         const todayClass = isToday(date) ? ' today' : '';
+        
+        // Check if date is in the past
+        const currentDate = new Date(date);
+        currentDate.setHours(0, 0, 0, 0);
+        const isPastDate = currentDate < today;
+        const pastClass = isPastDate ? ' past-date' : '';
+        
         const dateKey = formatDate(date);
         const dayTasks = tasks[dateKey] || [];
         const pendingTasks = dayTasks.filter(task => !task.completed).length;
@@ -166,12 +234,12 @@ function renderCalendar() {
             }).join('');
         }
         
-        html += `<div class="${dayClass}${todayClass}" data-date="${dateKey}">
+        html += `<div class="${dayClass}${todayClass}${pastClass}" data-date="${dateKey}">
             <div class="day-content">
                 <span class="day-number">${date.getDate()}</span>
                 ${totalTasks > 0 ? `<small class="task-count">${pendingTasks} pendiente(s)</small>` : ''}
                 ${taskPreview}
-                <button class="day-add-btn" data-date="${dateKey}" title="Agregar recordatorio">+</button>
+                ${!isPastDate ? `<button class="day-add-btn" data-date="${dateKey}" title="Agregar recordatorio">+</button>` : ''}
             </div>
         </div>`;
     }
@@ -189,64 +257,38 @@ function renderCalendar() {
         renderCalendar();
     });
 
-    // Add event listeners for day clicks (show task list)
-    document.querySelectorAll('.day:not(.other-month)').forEach(day => {
-        const dayContent = day.querySelector('.day-content');
-        if (dayContent) {
-            dayContent.addEventListener('click', (e) => {
-                // Only trigger if not clicking on the + button
-                if (!e.target.classList.contains('day-add-btn')) {
-                    e.stopPropagation();
-                    const date = day.dataset.date;
-                    showDayTasks(date);
-                }
-            });
-        }
-    });
-
-    // Add event listeners for + buttons (add task)
-    document.querySelectorAll('.day-add-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent triggering the day click
-            const date = btn.dataset.date;
-            addTask(date);
-        });
-    });
+    // Add event listeners for day clicks and + buttons using event delegation
+    // This prevents multiple listeners from being added on re-renders
 }
 
 // Render agenda
 function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     let html = `
-        <h2>Agenda</h2>
-        <div class="agenda-filters">
-            <select id="month-filter">
-                <option value="all">Todos los meses</option>
-                <option value="0">Enero</option>
-                <option value="1">Febrero</option>
-                <option value="2">Marzo</option>
-                <option value="3">Abril</option>
-                <option value="4">Mayo</option>
-                <option value="5">Junio</option>
-                <option value="6">Julio</option>
-                <option value="7">Agosto</option>
-                <option value="8">Septiembre</option>
-                <option value="9">Octubre</option>
-                <option value="10">Noviembre</option>
-                <option value="11">Diciembre</option>
-            </select>
-            <select id="status-filter">
-                <option value="all">Todas las tareas</option>
-                <option value="pending">Pendientes</option>
-                <option value="completed">Completadas</option>
-            </select>
-        </div>
-        <div style="margin: 15px 0;">
-            <button onclick="showTaskInputModal()" 
-                    style="background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px;">
-                ➕ Agregar Tarea Rápida
-            </button>
-        </div>
-        <ul>
+        <div class="agenda-main">
+            <h2>📋 Agenda de Tareas</h2>
+            <div class="agenda-filters">
+                <select id="month-filter">
+                    <option value="all">Todos los meses</option>
+                    <option value="0">Enero</option>
+                    <option value="1">Febrero</option>
+                    <option value="2">Marzo</option>
+                    <option value="3">Abril</option>
+                    <option value="4">Mayo</option>
+                    <option value="5">Junio</option>
+                    <option value="6">Julio</option>
+                    <option value="7">Agosto</option>
+                    <option value="8">Septiembre</option>
+                    <option value="9">Octubre</option>
+                    <option value="10">Noviembre</option>
+                    <option value="11">Diciembre</option>
+                </select>
+                <select id="status-filter">
+                    <option value="all">Todas las tareas</option>
+                    <option value="pending">Pendientes</option>
+                    <option value="completed">Completadas</option>
+                </select>
+            </div>
+            <ul class="task-list">
     `;
 
     let allTasks = Object.entries(tasks).flatMap(([date, taskList]) =>
@@ -280,25 +322,65 @@ function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
         
         html += `<li class="task${completedClass}">
             <div class="task-info">
-                <span>${task.title} - <span style="${dateStyle}">${formattedDate}${timeDisplay}</span></span>
+                <div class="task-content">
+                    <h4 class="task-title">${task.title}</h4>
+                    <p class="task-meta" style="${dateStyle}">
+                        <span class="task-date">${formattedDate}</span>
+                        ${timeDisplay ? `<span class="task-time">${timeDisplay}</span>` : ''}
+                    </p>
+                </div>
                 <div class="task-buttons">
                     <button onclick="showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})" 
-                            style="background: #2196F3; color: white; border: none; padding: 4px 8px; margin-right: 4px; cursor: pointer; border-radius: 3px; font-size: 12px;">
+                            class="btn-edit" title="Editar tarea">
                         ✏️ Editar
                     </button>
                     <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')"
-                            style="background: ${task.completed ? '#FF9800' : '#4CAF50'}; color: white; border: none; padding: 4px 8px; margin-right: 4px; cursor: pointer; border-radius: 3px; font-size: 12px;">
-                        ${task.completed ? 'Desmarcar' : 'Completar'}
+                            class="btn-toggle" title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}">
+                        ${task.completed ? '↩️ Desmarcar' : '✅ Completar'}
                     </button>
-                    <button onclick="deleteTask('${task.id}')" class="delete-btn"
-                            style="background: #f44336; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 12px;">
+                    <button onclick="deleteTask('${task.id}')" class="btn-delete" title="Eliminar tarea">
                         🗑️ Eliminar
                     </button>
                 </div>
             </div>
         </li>`;
     });
-    html += '</ul>';
+    html += `
+            </ul>
+        </div>
+        <div class="agenda-sidebar">
+            <h3>🚀 Acciones Rápidas</h3>
+            <div class="quick-actions">
+                <button onclick="showTaskInputModal()" class="btn-primary btn-full">
+                    ➕ Agregar Tarea Rápida
+                </button>
+                <button onclick="showPdfExportModal()" class="btn-secondary btn-full">
+                    📄 Exportar PDF
+                </button>
+            </div>
+            
+            <h3>📊 Estadísticas</h3>
+            <div class="stats-container">
+                <div class="stat-item">
+                    <span class="stat-number">${allTasks.length}</span>
+                    <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${allTasks.filter(t => t.completed).length}</span>
+                    <span class="stat-label">Completadas</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${allTasks.filter(t => !t.completed).length}</span>
+                    <span class="stat-label">Pendientes</span>
+                </div>
+            </div>
+            
+            <h3>📅 Próximas Tareas</h3>
+            <div class="upcoming-tasks">
+                ${getUpcomingTasksHTML(allTasks)}
+            </div>
+        </div>
+    `;
     agendaView.innerHTML = html;
 
     // Add event listeners for filters
@@ -311,6 +393,45 @@ function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     document.getElementById('status-filter').addEventListener('change', (e) => {
         renderAgenda(filterMonth, e.target.value);
     });
+}
+
+// Generate upcoming tasks HTML for sidebar
+function getUpcomingTasksHTML(allTasks) {
+    const today = new Date();
+    const upcomingTasks = allTasks
+        .filter(task => !task.completed && task.date)
+        .filter(task => {
+            const taskDate = new Date(task.date + 'T00:00:00');
+            return taskDate >= today;
+        })
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(0, 5);
+    
+    if (upcomingTasks.length === 0) {
+        return '<p class="no-upcoming">No hay tareas próximas programadas</p>';
+    }
+    
+    return upcomingTasks.map(task => {
+        const taskDate = new Date(task.date + 'T00:00:00');
+        const isToday = taskDate.toDateString() === today.toDateString();
+        const isTomorrow = taskDate.toDateString() === new Date(today.getTime() + 24*60*60*1000).toDateString();
+        
+        let dateLabel = '';
+        if (isToday) {
+            dateLabel = 'Hoy';
+        } else if (isTomorrow) {
+            dateLabel = 'Mañana';
+        } else {
+            dateLabel = formatDateForDisplay(task.date);
+        }
+        
+        return `
+            <div class="upcoming-task" onclick="showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})">
+                <div class="upcoming-task-title">${task.title}</div>
+                <div class="upcoming-task-date">${dateLabel}${task.time ? ` - ${task.time}` : ''}</div>
+            </div>
+        `;
+    }).join('');
 }
 
 // Add task
@@ -634,6 +755,12 @@ function updateExistingTask(taskId, title, newDate, time, isReminder) {
         if (document.querySelector('#agenda-view:not(.hidden)')) {
             renderAgenda();
         }
+    }
+    
+    // Close modal after updating task
+    const modal = document.querySelector('.modal');
+    if (modal) {
+        modal.remove();
     }
 }
 
@@ -1813,4 +1940,322 @@ function resetBackgroundTimer() {
     if (userSession && userSession.token && userGistId) {
         backgroundSyncTimer = setInterval(checkAndPullGist, currentSyncIntervalMs);
     }
+}
+
+// ========== PDF EXPORT FUNCTIONS ==========
+
+// Show PDF export modal
+function showPdfExportModal() {
+    const modal = document.getElementById('pdf-export-modal');
+    modal.classList.remove('hidden');
+    
+    // Set current month and year as default
+    const now = new Date();
+    document.getElementById('pdf-month-select').value = now.getMonth();
+    document.getElementById('pdf-year-select').value = now.getFullYear();
+    
+    // Set up event listeners for radio buttons
+    const radioButtons = document.querySelectorAll('input[name="export-type"]');
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', toggleExportOptions);
+    });
+    
+    // Set up close button
+    const closeBtn = modal.querySelector('.close-btn');
+    closeBtn.onclick = closePdfExportModal;
+    
+    // Close modal when clicking outside
+    modal.onclick = function(event) {
+        if (event.target === modal) {
+            closePdfExportModal();
+        }
+    };
+}
+
+// Close PDF export modal
+function closePdfExportModal() {
+    const modal = document.getElementById('pdf-export-modal');
+    modal.classList.add('hidden');
+}
+
+// Toggle export options based on selected radio button
+function toggleExportOptions() {
+    const selectedType = document.querySelector('input[name="export-type"]:checked').value;
+    const monthSelection = document.getElementById('month-selection');
+    const customRange = document.getElementById('custom-range');
+    
+    // Hide all options first
+    monthSelection.classList.add('hidden');
+    customRange.classList.add('hidden');
+    
+    // Show relevant option
+    if (selectedType === 'month') {
+        monthSelection.classList.remove('hidden');
+    } else if (selectedType === 'custom') {
+        customRange.classList.remove('hidden');
+    }
+}
+
+// Main PDF generation function
+function generatePDF() {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Get export settings
+        const exportType = document.querySelector('input[name="export-type"]:checked').value;
+        const includeCompleted = document.getElementById('include-completed').checked;
+        const includePending = document.getElementById('include-pending').checked;
+        
+        // Get filtered tasks based on export type
+        let filteredTasks = getFilteredTasksForPDF(exportType, includeCompleted, includePending);
+        
+        if (filteredTasks.length === 0) {
+            alert('No hay tareas que coincidan con los criterios seleccionados.');
+            return;
+        }
+        
+        // Generate PDF content
+        generatePDFContent(doc, filteredTasks, exportType);
+        
+        // Generate filename based on export type
+        const filename = generatePDFFilename(exportType);
+        
+        // Save the PDF
+        doc.save(filename);
+        
+        // Close modal
+        closePdfExportModal();
+        
+        // Show success message
+        alert(`PDF generado exitosamente: ${filename}`);
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Error al generar el PDF. Por favor, inténtalo de nuevo.');
+    }
+}
+
+// Get filtered tasks based on export type and options
+function getFilteredTasksForPDF(exportType, includeCompleted, includePending) {
+    // Get all tasks and flatten them
+    let allTasks = Object.entries(tasks).flatMap(([date, taskList]) =>
+        taskList.map(task => ({ ...task, date: date === 'undated' ? null : date }))
+    );
+    
+    // Filter by completion status
+    allTasks = allTasks.filter(task => {
+        if (task.completed && !includeCompleted) return false;
+        if (!task.completed && !includePending) return false;
+        return true;
+    });
+    
+    // Filter by date range based on export type
+    if (exportType === 'month') {
+        const selectedMonth = parseInt(document.getElementById('pdf-month-select').value);
+        const selectedYear = parseInt(document.getElementById('pdf-year-select').value);
+        
+        allTasks = allTasks.filter(task => {
+            if (!task.date) return false;
+            const taskDate = new Date(task.date + 'T00:00:00');
+            return taskDate.getMonth() === selectedMonth && taskDate.getFullYear() === selectedYear;
+        });
+    } else if (exportType === 'custom') {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        
+        if (!startDate || !endDate) {
+            alert('Por favor, selecciona ambas fechas para el rango personalizado.');
+            return [];
+        }
+        
+        if (new Date(startDate) > new Date(endDate)) {
+            alert('La fecha de inicio debe ser anterior o igual a la fecha de fin.');
+            return [];
+        }
+        
+        allTasks = allTasks.filter(task => {
+            if (!task.date) return false;
+            const taskDate = new Date(task.date + 'T00:00:00');
+            const start = new Date(startDate + 'T00:00:00');
+            const end = new Date(endDate + 'T23:59:59');
+            return taskDate >= start && taskDate <= end;
+        });
+    }
+    
+    // Sort tasks by date (undated tasks first, then by date)
+    allTasks.sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return -1;
+        if (!b.date) return 1;
+        
+        const dateA = new Date(a.date + 'T00:00:00');
+        const dateB = new Date(b.date + 'T00:00:00');
+        
+        if (dateA.getTime() === dateB.getTime()) {
+            // If same date, sort by time if available
+            if (a.time && b.time) {
+                return a.time.localeCompare(b.time);
+            }
+            if (a.time && !b.time) return -1;
+            if (!a.time && b.time) return 1;
+            return 0;
+        }
+        
+        return dateA - dateB;
+    });
+    
+    return allTasks;
+}
+
+// Generate PDF content
+function generatePDFContent(doc, tasks, exportType) {
+    // Set up fonts and colors
+    doc.setFont('helvetica');
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(237, 174, 73); // Calendar10 brand color
+    doc.text('Calendar10 - Reporte de Tareas', 20, 25);
+    
+    // Subtitle based on export type
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    let subtitle = '';
+    if (exportType === 'all') {
+        subtitle = 'Todas las tareas ordenadas por fecha';
+    } else if (exportType === 'month') {
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const selectedMonth = parseInt(document.getElementById('pdf-month-select').value);
+        const selectedYear = parseInt(document.getElementById('pdf-year-select').value);
+        subtitle = `Tareas de ${monthNames[selectedMonth]} ${selectedYear}`;
+    } else if (exportType === 'custom') {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        subtitle = `Tareas del ${formatDateForDisplay(startDate)} al ${formatDateForDisplay(endDate)}`;
+    }
+    doc.text(subtitle, 20, 35);
+    
+    // Generation date
+    const now = new Date();
+    doc.text(`Generado el: ${now.toLocaleDateString('es-ES')} a las ${now.toLocaleTimeString('es-ES')}`, 20, 45);
+    
+    // Table headers
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    
+    let yPosition = 60;
+    const leftMargin = 20;
+    const colWidths = [80, 35, 25, 30]; // Title, Date, Time, Status
+    const colPositions = [leftMargin, leftMargin + colWidths[0], leftMargin + colWidths[0] + colWidths[1], leftMargin + colWidths[0] + colWidths[1] + colWidths[2]];
+    
+    // Draw table header
+    doc.rect(leftMargin, yPosition - 5, colWidths.reduce((a, b) => a + b, 0), 10);
+    doc.text('Título de la Tarea', colPositions[0] + 2, yPosition);
+    doc.text('Fecha', colPositions[1] + 2, yPosition);
+    doc.text('Hora', colPositions[2] + 2, yPosition);
+    doc.text('Estado', colPositions[3] + 2, yPosition);
+    
+    yPosition += 10;
+    doc.setFont('helvetica', 'normal');
+    
+    // Add tasks to table
+    tasks.forEach((task, index) => {
+        // Check if we need a new page
+        if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+            
+            // Redraw header on new page
+            doc.setFont('helvetica', 'bold');
+            doc.rect(leftMargin, yPosition - 5, colWidths.reduce((a, b) => a + b, 0), 10);
+            doc.text('Título de la Tarea', colPositions[0] + 2, yPosition);
+            doc.text('Fecha', colPositions[1] + 2, yPosition);
+            doc.text('Hora', colPositions[2] + 2, yPosition);
+            doc.text('Estado', colPositions[3] + 2, yPosition);
+            yPosition += 10;
+            doc.setFont('helvetica', 'normal');
+        }
+        
+        // Alternate row colors
+        if (index % 2 === 0) {
+            doc.setFillColor(245, 245, 245);
+            doc.rect(leftMargin, yPosition - 5, colWidths.reduce((a, b) => a + b, 0), 8, 'F');
+        }
+        
+        // Task title (truncate if too long)
+        let title = task.title;
+        if (title.length > 35) {
+            title = title.substring(0, 32) + '...';
+        }
+        doc.text(title, colPositions[0] + 2, yPosition);
+        
+        // Date
+        const dateText = task.date ? formatDateForDisplay(task.date) : 'Sin fecha';
+        doc.text(dateText, colPositions[1] + 2, yPosition);
+        
+        // Time
+        const timeText = task.time || '-';
+        doc.text(timeText, colPositions[2] + 2, yPosition);
+        
+        // Status
+        const statusText = task.completed ? '✓ Completada' : '○ Pendiente';
+        doc.setTextColor(task.completed ? 76 : 255, task.completed ? 175 : 152, task.completed ? 80 : 0);
+        doc.text(statusText, colPositions[3] + 2, yPosition);
+        doc.setTextColor(0, 0, 0);
+        
+        yPosition += 8;
+    });
+    
+    // Footer with summary
+    yPosition += 10;
+    if (yPosition > 260) {
+        doc.addPage();
+        yPosition = 20;
+    }
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Resumen:', leftMargin, yPosition);
+    yPosition += 8;
+    
+    doc.setFont('helvetica', 'normal');
+    const completedCount = tasks.filter(t => t.completed).length;
+    const pendingCount = tasks.filter(t => !t.completed).length;
+    
+    doc.text(`Total de tareas: ${tasks.length}`, leftMargin, yPosition);
+    yPosition += 6;
+    doc.setTextColor(76, 175, 80);
+    doc.text(`Tareas completadas: ${completedCount}`, leftMargin, yPosition);
+    yPosition += 6;
+    doc.setTextColor(255, 152, 0);
+    doc.text(`Tareas pendientes: ${pendingCount}`, leftMargin, yPosition);
+    
+    // Footer
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(8);
+    doc.text('Generado por Calendar10 - skillparty', leftMargin, 285);
+}
+
+// Generate filename based on export type
+function generatePDFFilename(exportType) {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    
+    if (exportType === 'all') {
+        return `Calendar10_Todas_las_Tareas_${dateStr}.pdf`;
+    } else if (exportType === 'month') {
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const selectedMonth = parseInt(document.getElementById('pdf-month-select').value);
+        const selectedYear = parseInt(document.getElementById('pdf-year-select').value);
+        return `Calendar10_${monthNames[selectedMonth]}_${selectedYear}_${dateStr}.pdf`;
+    } else if (exportType === 'custom') {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        return `Calendar10_${startDate}_a_${endDate}_${dateStr}.pdf`;
+    }
+    
+    return `Calendar10_Tareas_${dateStr}.pdf`;
 }

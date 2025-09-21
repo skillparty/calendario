@@ -54,35 +54,123 @@
             <button id="add-task-modal-btn">Agregar Tarea</button>
         </div>
     </div>
+
+    <!-- Modal for PDF export -->
+    <div id="pdf-export-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn" title="Cerrar">&times;</span>
+            <h3>📄 Exportar Tareas a PDF</h3>
+            <div style="margin: 20px 0;">
+                <h4>Selecciona el tipo de exportación:</h4>
+                <div style="margin: 15px 0;">
+                    <label style="display: block; margin: 10px 0;">
+                        <input type="radio" name="export-type" value="all" checked style="margin-right: 8px;">
+                        Todas las tareas (ordenadas por fecha)
+                    </label>
+                    <label style="display: block; margin: 10px 0;">
+                        <input type="radio" name="export-type" value="month" style="margin-right: 8px;">
+                        Tareas de un mes específico
+                    </label>
+                    <label style="display: block; margin: 10px 0;">
+                        <input type="radio" name="export-type" value="custom" style="margin-right: 8px;">
+                        Rango de fechas personalizado
+                    </label>
+                </div>
+                
+                <div id="month-selection" class="export-option hidden" style="margin: 15px 0;">
+                    <label>Selecciona el mes:</label>
+                    <select id="pdf-month-select" style="margin-left: 10px; padding: 5px;">
+                        <option value="0">Enero</option>
+                        <option value="1">Febrero</option>
+                        <option value="2">Marzo</option>
+                        <option value="3">Abril</option>
+                        <option value="4">Mayo</option>
+                        <option value="5">Junio</option>
+                        <option value="6">Julio</option>
+                        <option value="7">Agosto</option>
+                        <option value="8">Septiembre</option>
+                        <option value="9">Octubre</option>
+                        <option value="10">Noviembre</option>
+                        <option value="11">Diciembre</option>
+                    </select>
+                    <select id="pdf-year-select" style="margin-left: 10px; padding: 5px;">
+                        <option value="2023">2023</option>
+                        <option value="2024">2024</option>
+                        <option value="2025" selected>2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+                
+                <div id="custom-range" class="export-option hidden" style="margin: 15px 0;">
+                    <div style="margin: 10px 0;">
+                        <label>Fecha de inicio:</label>
+                        <input type="date" id="start-date" style="margin-left: 10px; padding: 5px;">
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>Fecha de fin:</label>
+                        <input type="date" id="end-date" style="margin-left: 10px; padding: 5px;">
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <h4>Opciones adicionales:</h4>
+                    <label style="display: block; margin: 10px 0;">
+                        <input type="checkbox" id="include-completed" checked style="margin-right: 8px;">
+                        Incluir tareas completadas
+                    </label>
+                    <label style="display: block; margin: 10px 0;">
+                        <input type="checkbox" id="include-pending" checked style="margin-right: 8px;">
+                        Incluir tareas pendientes
+                    </label>
+                </div>
+                
+                <div style="margin: 20px 0; text-align: center;">
+                    <button onclick="generatePDF()" 
+                            style="background: #FF5722; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; margin-right: 10px;">
+                        📄 Generar PDF
+                    </button>
+                    <button onclick="closePdfExportModal()" 
+                            style="background: #757575; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px;">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Footer -->
     <footer>
         <div class="footer-content">
-            <div class="developer-info">
-                <img src="public/logo.png" alt="skillparty Logo" class="developer-logo">
-                <div class="developer-details">
-                    <h3>Desarrollado por skillparty</h3>
-                    <div class="contact-info">
-                        <a href="https://github.com/skillparty" target="_blank" rel="noopener" class="contact-link">
-                            <span class="contact-icon">🔗</span>
-                            <span>GitHub: skillparty</span>
-                        </a>
-                        <a href="mailto:skillparty@outlook.com" class="contact-link">
-                            <span class="contact-icon">📧</span>
-                            <span>skillparty@outlook.com</span>
-                        </a>
-                        <a href="tel:+59160344144" class="contact-link">
-                            <span class="contact-icon">📱</span>
-                            <span>+591 60344144</span>
-                        </a>
-                    </div>
+            <div class="footer-logo">
+                <img src="public/loquito.png" alt="Calendar10 Logo" class="footer-logo-img">
+            </div>
+            <div class="footer-contact">
+                <div class="contact-item">
+                    <span class="contact-icon">🔗</span>
+                    <a href="https://github.com/skillparty" target="_blank" rel="noopener" class="contact-link">
+                        GitHub: skillparty
+                    </a>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon">📧</span>
+                    <a href="mailto:skillparty@outlook.com" class="contact-link">
+                        skillparty@outlook.com
+                    </a>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon">📱</span>
+                    <a href="tel:+59160344144" class="contact-link">
+                        +591 60344144
+                    </a>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Calendar10 by skillparty. Todos los derechos reservados.</p>
+                <p>&copy; 2025 Calendar10. Todos los derechos reservados.</p>
             </div>
         </div>
     </footer>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         // Disable source maps to prevent 404 errors
         console.log('Aplicación Calendar10 cargada correctamente');
