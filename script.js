@@ -1612,12 +1612,22 @@ function showDayTasks(date) {
         return;
     }
 
+    // Check if the date is in the past
+    const selectedDate = new Date(date + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPastDate = selectedDate < today;
+
     modalDate.textContent = formatDateForDisplay(date);
     modalTasks.innerHTML = '';
 
     const dayTasks = tasks[date] || [];
     if (dayTasks.length === 0) {
-        modalTasks.innerHTML = '<p>No hay tareas para este día.</p>';
+        if (isPastDate) {
+            modalTasks.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">No se agregaron tareas para esta fecha.</p>';
+        } else {
+            modalTasks.innerHTML = '<p>No hay tareas para este día.</p>';
+        }
     } else {
         dayTasks.forEach(task => {
             const taskDiv = document.createElement('div');
@@ -1625,13 +1635,12 @@ function showDayTasks(date) {
             taskDiv.innerHTML = `
                 <div class="task-content">
                     <strong>${task.title}</strong>
+                    ${task.time ? `<small style="color: var(--text-secondary);">⏰ ${task.time}</small>` : ''}
                     <div class="task-actions">
                         <button onclick="toggleTask('${task.id}'); setTimeout(() => showDayTasks('${date}'), 100)">
                             ${task.completed ? 'Desmarcar' : 'Marcar como hecho'}
                         </button>
-                        <button onclick="deleteTask('${task.id}')" class="delete-btn">
-                            🗑️ Eliminar
-                        </button>
+                        ${!isPastDate ? `<button onclick="deleteTask('${task.id}')" class="delete-btn">🗑️ Eliminar</button>` : ''}
                     </div>
                 </div>
             `;
@@ -1639,7 +1648,13 @@ function showDayTasks(date) {
         });
     }
 
-    addTaskBtn.onclick = () => addTask(date);
+    // Hide or show the add task button based on whether it's a past date
+    if (isPastDate) {
+        addTaskBtn.style.display = 'none';
+    } else {
+        addTaskBtn.style.display = 'block';
+        addTaskBtn.onclick = () => addTask(date);
+    }
 
     modal.classList.remove('hidden');
     modal.style.display = 'flex'; // Override the inline style
