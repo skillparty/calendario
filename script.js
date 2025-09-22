@@ -596,11 +596,16 @@ function saveTaskFromModal(originalDate, existingTaskId) {
             };
             
             console.log('=== SENDING TO BACKEND (COMPLETE DATA) ===');
-            console.log('Raw JSON:', JSON.stringify(backendData));
-            console.log('Title type:', typeof backendData.title);
-            console.log('Title length:', backendData.title.length);
-            console.log('Title value:', `"${backendData.title}"`);
-            console.log('Title charCodes:', Array.from(backendData.title).map(c => c.charCodeAt(0)));
+            console.log('Raw JSON:', JSON.stringify(backendData, null, 2));
+            console.log('Data validation check:');
+            console.log('- title:', typeof backendData.title, `"${backendData.title}"`, 'length:', backendData.title?.length);
+            console.log('- description:', typeof backendData.description, backendData.description);
+            console.log('- date:', typeof backendData.date, backendData.date);
+            console.log('- time:', typeof backendData.time, backendData.time);
+            console.log('- completed:', typeof backendData.completed, backendData.completed);
+            console.log('- is_reminder:', typeof backendData.is_reminder, backendData.is_reminder);
+            console.log('- priority:', typeof backendData.priority, backendData.priority);
+            console.log('- tags:', typeof backendData.tags, Array.isArray(backendData.tags), backendData.tags);
             
             apiFetch('/api/tasks', {
                 method: 'POST',
@@ -621,18 +626,32 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                     
                     try {
                         const errorData = JSON.parse(errorText);
-                        console.error('Parsed error data:', errorData);
+                        console.error('=== BACKEND VALIDATION ERROR ===');
+                        console.error('Full error response:', errorData);
+                        
                         if (errorData.details) {
-                            console.error('Validation details:', errorData.details);
-                            errorData.details.forEach(detail => {
-                                console.error(`Field '${detail.path}': ${detail.msg}`);
+                            console.error('Validation details:');
+                            errorData.details.forEach((detail, index) => {
+                                console.error(`  ${index + 1}. Field '${detail.path || detail.param}': ${detail.msg}`);
+                                console.error(`     Value: ${detail.value}`);
+                                console.error(`     Location: ${detail.location}`);
                             });
                         }
+                        
                         if (errorData.errors) {
                             console.error('Additional errors:', errorData.errors);
                         }
+                        
+                        // Show user-friendly error message
+                        if (errorData.details && errorData.details.length > 0) {
+                            const firstError = errorData.details[0];
+                            alert(`Error de validación: ${firstError.msg}\nCampo: ${firstError.path || firstError.param}`);
+                        } else {
+                            alert('Error de validación en el servidor. Revisa la consola para más detalles.');
+                        }
                     } catch (e) {
-                        console.error('Could not parse error response as JSON');
+                        console.error('Could not parse error response as JSON:', e);
+                        console.error('Raw error text:', errorText);
                     }
                     throw new Error('HTTP ' + res.status);
                 }
