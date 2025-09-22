@@ -16,6 +16,11 @@ function errorHandler(err, req, res, next) {
     error.details = err.details;
   }
 
+  // AppError with details (including validation errors)
+  if (err.name === 'AppError' && err.details) {
+    error.details = err.details;
+  }
+
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
     error.status = 401;
