@@ -588,7 +588,7 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                 title: cleanTitle,
                 description: task.description || null,
                 date: taskDate || null,
-                time: time || null,
+                time: (time && time.trim() !== '') ? time.trim() : null,
                 completed: false,
                 is_reminder: isReminder,
                 priority: 1,
@@ -736,7 +736,7 @@ function updateExistingTask(taskId, title, newDate, time, isReminder) {
                     body: JSON.stringify({
                         title: title,
                         date: (newDate && newDate !== 'undated' && newDate !== '') ? newDate : null,
-                        time: (time && time !== '') ? time : null,
+                        time: (time && time.trim && time.trim() !== '') ? time.trim() : null,
                         is_reminder: isReminder
                     })
                 }).then(res => {
@@ -790,7 +790,7 @@ function addTaskLegacy(date) {
                     title: task.title,
                     description: null,
                     date: (task.date && task.date !== 'undated' && task.date !== '') ? task.date : null,
-                    time: (task.time && task.time !== '') ? task.time : null,
+                    time: (task.time && task.time.trim && task.time.trim() !== '') ? task.time.trim() : null,
                     completed: Boolean(task.completed),
                     is_reminder: Boolean(task.isReminder),
                     priority: parseInt(task.priority || 1, 10),
