@@ -378,6 +378,9 @@ function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                 <button onclick="showPdfExportModal()" class="btn-secondary btn-full">
                     📄 Exportar PDF
                 </button>
+                <button onclick="testNotification()" class="btn-secondary btn-full" title="Probar sistema de notificaciones">
+                    🔔 Probar Notificaciones
+                </button>
             </div>
             
             <h3>📊 Estadísticas</h3>
@@ -1271,23 +1274,114 @@ function requestNotificationPermission() {
     return Promise.resolve(Notification.permission);
 }
 
-// Check notifications
+// Check notifications - Advanced system with 24h advance and 60min intervals
 function checkNotifications() {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    const today = formatDate(new Date());
+    const now = new Date();
+    const currentTime = now.getTime();
+    
+    // Get or initialize notification tracking
+    let notificationLog = JSON.parse(localStorage.getItem('notificationLog') || '{}');
+    let hasNewNotifications = false;
+
     Object.entries(tasks).forEach(([date, taskList]) => {
-        if (date === today) {
-            taskList.forEach(task => {
-                if (!task.completed && task.isReminder) {
-                    new Notification('Recordatorio', {
-                        body: task.title,
-                        icon: '/favicon.ico' // Add an icon if available
+        if (date === 'undated') return; // Skip undated tasks
+        
+        taskList.forEach(task => {
+            if (task.completed || !task.isReminder) return;
+            
+            // Calculate task datetime
+            const taskDate = new Date(date + 'T00:00:00');
+            if (task.time) {
+                const [hours, minutes] = task.time.split(':');
+                taskDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            } else {
+                // If no time specified, assume 9:00 AM
+                taskDate.setHours(9, 0, 0, 0);
+            }
+            
+            const taskTime = taskDate.getTime();
+            
+            // Calculate 24 hours before task
+            const reminderStart = taskTime - (24 * 60 * 60 * 1000); // 24 hours before
+            
+            // Check if we should send notification
+            if (currentTime >= reminderStart && currentTime <= taskTime) {
+                // Calculate how many 60-minute intervals have passed since reminder start
+                const intervalsPassed = Math.floor((currentTime - reminderStart) / (60 * 60 * 1000));
+                const notificationKey = `${task.id}_${intervalsPassed}`;
+                
+                // Send notification if we haven't sent this specific interval notification
+                if (!notificationLog[notificationKey]) {
+                    const timeUntilTask = Math.ceil((taskTime - currentTime) / (60 * 60 * 1000));
+                    const timeLabel = timeUntilTask > 0 ? 
+                        `en ${timeUntilTask} hora${timeUntilTask !== 1 ? 's' : ''}` : 
+                        'ahora';
+                    
+                    new Notification('🔔 Recordatorio de Tarea', {
+                        body: `${task.title}\n📅 ${formatDate(taskDate)}${task.time ? ` ⏰ ${task.time}` : ''}\n⏳ Programada ${timeLabel}`,
+                        icon: '/favicon.ico',
+                        tag: `reminder_${task.id}`, // Prevents duplicate notifications
+                        requireInteraction: true // Keeps notification visible until user interacts
                     });
+                    
+                    // Log this notification
+                    notificationLog[notificationKey] = {
+                        taskId: task.id,
+                        sentAt: currentTime,
+                        interval: intervalsPassed,
+                        taskTitle: task.title
+                    };
+                    hasNewNotifications = true;
+                    
+                    console.log(`📢 Notification sent for task: ${task.title} (interval ${intervalsPassed})`);
                 }
-            });
+            }
+        });
+    });
+    
+    // Clean up old notification logs (older than 7 days)
+    const sevenDaysAgo = currentTime - (7 * 24 * 60 * 60 * 1000);
+    Object.keys(notificationLog).forEach(key => {
+        if (notificationLog[key].sentAt < sevenDaysAgo) {
+            delete notificationLog[key];
+            hasNewNotifications = true;
         }
     });
+    
+    // Save updated notification log
+    if (hasNewNotifications) {
+        localStorage.setItem('notificationLog', JSON.stringify(notificationLog));
+    }
+}
+
+// Test notification system (for debugging)
+function testNotification() {
+    if (!('Notification' in window)) {
+        alert('Este navegador no soporta notificaciones');
+        return;
+    }
+    
+    if (Notification.permission !== 'granted') {
+        alert('Por favor, permite las notificaciones primero');
+        requestNotificationPermission();
+        return;
+    }
+    
+    new Notification('🧪 Prueba de Notificación', {
+        body: 'El sistema de recordatorios está funcionando correctamente.\n📅 Fecha: ' + new Date().toLocaleString(),
+        icon: '/favicon.ico',
+        requireInteraction: true
+    });
+    
+    console.log('🧪 Test notification sent');
+}
+
+// Clear notification log (for debugging/reset)
+function clearNotificationLog() {
+    localStorage.removeItem('notificationLog');
+    console.log('🗑️ Notification log cleared');
 }
 
 // Handle OAuth callback
