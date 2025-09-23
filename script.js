@@ -587,6 +587,12 @@ function saveTaskFromModal(originalDate, existingTaskId) {
         // Always save to localStorage first for immediate persistence
         localStorage.setItem('calendarTasks', JSON.stringify(tasks));
 
+        // Render immediately so user sees the task right away
+        renderCalendar();
+        if (document.querySelector('#agenda-view:not(.hidden)')) {
+            renderAgenda();
+        }
+
         // Then try to sync with backend if user is logged in
         if (userSession && userSession.jwt) {
             showSyncStatus('Guardando en servidor…');
@@ -695,20 +701,29 @@ function saveTaskFromModal(originalDate, existingTaskId) {
                     }
                 }
                 showSyncStatus('Guardado ✅');
+                
+                // Close modal after successful save
+                const modal = document.querySelector('.modal');
+                if (modal) {
+                    modal.remove();
+                }
             }).catch(err => {
                 console.error('Create task failed:', err);
                 showSyncStatus('Guardado localmente (sin conexión)', true);
-            }).finally(() => {
-                renderCalendar();
-                if (document.querySelector('#agenda-view:not(.hidden)')) {
-                    renderAgenda();
+                
+                // Close modal even if backend fails (task saved locally)
+                const modal = document.querySelector('.modal');
+                if (modal) {
+                    modal.remove();
                 }
             });
         } else {
-            // For non-backend users, just save locally
-            renderCalendar();
-            if (document.querySelector('#agenda-view:not(.hidden)')) {
-                renderAgenda();
+            // For non-backend users, just save locally (rendering already done above)
+            
+            // Close modal after local save
+            const modal = document.querySelector('.modal');
+            if (modal) {
+                modal.remove();
             }
         }
         
@@ -717,9 +732,6 @@ function saveTaskFromModal(originalDate, existingTaskId) {
             requestNotificationPermission();
         }
     }
-    
-    // Close modal
-    document.querySelector('.modal').remove();
 }
 
 // Update existing task
