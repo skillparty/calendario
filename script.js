@@ -23,15 +23,36 @@ const GITHUB_DEVICE_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 // Expected POST JSON: { code, redirect_uri } -> returns { success, token, user }
 const OAUTH_PROXY_URL = API_BASE_URL + '/api/auth/github';
 
-// Helper: API fetch with JWT
-async function apiFetch(path, options = {}) {
+// Helper: API fetch with JWT and retry logic
+async function apiFetch(path, options = {}, retries = 3) {
     const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
     if (userSession && userSession.jwt) {
         headers['Authorization'] = `Bearer ${userSession.jwt}`;
     }
     const init = Object.assign({}, options, { headers });
-    const res = await fetch(API_BASE_URL + path, init);
-    return res;
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const res = await fetch(API_BASE_URL + path, init);
+            
+            // If we get a 502/503 error and have retries left, wait and retry
+            if ((res.status === 502 || res.status === 503) && attempt < retries) {
+                console.log(`API request failed with ${res.status}, retrying (${attempt}/${retries})...`);
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+                continue;
+            }
+            
+            return res;
+        } catch (error) {
+            // Network errors
+            if (attempt < retries) {
+                console.log(`Network error, retrying (${attempt}/${retries}):`, error.message);
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                continue;
+            }
+            throw error;
+        }
+    }
 }
 
 // DOM elements - will be initialized after DOM loads
