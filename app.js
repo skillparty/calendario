@@ -8,7 +8,7 @@
 
 import { state, setCurrentDate, setTasks, getTasks, setUserSession, setUserGistId, setLastGistUpdatedAt, notifyTasksUpdated } from './state.js';
 import { API_BASE_URL, isLoggedInWithBackend, loadTasksIntoState, pushLocalTasksToBackend } from './api.js';
-import { renderCalendar, initCalendar } from './calendar.js';
+import { renderCalendar, initCalendar, showTaskInputModal } from './calendar.js';
 import { renderAgenda } from './agenda.js';
 import { showPdfExportModal } from './pdf.js';
 
@@ -399,7 +399,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (loginBtn) loginBtn.addEventListener('click', handleLogin);
 
   // Initialize the application
-  initApp();
   initCalendar();
 
   // Load enhanced modules
@@ -432,9 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
         e.preventDefault();
         const today = new Date().toISOString().split('T')[0];
-        if (typeof window.showTaskInputModal === 'function') {
-          window.showTaskInputModal(today);
-        }
+        showTaskInputModal(today);
       }
     });
     
