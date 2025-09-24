@@ -12,12 +12,12 @@
     <link rel="stylesheet" href="styles.css">
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="./manifest.json">
     
     <!-- Preload critical resources -->
-    <link rel="preload" href="/utils/EventBus.js" as="script" crossorigin>
-    <link rel="preload" href="/utils/StateManager.js" as="script" crossorigin>
-    <link rel="preload" href="/utils/IndexedDBManager.js" as="script" crossorigin>
+    <link rel="preload" href="./utils/EventBus.js" as="script" crossorigin>
+    <link rel="preload" href="./utils/StateManager.js" as="script" crossorigin>
+    <link rel="preload" href="./utils/IndexedDBManager.js" as="script" crossorigin>
 </head>
 <body>
     <header class="header-modern">
@@ -211,7 +211,7 @@
         // Register Service Worker for offline functionality
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('./sw.js')
                     .then(registration => {
                         console.log('ServiceWorker registrado:', registration.scope);
                         

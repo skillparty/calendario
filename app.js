@@ -394,18 +394,22 @@ document.addEventListener('DOMContentLoaded', () => {
   userName = document.getElementById('user-name');
   calendarView = document.getElementById('calendar-view');
   agendaView = document.getElementById('agenda-view');
-
   if (calendarBtn) calendarBtn.addEventListener('click', showCalendar);
   if (agendaBtn) agendaBtn.addEventListener('click', showAgenda);
   if (loginBtn) loginBtn.addEventListener('click', handleLogin);
 
-  // Initialize calendar interactions
+  // Initialize the application
+  initApp();
   initCalendar();
+
+  // Load safe enhancements
+  import('./app-safe.js').catch(err => {
+    console.warn('Safe enhancements not available:', err.message);
+  });
 
   handleOAuthCallback();
   updateLoginButton();
   showCalendar();
-  checkNotifications();
   setInterval(checkNotifications, 60000);
 
   // Re-render views when tasks change
