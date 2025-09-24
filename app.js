@@ -402,9 +402,44 @@ document.addEventListener('DOMContentLoaded', () => {
   initApp();
   initCalendar();
 
-  // Load safe enhancements
-  import('./app-safe.js').catch(err => {
-    console.warn('Safe enhancements not available:', err.message);
+  // Load enhanced modules
+  Promise.all([
+    import('./utils/EventBus.js'),
+    import('./utils/StateManager.js'),
+    import('./utils/PerformanceMonitor.js'),
+    import('./state-enhanced.js')
+  ]).then(([eventBusModule, stateModule, perfModule, enhancedStateModule]) => {
+    console.log('Enhanced modules loaded successfully');
+    
+    // Setup event listeners
+    eventBusModule.eventBus.on('task:created', (event) => {
+      console.log('Task created:', event.payload);
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Tarea creada', {
+          body: event.payload.title,
+          icon: './public/app.png'
+        });
+      }
+    });
+    
+    // Setup performance monitoring
+    perfModule.performanceMonitor.measure('app-enhanced-init', () => {
+      console.log('Enhanced features initialized');
+    });
+    
+    // Setup keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        const today = new Date().toISOString().split('T')[0];
+        if (typeof window.showTaskInputModal === 'function') {
+          window.showTaskInputModal(today);
+        }
+      }
+    });
+    
+  }).catch(err => {
+    console.error('Failed to load enhanced modules:', err);
   });
 
   handleOAuthCallback();

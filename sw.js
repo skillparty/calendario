@@ -9,18 +9,23 @@ const API_CACHE = `calendar10-api-${CACHE_VERSION}`;
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/app.js',
-  '/state.js',
-  '/api.js',
-  '/calendar.js',
-  '/agenda.js',
-  '/pdf.js',
-  '/types.d.ts',
-  '/loquito.png',
-  '/favicon.ico'
+  './',
+  './index.html',
+  './styles.css',
+  './app.js',
+  './state.js',
+  './api.js',
+  './calendar.js',
+  './agenda.js',
+  './pdf.js',
+  './types.d.ts',
+  './utils/EventBus.js',
+  './utils/StateManager.js',
+  './utils/PerformanceMonitor.js',
+  './utils/IndexedDBManager.js',
+  './state-enhanced.js',
+  './public/app.png',
+  './public/loquito.png'
 ];
 
 // API endpoints to cache
