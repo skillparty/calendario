@@ -10,6 +10,14 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23edae49'/><text y='70' font-size='70' text-anchor='middle' x='50'>📅</text></svg>">
     <title>Calendar10 - Gestiona tus tareas y eventos</title>
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/utils/EventBus.js" as="script" crossorigin>
+    <link rel="preload" href="/utils/StateManager.js" as="script" crossorigin>
+    <link rel="preload" href="/utils/IndexedDBManager.js" as="script" crossorigin>
 </head>
 <body>
     <header class="header-modern">
@@ -197,10 +205,60 @@
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Service Worker Registration -->
     <script>
-        // Disable source maps to prevent 404 errors
+        // Register Service Worker for offline functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registrado:', registration.scope);
+                        
+                        // Check for updates periodically
+                        setInterval(() => {
+                            registration.update();
+                        }, 3600000); // Every hour
+                        
+                        // Handle updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New service worker available
+                                    if (confirm('Nueva versión disponible. ¿Actualizar ahora?')) {
+                                        newWorker.postMessage({ type: 'skip-waiting' });
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registro falló:', err);
+                    });
+                    
+                // Reload when new service worker takes control
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    window.location.reload();
+                });
+            });
+        }
+        
+        // Check online/offline status
+        window.addEventListener('online', () => {
+            console.log('Conexión restaurada');
+            document.body.classList.remove('offline');
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('Sin conexión - Modo offline');
+            document.body.classList.add('offline');
+        });
+        
         console.log('Aplicación Calendar10 cargada correctamente');
     </script>
-    <script src="script.js"></script>
+    
+    <!-- Main Application Module -->
+    <script type="module" src="./app.js"></script>
 </body>
 </html>

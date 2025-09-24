@@ -18,6 +18,47 @@ Una aplicación web simple de calendario digital con recordatorios y agenda, con
 2. Abre `index.html` en un navegador web moderno
 3. Para ejecutar localmente: `python3 -m http.server 8000` y visita `http://localhost:8000`
 
+## Arquitectura de módulos (ESM)
+
+La app ahora está dividida en módulos ES para mejorar legibilidad y mantenibilidad:
+
+- `state.js`: Estado centralizado (tareas, sesión de usuario, filtros, sincronización).
+- `api.js`: Cliente de API (JWT), paginación (`fetchAllTasksFromBackend`), carga y reconciliación con el backend.
+- `calendar.js`: Render del calendario, modal de día, creación/edición de tareas, validación de fechas pasadas.
+- `agenda.js`: Lista de tareas sin fecha, filtros por mes/estado, acciones rápidas y sidebar.
+- `pdf.js`: Exportación a PDF y modal de opciones, integración con jsPDF.
+- `app.js`: Punto de entrada. Orquesta autenticación, vistas, notificaciones y sincronización.
+
+Nota: El archivo legacy `script.js` fue reemplazado por estos módulos y ya no se utiliza.
+
+## TypeScript (migración gradual)
+
+Esta app usa una migración gradual a TypeScript basada en JSDoc, sin build adicional ni cambios en tiempo de ejecución.
+
+- Tipos compartidos en `types.d.ts`:
+  - `Task`, `CalendarTask`, `AgendaTask`, `APITask`, `TasksByDate`, `UserSession`, `AppState`.
+- Archivos con tipado JSDoc:
+  - `state.js`, `api.js`, `calendar.js`, `agenda.js`, `pdf.js`, `app.js`.
+- Configuración en `tsconfig.json`:
+  - `allowJs: true`, `checkJs: true`, `noEmit: true`.
+
+Ejecutar chequeo de tipos (no compila ni genera archivos):
+
+```bash
+npx tsc -p tsconfig.json
+# o usando npm script
+npm run typecheck
+```
+
+Ejemplo de JSDoc para tipos:
+
+```js
+/** @typedef {import('./types').Task} Task */
+
+/** @param {Task[]} tasks */
+function renderList(tasks) { /* ... */ }
+```
+
 ## Despliegue en GitHub Pages
 
 1. Sube los archivos a un repositorio de GitHub
@@ -33,7 +74,7 @@ Para habilitar la autenticación con GitHub:
 2. Crea una nueva OAuth App
 3. Establece la Authorization callback URL como tu URL de GitHub Pages
 4. Copia el Client ID
-5. En `script.js`, asegúrate de que `GITHUB_CLIENT_ID` tenga tu Client ID real
+5. En `app.js`, asegúrate de que `GITHUB_CLIENT_ID` tenga tu Client ID real. Si usas un backend propio, ajusta `API_BASE_URL` en `api.js`. La constante `OAUTH_PROXY_URL` en `app.js` apunta por defecto a `${API_BASE_URL}/api/auth/github`.
 
 ### Cómo funciona el inicio de sesión (Device Flow)
 
@@ -53,7 +94,7 @@ Si deseas usar el flujo estándar (Authorization Code) para obtener el token dir
 
 1. Despliega un endpoint (Cloudflare Worker / Vercel / Netlify Function) que reciba `{ code, redirect_uri }` y llame a `https://github.com/login/oauth/access_token` con `client_id` y `client_secret`.
 2. Responde JSON: `{ access_token: "..." }`.
-3. Configura `OAUTH_PROXY_URL` en `script.js` con la URL de ese endpoint.
+3. Asegúrate de que `API_BASE_URL` en `api.js` apunte a tu backend. En `app.js`, `OAUTH_PROXY_URL` por defecto usa `${API_BASE_URL}/api/auth/github`. Si tu proxy usa otra ruta, cambia `OAUTH_PROXY_URL` en `app.js`.
 4. Entonces, cuando GitHub redirija con `?code=...`, la app hará el intercambio automáticamente.
 
 Ejemplo (pseudo Worker):
