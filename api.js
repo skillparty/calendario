@@ -169,27 +169,35 @@ export async function pushLocalTasksToBackend() {
 }
 
 export async function createTaskOnBackend(payload) {
+  console.log('Original payload received:', payload);
+  
   // Ensure payload matches backend validation exactly
   const cleanPayload = {
     title: payload.title || '',
-    description: payload.description || null,
     completed: Boolean(payload.completed),
     is_reminder: Boolean(payload.isReminder || payload.is_reminder),
     priority: parseInt(payload.priority || '3'),
     tags: Array.isArray(payload.tags) ? payload.tags : []
   };
 
-  // Only include date if it's a valid date string
-  if (payload.date && payload.date.trim() !== '') {
-    cleanPayload.date = payload.date;
+  // Only add description if it's not empty
+  if (payload.description && payload.description.trim() !== '') {
+    cleanPayload.description = payload.description.trim();
   }
 
-  // Only include time if date is present and time is valid
-  if (cleanPayload.date && payload.time && payload.time.trim() !== '') {
-    cleanPayload.time = payload.time;
+  // Only include date if it's a valid date string (not null, not empty)
+  if (payload.date && typeof payload.date === 'string' && payload.date.trim() !== '' && payload.date !== 'null') {
+    cleanPayload.date = payload.date.trim();
+    
+    // Only include time if date is present and time is valid
+    if (payload.time && typeof payload.time === 'string' && payload.time.trim() !== '') {
+      cleanPayload.time = payload.time.trim();
+    }
   }
 
-  console.log('Creating task with clean payload:', cleanPayload);
+  console.log('Clean payload to send:', cleanPayload);
+  console.log('Payload keys:', Object.keys(cleanPayload));
+  
   const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(cleanPayload) });
   if (!res.ok) {
     const errorText = await res.text();
