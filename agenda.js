@@ -21,6 +21,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
   setFilters(filterMonth, filterStatus);
 
   let html = `
+    <div class="agenda-container">
         <div class="agenda-main">
             <h2>📋 Agenda de Tareas</h2>
             <div class="agenda-filters">
@@ -147,23 +148,34 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     });
   }
 
-  html += `</ul></div>
+  html += `</ul>
+        </div>
         <div class="agenda-sidebar">
             <h3>🚀 Acciones Rápidas</h3>
             <div class="quick-actions">
-                <button onclick="showTaskInputModal(null)" class="btn-primary btn-full">➕ Agregar Tarea Rápida</button>
-                <button onclick="showPdfExportModal()" class="btn-secondary btn-full">📄 Exportar PDF</button>
-                <button onclick="testNotification()" class="btn-secondary btn-full" title="Probar sistema de notificaciones">🔔 Probar Notificaciones</button>
+                <button onclick="showTaskInputModal(null)" class="btn-primary">➕ Agregar Tarea Rápida</button>
+                <button onclick="showPdfExportModal()" class="btn-secondary">📄 Exportar PDF</button>
+                <button onclick="testNotification()" class="btn-secondary" title="Probar sistema de notificaciones">🔔 Probar Notificaciones</button>
             </div>
             <h3>📊 Estadísticas</h3>
             <div class="stats-container">
-                <div class="stat-item"><span class="stat-number">${allTasks.length}</span><span class="stat-label">Total</span></div>
-                <div class="stat-item"><span class="stat-number">${allTasks.filter(t => t.completed).length}</span><span class="stat-label">Completadas</span></div>
-                <div class="stat-item"><span class="stat-number">${allTasks.filter(t => !t.completed).length}</span><span class="stat-label">Pendientes</span></div>
+                <div class="stat-item">
+                    <span class="stat-number">${allTasks.length}</span>
+                    <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${allTasks.filter(t => t.completed).length}</span>
+                    <span class="stat-label">Completadas</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${allTasks.filter(t => !t.completed).length}</span>
+                    <span class="stat-label">Pendientes</span>
+                </div>
             </div>
             <h3>📅 Próximas Tareas</h3>
             <div class="upcoming-tasks">${getUpcomingTasksHTML(allTasks)}</div>
-        </div>`;
+        </div>
+    </div>`;
 
   agendaView.innerHTML = html;
 
