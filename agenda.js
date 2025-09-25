@@ -117,10 +117,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
       
       // Obtener colores por día
       const dayColors = getColorByDay(task.date);
-      const customStyle = `
-        background: linear-gradient(135deg, ${dayColors.bg} 0%, rgba(255, 255, 255, 0.9) 100%);
-        border-left-color: ${dayColors.border};
-      `;
+      const customStyle = `border-left-color: ${dayColors.border};`;
       
       html += `<li class="task${completedClass}" style="${customStyle}">
               <div class="task-info">
@@ -134,7 +131,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                       </div>
                       ${description ? `<p class="task-description">${description}</p>` : ''}
                       <div class="task-meta" style="${dateStyle}">
-                          <span class="task-date" style="color: ${dayColors.text}; font-weight: 600;">${formattedDate}</span>
+                          <span class="task-date">${formattedDate}</span>
                           ${timeDisplay ? `<span class="task-time">${timeDisplay}</span>` : ''}
                       </div>
                   </div>
