@@ -438,19 +438,20 @@ main {
     background: linear-gradient(180deg,
         #f8f9fa 0%,
         #ffffff 100%);
+    min-height: 100vh;
 }
 
 .agenda-container {
     max-width: 1600px;
     margin: 0 auto;
     padding: 2rem;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 350px;
     gap: 2rem;
+    align-items: start;
 }
 
 .agenda-main {
-    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -661,6 +662,8 @@ main {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     border: 1px solid rgba(0, 0, 0, 0.04);
     min-height: 400px;
+    overflow-y: auto;
+    max-height: calc(100vh - 300px);
 }
 
 /* Date Group Headers */
@@ -721,6 +724,7 @@ main {
     position: relative;
     animation: slideIn 0.3s ease-out;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
 }
 
 @keyframes slideIn {
@@ -751,6 +755,7 @@ main {
 
 .task-card-content {
     display: flex;
+    flex-direction: column;
     align-items: stretch;
     padding: 1rem;
     gap: 1rem;
@@ -897,6 +902,10 @@ main {
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e5e7eb;
 }
 
 .task-action-btn {
@@ -1376,6 +1385,10 @@ main {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     border: 1px solid rgba(0, 0, 0, 0.04);
     height: fit-content;
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
 }
 
 .sidebar-section {
@@ -1503,6 +1516,11 @@ main {
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .stat-card:hover {
@@ -1529,6 +1547,7 @@ main {
     font-weight: 800;
     line-height: 1;
     margin-bottom: 0.25rem;
+    display: block;
 }
 
 .stat-card.total .stat-value {
@@ -1552,6 +1571,7 @@ main {
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    margin-top: 0.25rem;
 }
 
 .stat-bar {
@@ -1871,11 +1891,13 @@ main {
     header {
         padding: var(--spacing-md) var(--spacing-md);
     }
-    
+
     /* Enhanced Agenda Mobile Styles */
     .agenda-container {
         padding: 1rem;
         gap: 1rem;
+        grid-template-columns: 1fr;
+        display: flex;
         flex-direction: column;
     }
     
@@ -1990,6 +2012,11 @@ main {
         gap: 0.5rem;
         flex-direction: column;
     }
+
+    .task-card-actions {
+        justify-content: center;
+        opacity: 1 !important;
+    }
     
     .task-card-header {
         width: 100%;
@@ -2077,6 +2104,20 @@ main {
     
     .stats-grid {
         gap: 0.5rem;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .stat-card {
+        padding: 0.75rem;
+        min-height: 70px;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
     }
     
     .stat-card {
@@ -3458,7 +3499,7 @@ select:focus-visible {
         max-width: 1600px;
         padding: 2rem;
     }
-    
+
     .agenda-main {
         min-width: 0; /* Prevents grid overflow */
         display: flex;
