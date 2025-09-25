@@ -146,9 +146,9 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
         </div>
         <h3 class="empty-state-title">No hay tareas que mostrar</h3>
         <p class="empty-state-description">
-          ${filterMonth !== 'all' || filterStatus !== 'all' 
-            ? 'Prueba ajustando los filtros o crea una nueva tarea.' 
-            : '¡Comienza agregando tu primera tarea!'}
+          ${filterMonth !== 'all' || filterStatus !== 'all'
+            ? 'No se encontraron tareas con los filtros actuales. Prueba ajustando los filtros o crea una nueva tarea.'
+            : '¡Comienza agregando tu primera tarea del día!'}
         </p>
         <button onclick="showTaskInputModal(null)" class="btn-primary empty-state-btn">
           <span class="btn-icon">➕</span>
@@ -241,9 +241,11 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
         <div class="task-card-content">
           <div class="task-card-header">
             <div class="task-card-check">
-              <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')" 
-                      class="task-check-btn${task.completed ? ' checked' : ''}" 
-                      title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}">
+              <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')"
+                      class="task-check-btn${task.completed ? ' checked' : ''}"
+                      title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}"
+                      aria-label="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}"
+                      aria-pressed="${task.completed}">
                 <span class="check-icon">${task.completed ? '✓' : ''}</span>
               </button>
             </div>
@@ -275,14 +277,16 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
             </div>
           </div>
           <div class="task-card-actions">
-            <button onclick="showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})" 
-                    class="task-action-btn edit" 
-                    title="Editar tarea">
+            <button onclick="showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})"
+                    class="task-action-btn edit"
+                    title="Editar tarea"
+                    aria-label="Editar tarea">
               <span class="action-icon">✏️</span>
             </button>
-            <button onclick="if(confirm('¿Eliminar esta tarea?')) { deleteTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}'); }" 
-                    class="task-action-btn delete" 
-                    title="Eliminar tarea">
+            <button onclick="if(confirm('¿Estás seguro de que deseas eliminar esta tarea?')) { deleteTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}'); }"
+                    class="task-action-btn delete"
+                    title="Eliminar tarea"
+                    aria-label="Eliminar tarea">
               <span class="action-icon">🗑️</span>
             </button>
           </div>
