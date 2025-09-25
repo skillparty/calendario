@@ -173,13 +173,21 @@ export async function createTaskOnBackend(payload) {
   const cleanPayload = {
     title: payload.title || '',
     description: payload.description || null,
-    date: payload.date || null,
-    time: payload.time || null,
     completed: Boolean(payload.completed),
     is_reminder: Boolean(payload.isReminder || payload.is_reminder),
     priority: parseInt(payload.priority || '3'),
     tags: Array.isArray(payload.tags) ? payload.tags : []
   };
+
+  // Only include date if it's a valid date string
+  if (payload.date && payload.date.trim() !== '') {
+    cleanPayload.date = payload.date;
+  }
+
+  // Only include time if date is present and time is valid
+  if (cleanPayload.date && payload.time && payload.time.trim() !== '') {
+    cleanPayload.time = payload.time;
+  }
 
   console.log('Creating task with clean payload:', cleanPayload);
   const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(cleanPayload) });
