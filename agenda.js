@@ -69,6 +69,26 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     allTasks = allTasks.filter(task => task.completed === (filterStatus === 'completed'));
   }
 
+  // Función para obtener color por día de la semana
+  function getColorByDay(dateString) {
+    if (!dateString) return { bg: 'rgba(156, 163, 175, 0.1)', border: '#9ca3af', text: '#6b7280' }; // Gris para sin fecha
+    
+    const date = new Date(dateString + 'T00:00:00');
+    const dayOfWeek = date.getDay(); // 0 = Domingo, 1 = Lunes, etc.
+    
+    const dayColors = {
+      0: { bg: 'rgba(239, 68, 68, 0.1)', border: '#ef4444', text: '#dc2626' },   // Domingo - Rojo
+      1: { bg: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6', text: '#2563eb' }, // Lunes - Azul
+      2: { bg: 'rgba(34, 197, 94, 0.1)', border: '#22c55e', text: '#16a34a' },  // Martes - Verde
+      3: { bg: 'rgba(168, 85, 247, 0.1)', border: '#a855f7', text: '#9333ea' }, // Miércoles - Púrpura
+      4: { bg: 'rgba(245, 158, 11, 0.1)', border: '#f59e0b', text: '#d97706' }, // Jueves - Ámbar
+      5: { bg: 'rgba(236, 72, 153, 0.1)', border: '#ec4899', text: '#db2777' }, // Viernes - Rosa
+      6: { bg: 'rgba(20, 184, 166, 0.1)', border: '#14b8a6', text: '#0d9488' }  // Sábado - Teal
+    };
+    
+    return dayColors[dayOfWeek];
+  }
+
   if (allTasks.length === 0) {
     html += `
       <div class="empty-state">
@@ -94,7 +114,14 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
       const priorityIcon = task.priority === 1 ? '🔴' : task.priority === 2 ? '🟡' : '🟢';
       const reminderIcon = task.isReminder ? '🔔' : '';
       
-      html += `<li class="task${completedClass}">
+      // Obtener colores por día
+      const dayColors = getColorByDay(task.date);
+      const customStyle = `
+        background: linear-gradient(135deg, ${dayColors.bg} 0%, rgba(255, 255, 255, 0.9) 100%);
+        border-left-color: ${dayColors.border};
+      `;
+      
+      html += `<li class="task${completedClass}" style="${customStyle}">
               <div class="task-info">
                   <div class="task-content">
                       <div class="task-header">
@@ -106,7 +133,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                       </div>
                       ${description ? `<p class="task-description">${description}</p>` : ''}
                       <div class="task-meta" style="${dateStyle}">
-                          <span class="task-date">${formattedDate}</span>
+                          <span class="task-date" style="color: ${dayColors.text}; font-weight: 600;">${formattedDate}</span>
                           ${timeDisplay ? `<span class="task-time">${timeDisplay}</span>` : ''}
                       </div>
                   </div>
