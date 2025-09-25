@@ -447,7 +447,8 @@ main {
     padding: 2rem;
     display: flex;
     gap: 2rem;
-    align-items: start;
+    align-items: flex-start;
+    min-height: calc(100vh - 4rem);
 }
 
 .agenda-main {
@@ -456,6 +457,7 @@ main {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    width: 100%;
 }
 
 /* New Agenda Header Section */
@@ -776,6 +778,10 @@ main {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
 }
 
 /* Task Card Styles */
@@ -787,9 +793,11 @@ main {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     animation: slideIn 0.3s ease-out;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    margin-bottom: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1rem;
     list-style: none;
+    display: block;
+    width: 100%;
 }
 
 @keyframes slideIn {
@@ -1507,13 +1515,15 @@ main {
     background: white;
     border-radius: 20px;
     padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
     height: fit-content;
     position: sticky;
     top: 2rem;
     max-height: calc(100vh - 4rem);
     overflow-y: auto;
+    display: block;
+    visibility: visible;
 }
 
 .sidebar-section {
@@ -1543,6 +1553,7 @@ main {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    width: 100%;
 }
 
 .btn-action {
@@ -1628,20 +1639,22 @@ main {
 /* Enhanced Statistics Grid */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    width: 100%;
 }
 
 .stat-card {
-    background: #f9fafb;
-    padding: 1rem;
+    background: white;
+    padding: 1.25rem;
     border-radius: 12px;
     text-align: center;
-    border: 2px solid transparent;
+    border: 1px solid #e5e7eb;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-    min-height: 80px;
+    min-height: 90px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -2020,8 +2033,9 @@ main {
     /* Enhanced Agenda Mobile Styles */
     .agenda-container {
         padding: 1rem;
-        gap: 1rem;
+        gap: 1.5rem;
         flex-direction: column;
+        align-items: stretch;
     }
     
     .agenda-header {
