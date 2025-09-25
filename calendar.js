@@ -367,11 +367,19 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   const task = {
     id: Date.now().toString(),
     title,
-    date: taskDate,
-    time,
     completed: false,
     isReminder
   };
+
+  // Only add date if it's valid
+  if (taskDate && taskDate.trim() !== '') {
+    task.date = taskDate;
+    
+    // Only add time if date is present
+    if (time && time.trim() !== '') {
+      task.time = time;
+    }
+  }
 
   updateTasks(draft => {
     const key = taskDate ? taskDate : 'undated';
