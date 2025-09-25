@@ -74,19 +74,30 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     const formattedDate = task.date ? formatDateForDisplay(task.date) : 'Sin fecha';
     const timeDisplay = task.time ? ` a las ${task.time}` : '';
     const dateStyle = !task.date ? 'color: #999; font-style: italic;' : '';
+    const description = task.description && task.description.trim() ? task.description.trim() : '';
+    const priorityIcon = task.priority === 1 ? '🔴' : task.priority === 2 ? '🟡' : '🟢';
+    const reminderIcon = task.isReminder ? '🔔' : '';
+    
     html += `<li class="task${completedClass}">
             <div class="task-info">
                 <div class="task-content">
-                    <h4 class="task-title">${task.title}</h4>
-                    <p class="task-meta" style="${dateStyle}">
+                    <div class="task-header">
+                        <h4 class="task-title">${task.title}</h4>
+                        <div class="task-indicators">
+                            ${reminderIcon}
+                            <span class="task-priority" title="Prioridad: ${task.priority === 1 ? 'Alta' : task.priority === 2 ? 'Media' : 'Baja'}">${priorityIcon}</span>
+                        </div>
+                    </div>
+                    ${description ? `<p class="task-description">${description}</p>` : ''}
+                    <div class="task-meta" style="${dateStyle}">
                         <span class="task-date">${formattedDate}</span>
                         ${timeDisplay ? `<span class="task-time">${timeDisplay}</span>` : ''}
-                    </p>
+                    </div>
                 </div>
                 <div class="task-buttons">
-                    <button onclick="showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})" class="btn-edit" title="Editar tarea">✏️ Editar</button>
-                    <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')" class="btn-toggle" title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}">${task.completed ? '↩️ Desmarcar' : '✅ Completar'}</button>
-                    <button onclick="deleteTask('${task.id}')" class="btn-delete" title="Eliminar tarea">🗑️ Eliminar</button>
+                    <button onclick="showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})" class="btn-edit" title="Editar tarea">✏️</button>
+                    <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')" class="btn-toggle" title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}">${task.completed ? '↩️' : '✅'}</button>
+                    <button onclick="deleteTask('${task.id}')" class="btn-delete" title="Eliminar tarea">🗑️</button>
                 </div>
             </div>
         </li>`;

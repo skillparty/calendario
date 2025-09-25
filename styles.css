@@ -428,7 +428,7 @@ main {
     box-shadow: var(--shadow-medium);
 }
 
-/* Agenda Styles - Apple Design */
+/* Agenda Styles - Enhanced UX/UI */
 #agenda-view {
     padding: var(--spacing-xl);
 }
@@ -520,49 +520,153 @@ main {
 
 .task-content {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     width: 100%;
+    gap: var(--spacing-xs);
+}
+
+/* Enhanced Task Layout */
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-xs);
+    width: 100%;
+}
+
+.task-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+    flex: 1;
+    word-wrap: break-word;
+}
+
+.task-indicators {
+    display: flex;
+    gap: var(--spacing-xs);
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: var(--spacing-sm);
+}
+
+.task-priority {
+    font-size: 0.875rem;
+    cursor: help;
+}
+
+.task-description {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    background-color: rgba(237, 174, 73, 0.05);
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    border-left: 2px solid rgba(237, 174, 73, 0.3);
+}
+
+.task-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
 }
 
 .task-actions, .task-buttons {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-xs);
     align-items: center;
     flex-wrap: wrap;
-    max-width: 100%;
-    overflow: hidden;
+    flex-shrink: 0;
+    margin-left: var(--spacing-md);
 }
 
-.task button {
-    background-color: var(--hunyadi-yellow);
-    color: var(--bg-primary);
+/* Softer Button Colors */
+.task button, .btn-edit, .btn-toggle, .btn-delete {
     border: none;
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.875rem;
+    font-weight: 500;
     font-family: inherit;
     transition: all 0.2s ease;
     box-shadow: var(--shadow-light);
+    min-width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.task button:hover {
-    background-color: var(--amaranth);
+/* Edit Button - Soft Blue */
+.btn-edit {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.btn-edit:hover {
+    background-color: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
     transform: translateY(-1px);
     box-shadow: var(--shadow-medium);
 }
 
-.delete-btn {
-    background-color: var(--amaranth) !important;
-    border-color: var(--amaranth) !important;
-    color: var(--bg-primary) !important;
+/* Toggle Button - Soft Green/Orange */
+.btn-toggle {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
-.delete-btn:hover {
-    background-color: var(--bg-primary) !important;
-    color: var(--amaranth) !important;
+.btn-toggle:hover {
+    background-color: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.3);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-medium);
+}
+
+/* Delete Button - Soft Red */
+.btn-delete {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-delete:hover {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-medium);
+}
+
+/* Safari-specific fixes */
+@supports (-webkit-appearance: none) {
+    .task-buttons button {
+        -webkit-appearance: none;
+        appearance: none;
+        -webkit-border-radius: var(--radius-sm);
+        border-radius: var(--radius-sm);
+    }
+    
+    .task-description {
+        -webkit-hyphens: auto;
+        hyphens: auto;
+    }
+    
+    .task-title {
+        -webkit-line-clamp: none;
+        line-clamp: none;
+        -webkit-box-orient: vertical;
+    }
 }
 
 /* Modal Styles - Apple Design */
@@ -897,7 +1001,41 @@ main {
         min-width: unset;
         padding: var(--spacing-md);
         font-size: 1rem;
-        min-height: 48px;
+        border-radius: var(--radius-md);
+    }
+    
+    /* Enhanced mobile task layout */
+    .task-info {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-sm);
+    }
+    
+    .task-buttons {
+        margin-left: 0;
+        justify-content: center;
+        gap: var(--spacing-md);
+    }
+    
+    .task-buttons button {
+        flex: 1;
+        min-width: 60px;
+        padding: var(--spacing-sm);
+        font-size: 1rem;
+    }
+    
+    .task-description {
+        font-size: 0.9rem;
+        padding: var(--spacing-md);
+    }
+    
+    .task-title {
+        font-size: 1.1rem;
+    }
+    
+    .task-indicators {
+        margin-left: 0;
+        margin-top: var(--spacing-xs);
     }
     
     /* Task mobile layout */
