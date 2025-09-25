@@ -443,12 +443,13 @@ main {
 
 .agenda-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 24px;
     padding: 24px;
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
     min-height: calc(100vh - 120px);
+    align-items: flex-start;
 }
 
 .agenda-main {
@@ -929,6 +930,9 @@ main {
 .task-card-body {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .task-card-title-row {
@@ -941,11 +945,13 @@ main {
 
 .task-card-title {
     margin: 0;
-    font-size: 1rem;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--text-primary);
-    line-height: 1.5;
-    word-break: break-word;
+    color: #1e293b;
+    line-height: 1.4;
+    word-wrap: break-word;
+    display: block;
+    width: 100%;
 }
 
 .task-card-title.completed {
@@ -954,10 +960,16 @@ main {
 }
 
 .task-card-description {
-    margin: 0.5rem 0;
-    font-size: 0.875rem;
-    color: var(--text-secondary);
+    margin: 8px 0;
+    font-size: 14px;
+    color: #64748b;
     line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    display: block;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
 }
 
 /* Badges */
@@ -1541,14 +1553,17 @@ main {
 /* Enhanced Sidebar Styles */
 .agenda-sidebar {
     width: 350px;
-    background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+    background: white;
+    border: 1px solid rgba(226, 232, 240, 0.5);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
     position: sticky;
-    top: 2rem;
+    top: 24px;
+    height: fit-content;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
 }
 
 .sidebar-section {
@@ -1562,11 +1577,12 @@ main {
 .sidebar-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin: 0 0 1rem 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
+    gap: 8px;
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.025em;
 }
 
 .sidebar-icon {
@@ -1666,22 +1682,22 @@ main {
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 12px;
     width: 100%;
 }
 
 .stat-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 2rem;
-    border-radius: 20px;
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
     text-align: center;
-    border: none;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
-    min-height: 120px;
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
-    color: white;
+    min-height: 80px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    color: #1e293b;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -2059,6 +2075,7 @@ main {
 
     /* Enhanced Agenda Mobile Styles */
     .agenda-container {
+        flex-direction: column;
         padding: 16px;
         gap: 20px;
         min-height: calc(100vh - 80px);
@@ -2252,9 +2269,11 @@ main {
     /* Sidebar becomes full width section on mobile */
     .agenda-sidebar {
         width: 100%;
-        margin-top: 1.5rem;
+        margin-top: 0;
         border-radius: 16px;
         position: static;
+        max-height: none;
+        order: -1;
     }
     
     .sidebar-section {
