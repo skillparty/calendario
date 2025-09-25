@@ -379,44 +379,23 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
     draft[key].push(task);
   });
 
+  // Backend sync if logged in
   if (isLoggedInWithBackend()) {
-    showSyncStatus('Guardando en servidor…');
-    const cleanTitle = task.title.trim();
-    if (!cleanTitle || cleanTitle.length === 0) { alert('El título no puede estar vacío'); return; }
-    if (cleanTitle.length > 500) { alert('El título no puede tener más de 500 caracteres'); return; }
-    const backendData = {
-      title: cleanTitle,
-      description: task.description || null,
-      date: taskDate || null,
-      time: (time && time.trim() !== '') ? time.trim() : null,
-      completed: false,
-      is_reminder: isReminder,
-      priority: 1,
-      tags: []
-    };
-    createTaskOnBackend(backendData)
-      .then(created => {
-        if (created && created.data && created.data.id) {
-          const newId = String(created.data.id);
-          updateTasks(draft => {
-            const key = taskDate ? taskDate : 'undated';
-            const idx = (draft[key] || []).findIndex(t => t.id === task.id);
-            if (idx !== -1) draft[key][idx].id = newId;
-          });
-        }
+    console.log('Creating task on backend:', task);
+    createTaskOnBackend(task)
+      .then(() => {
+        console.log('Task created successfully on backend');
         showSyncStatus('Guardado ✅');
-        const modal = document.querySelector('.modal'); if (modal) modal.remove();
-        notifyTasksUpdated();
       })
       .catch(async (err) => {
         console.error('Create task failed:', err);
         showSyncStatus('Guardado localmente (sin conexión)', true);
-        const modal = document.querySelector('.modal'); if (modal) modal.remove();
       });
-  } else {
-    const modal = document.querySelector('.modal'); if (modal) modal.remove();
-    notifyTasksUpdated();
   }
+
+  const modal = document.querySelector('.modal'); 
+  if (modal) modal.remove();
+  notifyTasksUpdated();
 
   if (isReminder && 'Notification' in window) {
     if (Notification.permission === 'default') Notification.requestPermission();
