@@ -29,9 +29,28 @@ export async function apiFetch(path, options = {}, retries = 3) {
   }
   const init = Object.assign({}, options, { headers });
 
+  console.log('API Request:', {
+    url: API_BASE_URL + path,
+    method: init.method || 'GET',
+    headers: headers,
+    body: init.body
+  });
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(API_BASE_URL + path, init);
+      
+      console.log('API Response:', {
+        status: res.status,
+        statusText: res.statusText,
+        url: res.url
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.clone().text();
+        console.error('API Error Response:', errorText);
+      }
+      
       if ((res.status === 502 || res.status === 503) && attempt < retries) {
         await new Promise(r => setTimeout(r, 1000 * attempt));
         continue;
