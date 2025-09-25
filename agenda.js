@@ -232,16 +232,24 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     const description = task.description && task.description.trim() ? task.description.trim() : '';
     const priorityClass = task.priority === 1 ? 'high' : task.priority === 2 ? 'medium' : 'low';
     const priorityLabel = task.priority === 1 ? 'Alta' : task.priority === 2 ? 'Media' : 'Baja';
+    const priorityIcon = task.priority === 1 ? '🔴' : task.priority === 2 ? '🟡' : '🟢';
     const reminderIcon = task.isReminder ? '🔔' : '';
     
     const dayColors = getColorByDay(task.date);
     
+    // Escape HTML to prevent XSS
+    const escapeHtml = (text) => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+    
     return `
-      <li class="task-card${completedClass}" data-task-id="${task.id}">
+      <li class="task-card${completedClass}" data-task-id="${task.id}" data-priority="${task.priority}">
         <div class="task-card-content">
           <div class="task-card-header">
             <div class="task-card-check">
-              <button onclick="toggleTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}')"
+              <button onclick="event.stopPropagation(); toggleTaskWithAnimation('${task.id}', '${filterMonth}', '${filterStatus}')"
                       class="task-check-btn${task.completed ? ' checked' : ''}"
                       title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}"
                       aria-label="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}"
@@ -251,15 +259,15 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
             </div>
             <div class="task-card-body">
               <div class="task-card-title-row">
-                <h4 class="task-card-title${task.completed ? ' completed' : ''}">${task.title}</h4>
+                <h4 class="task-card-title${task.completed ? ' completed' : ''}">${escapeHtml(task.title)}</h4>
                 <div class="task-card-badges">
                   ${reminderIcon ? `<span class="badge reminder" title="Recordatorio activo">${reminderIcon}</span>` : ''}
                   <span class="badge priority ${priorityClass}" title="Prioridad: ${priorityLabel}">
-                    ${priorityClass === 'high' ? '🔴' : priorityClass === 'medium' ? '🟡' : '🟢'}
+                    ${priorityIcon}
                   </span>
                 </div>
               </div>
-              ${description ? `<p class="task-card-description">${description}</p>` : ''}
+              ${description ? `<p class="task-card-description">${escapeHtml(description)}</p>` : ''}
               <div class="task-card-meta">
                 ${timeDisplay ? `
                   <span class="meta-item time">
@@ -277,15 +285,15 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
             </div>
           </div>
           <div class="task-card-actions">
-            <button onclick="showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})"
+            <button onclick="event.stopPropagation(); showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})"
                     class="task-action-btn edit"
-                    title="Editar tarea"
+                    title="Editar"
                     aria-label="Editar tarea">
               <span class="action-icon">✏️</span>
             </button>
-            <button onclick="if(confirm('¿Estás seguro de que deseas eliminar esta tarea?')) { deleteTask('${task.id}'); renderAgenda('${filterMonth}', '${filterStatus}'); }"
+            <button onclick="event.stopPropagation(); confirmDeleteTask('${task.id}', '${escapeHtml(task.title)}', '${filterMonth}', '${filterStatus}')"
                     class="task-action-btn delete"
-                    title="Eliminar tarea"
+                    title="Eliminar"
                     aria-label="Eliminar tarea">
               <span class="action-icon">🗑️</span>
             </button>
@@ -495,6 +503,137 @@ export function toggleTask(id) {
   }
 }
 
+// New function with animation
+export function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
+  const taskCard = document.querySelector(`[data-task-id="${id}"]`);
+  if (taskCard) {
+    taskCard.style.transition = 'all 0.3s ease';
+    taskCard.style.transform = 'scale(0.98)';
+    setTimeout(() => {
+      toggleTask(id);
+      renderAgenda(filterMonth, filterStatus);
+    }, 150);
+  } else {
+    toggleTask(id);
+    renderAgenda(filterMonth, filterStatus);
+  }
+}
+
+// Improved delete confirmation
+export function confirmDeleteTask(id, title, filterMonth, filterStatus) {
+  const modal = document.createElement('div');
+  modal.className = 'delete-confirm-modal';
+  modal.innerHTML = `
+    <div class="delete-confirm-content">
+      <h3>⚠️ Confirmar eliminación</h3>
+      <p>¿Estás seguro de que deseas eliminar la tarea?</p>
+      <p class="task-title-preview">"${title}"</p>
+      <div class="delete-confirm-actions">
+        <button onclick="this.closest('.delete-confirm-modal').remove()" class="btn-cancel">Cancelar</button>
+        <button onclick="deleteTaskConfirmed('${id}', '${filterMonth}', '${filterStatus}')" class="btn-delete-confirm">Eliminar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  // Add styles for the modal
+  const style = document.createElement('style');
+  style.textContent = `
+    .delete-confirm-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    .delete-confirm-content {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      animation: slideUp 0.3s ease;
+    }
+    
+    .delete-confirm-content h3 {
+      margin: 0 0 1rem 0;
+      color: #dc2626;
+    }
+    
+    .task-title-preview {
+      background: #f3f4f6;
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-weight: 500;
+      margin: 1rem 0;
+    }
+    
+    .delete-confirm-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+    
+    .btn-cancel {
+      padding: 0.75rem 1.5rem;
+      background: #e5e7eb;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    .btn-delete-confirm {
+      padding: 0.75rem 1.5rem;
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+export function deleteTaskConfirmed(id, filterMonth, filterStatus) {
+  const modal = document.querySelector('.delete-confirm-modal');
+  if (modal) modal.remove();
+  
+  const taskCard = document.querySelector(`[data-task-id="${id}"]`);
+  if (taskCard) {
+    taskCard.style.transition = 'all 0.3s ease';
+    taskCard.style.transform = 'translateX(-100%)';
+    taskCard.style.opacity = '0';
+    setTimeout(() => {
+      deleteTask(id);
+      renderAgenda(filterMonth, filterStatus);
+    }, 300);
+  } else {
+    deleteTask(id);
+    renderAgenda(filterMonth, filterStatus);
+  }
+}
+
 /** @param {string} id */
 export function deleteTask(id) {
   // remove from local state
@@ -516,6 +655,9 @@ export function deleteTask(id) {
 if (typeof window !== 'undefined') {
   window.renderAgenda = renderAgenda;
   window.toggleTask = toggleTask;
+  window.toggleTaskWithAnimation = toggleTaskWithAnimation;
+  window.confirmDeleteTask = confirmDeleteTask;
+  window.deleteTaskConfirmed = deleteTaskConfirmed;
   window.deleteTask = deleteTask;
   window.showTaskInputModal = showTaskInputModal;
 }
