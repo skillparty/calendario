@@ -444,7 +444,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
 }
 
 /** @param {Task[]} allTasks @returns {Task[]} */
-export function filterUpcomingTasks(allTasks) {
+function filterUpcomingTasks(allTasks) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   return allTasks
     .filter(t => !t.completed && t.date)
@@ -478,7 +478,7 @@ function formatDateForDisplay(dateString) {
 }
 
 /** @param {string} id */
-export function toggleTask(id) {
+function toggleTask(id) {
   updateTasks(draft => {
     Object.values(draft).forEach(list => {
       const t = (list || []).find(x => x.id === id);
@@ -504,7 +504,7 @@ export function toggleTask(id) {
 }
 
 // New function with animation
-export function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
+function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
   const taskCard = document.querySelector(`[data-task-id="${id}"]`);
   if (taskCard) {
     taskCard.style.transition = 'all 0.3s ease';
@@ -520,7 +520,7 @@ export function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
 }
 
 // Improved delete confirmation
-export function confirmDeleteTask(id, title, filterMonth, filterStatus) {
+function confirmDeleteTask(id, title, filterMonth, filterStatus) {
   const modal = document.createElement('div');
   modal.className = 'delete-confirm-modal';
   modal.innerHTML = `
@@ -615,7 +615,7 @@ export function confirmDeleteTask(id, title, filterMonth, filterStatus) {
   document.head.appendChild(style);
 }
 
-export function deleteTaskConfirmed(id, filterMonth, filterStatus) {
+function deleteTaskConfirmed(id, filterMonth, filterStatus) {
   const modal = document.querySelector('.delete-confirm-modal');
   if (modal) modal.remove();
   
@@ -635,7 +635,7 @@ export function deleteTaskConfirmed(id, filterMonth, filterStatus) {
 }
 
 /** @param {string} id */
-export function deleteTask(id) {
+function deleteTask(id) {
   // remove from local state
   updateTasks(draft => {
     Object.keys(draft).forEach(date => {

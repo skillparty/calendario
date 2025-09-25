@@ -698,12 +698,15 @@ main {
     background: white;
     border-radius: 20px;
     padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
     min-height: 400px;
     overflow-y: auto;
     max-height: calc(100vh - 300px);
     scroll-behavior: smooth;
+    display: block;
+    visibility: visible;
+    opacity: 1;
 }
 
 /* Custom scrollbar for task list */
@@ -789,15 +792,18 @@ main {
     background: white;
     border-radius: 12px;
     border: 1px solid #e5e7eb;
-    overflow: hidden;
+    overflow: visible;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     animation: slideIn 0.3s ease-out;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 1rem;
     list-style: none;
     display: block;
     width: 100%;
+    min-height: 80px;
+    opacity: 1;
+    visibility: visible;
 }
 
 @keyframes slideIn {
