@@ -342,7 +342,11 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
       });
     });
 
-    // Backend update if logged in
+    // Close modal immediately after local update (before backend sync)
+    const modal = document.querySelector('.modal'); if (modal) modal.remove();
+    notifyTasksUpdated();
+
+    // Backend update if logged in (async, doesn't block UI)
     if (isLoggedInWithBackend()) {
       const serverId = /^\d+$/.test(existingTaskId) ? existingTaskId : null;
       if (serverId) {
@@ -357,9 +361,6 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
         pushLocalTasksToBackend();
       }
     }
-
-    const modal = document.querySelector('.modal'); if (modal) modal.remove();
-    notifyTasksUpdated();
     return;
   }
 
@@ -387,7 +388,12 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
     draft[key].push(task);
   });
 
-  // Backend sync if logged in
+  // Close modal immediately after local save (before backend sync)
+  const modal = document.querySelector('.modal'); 
+  if (modal) modal.remove();
+  notifyTasksUpdated();
+
+  // Backend sync if logged in (async, doesn't block UI)
   console.log('=== TASK CREATION DEBUG ===');
   console.log('taskDate:', taskDate);
   console.log('Final task object:', task);
@@ -408,10 +414,6 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   } else {
     console.log('Not logged in with backend - saving locally only');
   }
-
-  const modal = document.querySelector('.modal'); 
-  if (modal) modal.remove();
-  notifyTasksUpdated();
 
   if (isReminder && 'Notification' in window) {
     if (Notification.permission === 'default') Notification.requestPermission();
