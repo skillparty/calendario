@@ -169,8 +169,20 @@ export async function pushLocalTasksToBackend() {
 }
 
 export async function createTaskOnBackend(payload) {
-  console.log('Creating task with payload:', payload);
-  const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(payload) });
+  // Ensure payload matches backend validation exactly
+  const cleanPayload = {
+    title: payload.title || '',
+    description: payload.description || null,
+    date: payload.date || null,
+    time: payload.time || null,
+    completed: Boolean(payload.completed),
+    is_reminder: Boolean(payload.isReminder || payload.is_reminder),
+    priority: parseInt(payload.priority || '3'),
+    tags: Array.isArray(payload.tags) ? payload.tags : []
+  };
+
+  console.log('Creating task with clean payload:', cleanPayload);
+  const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(cleanPayload) });
   if (!res.ok) {
     const errorText = await res.text();
     console.error('Create task failed:', res.status, errorText);
