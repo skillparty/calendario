@@ -70,8 +70,9 @@ function showSyncStatus(message, isError = false) {
 
 /** @returns {void} */
 function showCalendar() {
-  calendarView.classList.remove('hidden');
-  agendaView.classList.add('hidden');
+  document.body.setAttribute('data-current-view', 'calendar');
+  if (calendarView) calendarView.classList.remove('hidden');
+  if (agendaView) agendaView.classList.add('hidden');
   if (calendarBtn) { calendarBtn.classList.add('active'); calendarBtn.setAttribute('aria-pressed', 'true'); }
   if (agendaBtn) { agendaBtn.classList.remove('active'); agendaBtn.setAttribute('aria-pressed', 'false'); }
   renderCalendar();
@@ -79,8 +80,15 @@ function showCalendar() {
 
 /** @returns {void} */
 function showAgenda() {
-  agendaView.classList.remove('hidden');
-  calendarView.classList.add('hidden');
+  document.body.setAttribute('data-current-view', 'agenda');
+  // FORCE AGENDA VIEW TO ALWAYS BE VISIBLE
+  if (agendaView) {
+    agendaView.classList.remove('hidden');
+    agendaView.style.display = 'block';
+    agendaView.style.visibility = 'visible';
+    agendaView.style.opacity = '1';
+  }
+  if (calendarView) calendarView.classList.add('hidden');
   if (agendaBtn) { agendaBtn.classList.add('active'); agendaBtn.setAttribute('aria-pressed', 'true'); }
   if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
   const monthFilterEl = document.getElementById('month-filter');
