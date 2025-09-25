@@ -380,8 +380,10 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   });
 
   // Backend sync if logged in
+  console.log('Checking backend login status:', isLoggedInWithBackend());
   if (isLoggedInWithBackend()) {
     console.log('Creating task on backend:', task);
+    console.log('User session:', state.userSession);
     createTaskOnBackend(task)
       .then(() => {
         console.log('Task created successfully on backend');
@@ -391,6 +393,8 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
         console.error('Create task failed:', err);
         showSyncStatus('Guardado localmente (sin conexión)', true);
       });
+  } else {
+    console.log('Not logged in with backend - saving locally only');
   }
 
   const modal = document.querySelector('.modal'); 

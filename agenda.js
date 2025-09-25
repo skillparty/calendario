@@ -96,7 +96,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
         <div class="agenda-sidebar">
             <h3>🚀 Acciones Rápidas</h3>
             <div class="quick-actions">
-                <button onclick="showTaskInputModal()" class="btn-primary btn-full">➕ Agregar Tarea Rápida</button>
+                <button onclick="showTaskInputModal(null)" class="btn-primary btn-full">➕ Agregar Tarea Rápida</button>
                 <button onclick="showPdfExportModal()" class="btn-secondary btn-full">📄 Exportar PDF</button>
                 <button onclick="testNotification()" class="btn-secondary btn-full" title="Probar sistema de notificaciones">🔔 Probar Notificaciones</button>
             </div>
