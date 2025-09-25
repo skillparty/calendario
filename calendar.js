@@ -388,6 +388,10 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   });
 
   // Backend sync if logged in
+  console.log('=== TASK CREATION DEBUG ===');
+  console.log('taskDate:', taskDate);
+  console.log('Final task object:', task);
+  console.log('Task has date field:', 'date' in task);
   console.log('Checking backend login status:', isLoggedInWithBackend());
   if (isLoggedInWithBackend()) {
     console.log('Creating task on backend:', task);
