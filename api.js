@@ -125,18 +125,36 @@ export async function pushLocalTasksToBackend() {
   for (const t of localList) {
     const existing = serverById.get(String(t.id));
     if (!existing) {
+      /** @type {any} */
+      const payload = {
+        title: t.title,
+        completed: Boolean(t.completed),
+        is_reminder: t.isReminder !== undefined ? Boolean(t.isReminder) : true,
+        priority: parseInt(t.priority || 1, 10),
+        tags: Array.isArray(t.tags) ? t.tags : []
+      };
+      
+      // Only add description if it's not empty
+      if (t.description && t.description.trim() !== '') {
+        payload.description = t.description.trim();
+      }
+      
+      // Only add date if it's valid (not null, not empty, not 'undated')
+      if (t.date && t.date !== 'undated' && t.date.trim() !== '') {
+        const dateStr = t.date.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          payload.date = dateStr;
+          
+          // Only add time if date is present and time is valid
+          if (t.time && t.time.trim() !== '') {
+            payload.time = t.time.trim();
+          }
+        }
+      }
+      
       await apiFetch('/api/tasks', {
         method: 'POST',
-        body: JSON.stringify({
-          title: t.title,
-          description: t.description || null,
-          date: (t.date && t.date !== 'undated' && t.date !== '') ? t.date : null,
-          time: (t.time && t.time !== '') ? t.time : null,
-          completed: Boolean(t.completed),
-          is_reminder: t.isReminder !== undefined ? Boolean(t.isReminder) : true,
-          priority: parseInt(t.priority || 1, 10),
-          tags: Array.isArray(t.tags) ? t.tags : []
-        })
+        body: JSON.stringify(payload)
       });
     } else {
       /** @type {Partial<APITask> & {[k: string]: any}} */
@@ -185,13 +203,24 @@ export async function createTaskOnBackend(payload) {
     cleanPayload.description = payload.description.trim();
   }
 
-  // Only include date if it's a valid date string (not null, not empty)
-  if (payload.date && typeof payload.date === 'string' && payload.date.trim() !== '' && payload.date !== 'null') {
-    cleanPayload.date = payload.date.trim();
+  // Only include date if it's a valid date string (not null, not empty, not undefined)
+  if (payload.date && 
+      typeof payload.date === 'string' && 
+      payload.date.trim() !== '' && 
+      payload.date !== 'null' && 
+      payload.date !== 'undefined') {
     
-    // Only include time if date is present and time is valid
-    if (payload.time && typeof payload.time === 'string' && payload.time.trim() !== '') {
-      cleanPayload.time = payload.time.trim();
+    const dateStr = payload.date.trim();
+    // Validate date format (YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      cleanPayload.date = dateStr;
+      
+      // Only include time if date is present and time is valid
+      if (payload.time && typeof payload.time === 'string' && payload.time.trim() !== '') {
+        cleanPayload.time = payload.time.trim();
+      }
+    } else {
+      console.warn('Invalid date format, skipping date field:', dateStr);
     }
   }
 
