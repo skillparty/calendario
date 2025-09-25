@@ -2,7 +2,7 @@
   "name": "Calendar10 - Gestión de Tareas",
   "short_name": "Calendar10",
   "description": "Aplicación de calendario y gestión de tareas con sincronización offline",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#edae49",
@@ -43,22 +43,22 @@
   "categories": ["productivity", "utilities"],
   "lang": "es-ES",
   "dir": "ltr",
-  "scope": "/",
+  "scope": "./",
   "prefer_related_applications": false,
   "shortcuts": [
     {
       "name": "Nueva Tarea",
       "short_name": "Nueva",
       "description": "Crear una nueva tarea",
-      "url": "/?action=new-task",
-      "icons": [{ "src": "/public/app.png", "sizes": "96x96" }]
+      "url": "./?action=new-task",
+      "icons": [{ "src": "./public/app.png", "sizes": "96x96" }]
     },
     {
       "name": "Agenda",
       "short_name": "Agenda",
       "description": "Ver agenda de tareas",
-      "url": "/?view=agenda",
-      "icons": [{ "src": "/public/app.png", "sizes": "96x96" }]
+      "url": "./?view=agenda",
+      "icons": [{ "src": "./public/app.png", "sizes": "96x96" }]
     }
   ]
 }

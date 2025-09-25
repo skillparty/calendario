@@ -150,8 +150,13 @@ export async function pushLocalTasksToBackend() {
 }
 
 export async function createTaskOnBackend(payload) {
+  console.log('Creating task with payload:', payload);
   const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(payload) });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('Create task failed:', res.status, errorText);
+    throw new Error('HTTP ' + res.status + ': ' + errorText);
+  }
   return res.json();
 }
 
