@@ -361,7 +361,8 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
     });
 
     // Close modal immediately after local update (before backend sync)
-    const modal = document.querySelector('.modal'); if (modal) modal.remove();
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(m => m.remove());
     notifyTasksUpdated();
 
     // Backend update if logged in (async, doesn't block UI)
@@ -407,8 +408,8 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   });
 
   // Close modal immediately after local save (before backend sync)
-  const modal = document.querySelector('.modal'); 
-  if (modal) modal.remove();
+  const modals = document.querySelectorAll('.modal');
+  modals.forEach(m => m.remove());
   notifyTasksUpdated();
 
   // Backend sync if logged in (async, doesn't block UI)

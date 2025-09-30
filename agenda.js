@@ -542,40 +542,23 @@ function toggleTask(id) {
   }
 }
 
-// New function with animation
+// Toggle task without animation, preserving scroll position
 function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
   // Save current scroll position
   const taskListContainer = document.querySelector('.task-list-container');
   const scrollPosition = taskListContainer ? taskListContainer.scrollTop : 0;
   
-  const taskCard = document.querySelector(`[data-task-id="${id}"]`);
-  if (taskCard) {
-    taskCard.style.transition = 'all 0.3s ease';
-    taskCard.style.transform = 'scale(0.98)';
-    setTimeout(() => {
-      toggleTask(id);
-      renderAgenda(filterMonth, filterStatus);
-      
-      // Restore scroll position after render
-      requestAnimationFrame(() => {
-        const newTaskListContainer = document.querySelector('.task-list-container');
-        if (newTaskListContainer) {
-          newTaskListContainer.scrollTop = scrollPosition;
-        }
-      });
-    }, 150);
-  } else {
-    toggleTask(id);
-    renderAgenda(filterMonth, filterStatus);
-    
-    // Restore scroll position after render
-    requestAnimationFrame(() => {
-      const newTaskListContainer = document.querySelector('.task-list-container');
-      if (newTaskListContainer) {
-        newTaskListContainer.scrollTop = scrollPosition;
-      }
-    });
-  }
+  // Toggle task immediately
+  toggleTask(id);
+  renderAgenda(filterMonth, filterStatus);
+  
+  // Restore scroll position after render
+  requestAnimationFrame(() => {
+    const newTaskListContainer = document.querySelector('.task-list-container');
+    if (newTaskListContainer) {
+      newTaskListContainer.scrollTop = scrollPosition;
+    }
+  });
 }
 
 // Improved delete confirmation
