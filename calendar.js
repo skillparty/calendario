@@ -173,8 +173,17 @@ function showSyncStatus(message, isError = false) {
 
 /** @param {string|null} [date=null] @param {Task|null} [existingTask=null] */
 export function showTaskInputModal(date = null, existingTask = null) {
+  // Remove any existing task input modals first
+  const existingModals = document.querySelectorAll('.modal');
+  existingModals.forEach(m => {
+    if (m.querySelector('#task-title-input')) {
+      m.remove();
+    }
+  });
+
   const modal = document.createElement('div');
   modal.className = 'modal';
+  modal.setAttribute('data-modal-type', 'task-input');
   modal.innerHTML = `
         <div class="modal-content">
             <span class="close-btn" onclick="this.parentElement.parentElement.remove()">&times;</span>
@@ -218,7 +227,16 @@ export function showTaskInputModal(date = null, existingTask = null) {
         </div>
     `;
   document.body.appendChild(modal);
-  document.getElementById('task-title-input').focus();
+  
+  // Prevent multiple modal opens
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+  
+  const titleInput = document.getElementById('task-title-input');
+  if (titleInput) titleInput.focus();
 }
 
 /** @param {string} dateString @returns {string} */

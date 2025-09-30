@@ -602,6 +602,27 @@
 .sidebar-section {
     position: sticky;
     top: var(--spacing-lg);
+    align-self: flex-start;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.sidebar-section::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-section::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+}
+
+.sidebar-section::-webkit-scrollbar-thumb {
+    background: var(--cadet-gray);
+    border-radius: 10px;
+}
+
+.sidebar-section::-webkit-scrollbar-thumb:hover {
+    background: var(--paynes-gray);
 }
 
 .sidebar-content {

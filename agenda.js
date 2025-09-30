@@ -22,20 +22,24 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
 
   let html = `
     <div class="agenda-container">
-        <div class="agenda-main">
-            <div class="agenda-header">
+        <!-- Header Section -->
+        <header class="agenda-header">
+            <div class="header-content">
                 <h2 class="agenda-title">
                     <span class="agenda-icon">📋</span>
-                    <span>Agenda de Tareas</span>
+                    <span class="title-text">Agenda de Tareas</span>
                 </h2>
                 <button onclick="showTaskInputModal(null)" class="btn-add-task-header">
                     <span class="btn-icon">➕</span>
                     <span class="btn-text">Nueva Tarea</span>
                 </button>
             </div>
-            
-            <div class="agenda-filters-container">
-                <div class="agenda-filters">
+        </header>
+        
+        <!-- Filters Section -->
+        <section class="agenda-filters-section">
+            <div class="filters-wrapper">
+                <div class="filters-row">
                     <div class="filter-group">
                         <label for="month-filter" class="filter-label">
                             <span class="filter-icon">📅</span>
@@ -76,15 +80,35 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                     </div>
                 </div>
                 
-                <div class="filter-stats">
-                    <span class="stat-badge" id="total-tasks-badge">0 tareas</span>
-                    <span class="stat-badge pending" id="pending-tasks-badge">0 pendientes</span>
-                    <span class="stat-badge completed" id="completed-tasks-badge">0 completadas</span>
+                <div class="stats-row">
+                    <div class="stat-badge total" id="total-tasks-badge">
+                        <span class="stat-number">0</span>
+                        <span class="stat-label">Total</span>
+                    </div>
+                    <div class="stat-badge pending" id="pending-tasks-badge">
+                        <span class="stat-number">0</span>
+                        <span class="stat-label">Pendientes</span>
+                    </div>
+                    <div class="stat-badge completed" id="completed-tasks-badge">
+                        <span class="stat-number">0</span>
+                        <span class="stat-label">Completadas</span>
+                    </div>
                 </div>
             </div>
-            
-            <div class="task-list-container">
-                <ul class="task-list">
+        </section>
+
+        <!-- Main Content Area -->
+        <main class="agenda-main-content">
+            <div class="content-grid">
+                <section class="tasks-section">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <span class="section-icon">📝</span>
+                            <span>Lista de Tareas</span>
+                        </h3>
+                    </div>
+                    <div class="task-list-container">
+                        <ul class="task-list">
     `;
 
   /** @type {Task[]} */
@@ -309,71 +333,77 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     return date.toLocaleDateString('es-ES', options);
   }
 
-  html += `</ul>
-            </div>
-        </div>
-        <div class="agenda-sidebar">
-            <div class="sidebar-section quick-actions-section">
-                <h3 class="sidebar-title">
-                    <span class="sidebar-icon">🚀</span>
-                    <span>Acciones Rápidas</span>
-                </h3>
-                <div class="quick-actions">
-                    <button onclick="showTaskInputModal(null)" class="btn-action primary">
-                        <span class="btn-icon">➕</span>
-                        <span>Nueva Tarea</span>
-                    </button>
-                    <button onclick="showPdfExportModal()" class="btn-action secondary">
-                        <span class="btn-icon">📄</span>
-                        <span>Exportar PDF</span>
-                    </button>
-                    <button onclick="testNotification()" class="btn-action secondary">
-                        <span class="btn-icon">🔔</span>
-                        <span>Notificaciones</span>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="sidebar-section stats-section">
-                <h3 class="sidebar-title">
-                    <span class="sidebar-icon">📊</span>
-                    <span>Estadísticas</span>
-                </h3>
-                <div class="stats-grid">
-                    <div class="stat-card total">
-                        <div class="stat-value">${totalTasks}</div>
-                        <div class="stat-label">Total</div>
-                        <div class="stat-bar">
-                            <div class="stat-bar-fill" style="width: 100%"></div>
+  html += `
+                        </ul>
+                    </div>
+                </section>
+                
+                <aside class="sidebar-section">
+                    <div class="sidebar-content">
+                        <div class="sidebar-block quick-actions-block">
+                            <h3 class="sidebar-title">
+                                <span class="sidebar-icon">🚀</span>
+                                <span>Acciones Rápidas</span>
+                            </h3>
+                            <div class="quick-actions">
+                                <button onclick="showTaskInputModal(null)" class="btn-action primary">
+                                    <span class="btn-icon">➕</span>
+                                    <span>Nueva Tarea</span>
+                                </button>
+                                <button onclick="showPdfExportModal()" class="btn-action secondary">
+                                    <span class="btn-icon">📄</span>
+                                    <span>Exportar PDF</span>
+                                </button>
+                                <button onclick="testNotification()" class="btn-action secondary">
+                                    <span class="btn-icon">🔔</span>
+                                    <span>Test Notificaciones</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="sidebar-block stats-block">
+                            <h3 class="sidebar-title">
+                                <span class="sidebar-icon">📊</span>
+                                <span>Resumen</span>
+                            </h3>
+                            <div class="stats-overview">
+                                <div class="stat-item total">
+                                    <div class="stat-value">${totalTasks}</div>
+                                    <div class="stat-label">Total</div>
+                                    <div class="stat-progress">
+                                        <div class="progress-bar" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                                <div class="stat-item completed">
+                                    <div class="stat-value">${completedTasks}</div>
+                                    <div class="stat-label">Completadas</div>
+                                    <div class="stat-progress">
+                                        <div class="progress-bar" style="width: ${totalTasks > 0 ? (completedTasks / totalTasks * 100) : 0}%"></div>
+                                    </div>
+                                </div>
+                                <div class="stat-item pending">
+                                    <div class="stat-value">${pendingTasks}</div>
+                                    <div class="stat-label">Pendientes</div>
+                                    <div class="stat-progress">
+                                        <div class="progress-bar" style="width: ${totalTasks > 0 ? (pendingTasks / totalTasks * 100) : 0}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="sidebar-block upcoming-block">
+                            <h3 class="sidebar-title">
+                                <span class="sidebar-icon">⏰</span>
+                                <span>Próximas</span>
+                            </h3>
+                            <div class="upcoming-tasks">
+                                ${getUpcomingTasksHTML(allTasks)}
+                            </div>
                         </div>
                     </div>
-                    <div class="stat-card completed">
-                        <div class="stat-value">${completedTasks}</div>
-                        <div class="stat-label">Completadas</div>
-                        <div class="stat-bar">
-                            <div class="stat-bar-fill" style="width: ${totalTasks > 0 ? (completedTasks / totalTasks * 100) : 0}%"></div>
-                        </div>
-                    </div>
-                    <div class="stat-card pending">
-                        <div class="stat-value">${pendingTasks}</div>
-                        <div class="stat-label">Pendientes</div>
-                        <div class="stat-bar">
-                            <div class="stat-bar-fill" style="width: ${totalTasks > 0 ? (pendingTasks / totalTasks * 100) : 0}%"></div>
-                        </div>
-                    </div>
-                </div>
+                </aside>
             </div>
-            
-            <div class="sidebar-section upcoming-section">
-                <h3 class="sidebar-title">
-                    <span class="sidebar-icon">📅</span>
-                    <span>Próximas Tareas</span>
-                </h3>
-                <div class="upcoming-tasks">
-                    ${getUpcomingTasksHTML(allTasks)}
-                </div>
-            </div>
-        </div>
+        </main>
     </div>`;
 
   agendaView.innerHTML = html;
@@ -384,9 +414,18 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     const pendingBadge = document.getElementById('pending-tasks-badge');
     const completedBadge = document.getElementById('completed-tasks-badge');
     
-    if (totalBadge) totalBadge.textContent = `${totalTasks} ${totalTasks === 1 ? 'tarea' : 'tareas'}`;
-    if (pendingBadge) pendingBadge.textContent = `${pendingTasks} ${pendingTasks === 1 ? 'pendiente' : 'pendientes'}`;
-    if (completedBadge) completedBadge.textContent = `${completedTasks} ${completedTasks === 1 ? 'completada' : 'completadas'}`;
+    if (totalBadge) {
+      const numberEl = totalBadge.querySelector('.stat-number');
+      if (numberEl) numberEl.textContent = totalTasks;
+    }
+    if (pendingBadge) {
+      const numberEl = pendingBadge.querySelector('.stat-number');
+      if (numberEl) numberEl.textContent = pendingTasks;
+    }
+    if (completedBadge) {
+      const numberEl = completedBadge.querySelector('.stat-number');
+      if (numberEl) numberEl.textContent = completedTasks;
+    }
   }, 0);
 
   const monthSel = document.getElementById('month-filter');
@@ -505,6 +544,10 @@ function toggleTask(id) {
 
 // New function with animation
 function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
+  // Save current scroll position
+  const taskListContainer = document.querySelector('.task-list-container');
+  const scrollPosition = taskListContainer ? taskListContainer.scrollTop : 0;
+  
   const taskCard = document.querySelector(`[data-task-id="${id}"]`);
   if (taskCard) {
     taskCard.style.transition = 'all 0.3s ease';
@@ -512,10 +555,26 @@ function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
     setTimeout(() => {
       toggleTask(id);
       renderAgenda(filterMonth, filterStatus);
+      
+      // Restore scroll position after render
+      requestAnimationFrame(() => {
+        const newTaskListContainer = document.querySelector('.task-list-container');
+        if (newTaskListContainer) {
+          newTaskListContainer.scrollTop = scrollPosition;
+        }
+      });
     }, 150);
   } else {
     toggleTask(id);
     renderAgenda(filterMonth, filterStatus);
+    
+    // Restore scroll position after render
+    requestAnimationFrame(() => {
+      const newTaskListContainer = document.querySelector('.task-list-container');
+      if (newTaskListContainer) {
+        newTaskListContainer.scrollTop = scrollPosition;
+      }
+    });
   }
 }
 
