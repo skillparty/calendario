@@ -1698,4 +1698,33 @@ main {
     }
 }
 
+/* ========== AGENDA AUTO-SCROLL ANIMATIONS ========== */
+@keyframes highlightToday {
+    0% {
+        background-color: transparent;
+        transform: scale(1);
+    }
+    25% {
+        background-color: rgba(237, 174, 73, 0.15);
+        transform: scale(1.02);
+    }
+    50% {
+        background-color: rgba(237, 174, 73, 0.25);
+        transform: scale(1.02);
+    }
+    75% {
+        background-color: rgba(237, 174, 73, 0.15);
+        transform: scale(1.02);
+    }
+    100% {
+        background-color: transparent;
+        transform: scale(1);
+    }
+}
+
+/* Smooth scroll behavior for task list container */
+.task-list-container {
+    scroll-behavior: smooth;
+}
+
 /* End of styles */

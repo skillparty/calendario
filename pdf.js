@@ -234,6 +234,44 @@ function formatDateForDisplay(dateString) {
   return date.toLocaleDateString('es-ES', options);
 }
 
+/**
+ * Generates the PDF filename based on export type
+ * @param {string} exportType - 'all', 'month', or 'custom'
+ * @returns {string}
+ */
+function generatePDFFilename(exportType) {
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  if (exportType === 'all') {
+    return `Calendar10_Todas_las_Tareas_${dateStr}.pdf`;
+  }
+  
+  if (exportType === 'month') {
+    const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const monthSelect = document.getElementById('pdf-month-select');
+    const yearSelect = document.getElementById('pdf-year-select');
+    if (monthSelect && yearSelect) {
+      const month = parseInt(monthSelect.value);
+      const year = parseInt(yearSelect.value);
+      return `Calendar10_${monthNames[month]}_${year}_${dateStr}.pdf`;
+    }
+  }
+  
+  if (exportType === 'custom') {
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    if (startDateInput && endDateInput) {
+      const startDate = startDateInput.value;
+      const endDate = endDateInput.value;
+      return `Calendar10_${startDate}_a_${endDate}_${dateStr}.pdf`;
+    }
+  }
+  
+  // Fallback
+  return `Calendar10_Export_${dateStr}.pdf`;
+}
+
 // Attach one-time delegation for export type change
 if (typeof document !== 'undefined') {
   (function attachExportTypeDelegation() {

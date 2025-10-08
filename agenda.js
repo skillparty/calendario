@@ -232,8 +232,11 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
       
       const dayColors = getColorByDay(date);
       
+      // Agregar ID único para la fecha de hoy para hacer scroll automático
+      const todayId = isToday ? ' id="today-group"' : '';
+      
       html += `
-        <li class="task-date-group">
+        <li class="task-date-group"${todayId}>
           <div class="date-group-header" style="border-left: 4px solid ${dayColors.border};">
             <span class="date-group-icon">${isToday ? '📍' : '📅'}</span>
             <h3 class="date-group-title">${dateLabel}</h3>
@@ -427,6 +430,31 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
       if (numberEl) numberEl.textContent = completedTasks;
     }
   }, 0);
+
+  // Auto-scroll a la fecha actual si existe
+  requestAnimationFrame(() => {
+    const todayGroup = document.getElementById('today-group');
+    const taskListContainer = document.querySelector('.task-list-container');
+    
+    if (todayGroup && taskListContainer) {
+      // Calcular posición con offset para dejar espacio arriba
+      const containerTop = taskListContainer.offsetTop;
+      const todayGroupTop = todayGroup.offsetTop;
+      const offset = 100; // Espacio superior para mejor visualización
+      
+      // Hacer scroll suave hacia la fecha actual
+      taskListContainer.scrollTo({
+        top: todayGroupTop - offset,
+        behavior: 'smooth'
+      });
+      
+      // Agregar animación de highlight temporal a la fecha de hoy
+      const todayHeader = todayGroup.querySelector('.date-group-header');
+      if (todayHeader) {
+        todayHeader.style.animation = 'highlightToday 2s ease-in-out';
+      }
+    }
+  });
 
   const monthSel = document.getElementById('month-filter');
   const statusSel = document.getElementById('status-filter');
