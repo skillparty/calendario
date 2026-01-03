@@ -161,20 +161,28 @@ WHERE table_schema = 'public';
 
 ## 🔧 Configuración Frontend
 
-Después del deployment, actualiza tu frontend para apuntar al backend:
-
-- Edita `frontend/api.js` (o `api.js` en la raíz del frontend) y establece la constante `API_BASE_URL`.
-- Verifica en `frontend/app.js` (o `app.js` en la raíz del frontend) que `OAUTH_PROXY_URL` apunte a `${API_BASE_URL}/api/auth/github`.
+Después del deployment, actualiza tu `script.js`:
 
 ```javascript
-// api.js
-export const API_BASE_URL = 'https://tu-backend.railway.app';
+// En lugar de localStorage directo, usar API
+const API_BASE_URL = 'https://tu-backend.railway.app';
 
-// app.js
-const OAUTH_PROXY_URL = API_BASE_URL + '/api/auth/github';
+// Ejemplo: cargar tareas
+async function loadTasks() {
+  const token = localStorage.getItem('github_token');
+  const response = await fetch(`${API_BASE_URL}/api/tasks?date=${currentDate}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (response.ok) {
+    const tasks = await response.json();
+    displayTasks(tasks);
+  }
+}
 ```
-
-La aplicación cargará tareas con paginación automáticamente al iniciar sesión (JWT) mediante `loadTasksIntoState()` y sincronizará cambios con `pushLocalTasksToBackend()`.
 
 ## 📊 Monitoreo y Logs
 

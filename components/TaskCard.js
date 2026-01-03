@@ -3,6 +3,8 @@
  * @typedef {import('../types-enhanced').Priority} Priority
  */
 
+import { getIcon } from '../icons.js';
+
 /**
  * Web Component for displaying a task card
  * Provides reusable, encapsulated task display
@@ -262,17 +264,17 @@ export class TaskCard extends HTMLElement {
         <div class="task-meta">
           ${this.task.date ? `
             <div class="task-date">
-              <span>📅</span>
+              ${getIcon('date')}
               <span>${this.formatDate(this.task.date)}</span>
             </div>
           ` : ''}
           ${this.task.time ? `
             <div class="task-time">
-              <span>⏰</span>
+              ${getIcon('clock')}
               <span>${this.task.time}</span>
             </div>
           ` : ''}
-          ${this.task.isReminder ? '<span title="Recordatorio activo">🔔</span>' : ''}
+          ${this.task.isReminder ? `<span title="Recordatorio activo">${getIcon('bell')}</span>` : ''}
         </div>
 
         ${this.task.tags && this.task.tags.length > 0 ? `
@@ -285,10 +287,10 @@ export class TaskCard extends HTMLElement {
 
         <div class="task-actions">
           <button class="action-btn edit-btn" title="Editar" aria-label="Editar tarea">
-            ✏️
+            ${getIcon('edit')}
           </button>
           <button class="action-btn delete-btn" title="Eliminar" aria-label="Eliminar tarea">
-            🗑️
+            ${getIcon('trash')}
           </button>
         </div>
       </div>

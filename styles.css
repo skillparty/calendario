@@ -48,7 +48,8 @@ body {
     flex-direction: column;
 }
 
-/* ========== MODERN HEADER DESIGN ========== */
+/* ========== MODERN HEADER DESIGN (Legacy - Replaced by header-minimal) ========== */
+/* Keeping for backward compatibility but styles overridden by header-footer-minimal.css */
 .header-modern {
     background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
     border-bottom: 1px solid var(--border-color);
@@ -141,6 +142,9 @@ body {
 
 .header-right {
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
 .user-section {
@@ -1535,7 +1539,7 @@ main {
 }
 
 /* ========================================
-   FOOTER STYLES
+   FOOTER STYLES (Legacy - Replaced by footer-minimal)
    ======================================== */
 
 .footer-modern {

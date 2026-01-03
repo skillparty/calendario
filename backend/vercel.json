@@ -21,7 +21,12 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "SUPABASE_URL": "https://ldsqjckncfedgvqclfwb.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxkc3FqY2tuY2ZlZGd2cWNsZndiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NDE5MTIsImV4cCI6MjA4MzAxNzkxMn0.Z8X0sjgujFXx46iF6tWfpEggtD_1v3MDGSirdxW4zyM",
+    "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxkc3FqY2tuY2ZlZGd2cWNsZndiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzQ0MTkxMiwiZXhwIjoyMDgzMDE3OTEyfQ.JPk94jq_6S1uwWuyHL2weJa-XXWhzBEzkx2kWeP66Yc",
+    "FRONTEND_URL": "https://calendario-6qe4wbh2w-jose-alejandro-rollano-revollos-projects.vercel.app",
+    "JWT_SECRET": "calendario_super_secret_key_2026_change_in_production"
   },
   "functions": {
     "server.js": {

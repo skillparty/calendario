@@ -190,19 +190,12 @@ CREATE TABLE tasks (
 
 Para conectar con tu frontend actual:
 
-1. Asegúrate de que `API_BASE_URL` en `api.js` apunte a tu backend:
+1. Cambia `OAUTH_PROXY_URL` en `script.js`:
    ```js
-   // api.js
-   export const API_BASE_URL = 'https://tu-backend.railway.app';
+   const OAUTH_PROXY_URL = 'https://tu-backend.railway.app/api/auth/github';
    ```
 
-2. En `app.js`, verifica que `OAUTH_PROXY_URL` apunte a `${API_BASE_URL}/api/auth/github` (o a tu propio proxy):
-   ```js
-   // app.js
-   const OAUTH_PROXY_URL = API_BASE_URL + '/api/auth/github';
-   ```
-
-3. Actualiza las llamadas API para usar JWT:
+2. Actualiza las llamadas API para usar JWT:
    ```js
    const response = await fetch('https://tu-backend.railway.app/api/tasks', {
      headers: {
