@@ -1,20 +1,12 @@
 {
   "version": 2,
-  "name": "calendario-backend",
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "src": "server.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server.js"
-    },
     {
       "src": "/(.*)",
       "dest": "/server.js"
@@ -29,10 +21,5 @@
     "JWT_SECRET": "calendario_super_secret_key_2026_change_in_production",
     "GITHUB_CLIENT_ID": "Ov23liO2tcNCvR8xrHov",
     "GITHUB_CLIENT_SECRET": "8c93bba13e9d8f23f825fbf8ccee95e9b7593289"
-  },
-  "functions": {
-    "server.js": {
-      "maxDuration": 30
-    }
   }
 }
