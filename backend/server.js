@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const { errorHandler } = require('./middleware/errorHandler.js');
 const taskRoutes = require('./routes/tasks-supabase.js');
+const authRoutes = require('./routes/auth-supabase.js');
 
 // Load environment variables
 dotenv.config();
@@ -52,7 +53,10 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:8000',
+      'http://localhost:8079',
       'https://skillparty.github.io',
+      'https://calendario-6qe4wbh2w-jose-alejandro-rollano-revollos-projects.vercel.app',
+      'https://calendar10.vercel.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
@@ -103,6 +107,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 
 // 404 handler

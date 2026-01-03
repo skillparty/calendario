@@ -11,6 +11,8 @@ import { state, setTasks, getTasks } from './state.js';
 /** @type {string} */
 export const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000'
+  : window.location.hostname === 'skillparty.github.io'
+  ? 'https://calendario-j651byc2j-jose-alejandro-rollano-revollos-projects.vercel.app'
   : 'https://calendario-6qe4wbh2w-jose-alejandro-rollano-revollos-projects.vercel.app';
 
 /** @returns {boolean} */
