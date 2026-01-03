@@ -11,7 +11,7 @@ import { state, setTasks, getTasks } from './state.js';
 /** @type {string} */
 export const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000'
-  : 'https://calendar10-backend.vercel.app'; // 👈 Reemplaza con tu URL de backend
+  : 'https://calendario-j651byc2j-jose-alejandro-rollano-revollos-projects.vercel.app';
 
 /** @returns {boolean} */
 export function isLoggedInWithBackend() {
