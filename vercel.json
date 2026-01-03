@@ -7,11 +7,19 @@
       "use": "@vercel/static"
     },
     {
-      "src": "*.{js,css,png,jpg,svg,ico}",
+      "src": "*.{js,css,png,jpg,svg,ico,json}",
       "use": "@vercel/static"
     },
     {
       "src": "public/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "utils/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "components/**",
       "use": "@vercel/static"
     }
   ],
