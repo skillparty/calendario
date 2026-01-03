@@ -1,0 +1,18 @@
+{
+  "name": "calendario-backend-railway",
+  "build": {
+    "builder": "nixpacks"
+  },
+  "deploy": {
+    "healthcheckPath": "/api/health",
+    "restartPolicyType": "always"
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "PORT": "$PORT"
+      }
+    }
+  }
+}

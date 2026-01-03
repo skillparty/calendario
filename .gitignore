@@ -1,0 +1,11 @@
+node_modules/
+*.log
+.DS_Store
+.env
+.vscode/
+dist/
+build/
+coverage/
+.nyc_output/
+playwright-report/
+test-results/

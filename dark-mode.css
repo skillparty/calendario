@@ -1,0 +1,311 @@
+/* ========================================
+   DARK MODE - Calendar10
+   Professional dark theme
+   ======================================== */
+
+:root {
+    /* Light mode (default) colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #f5f6f7;
+    --bg-hover: #f0f1f3;
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --text-tertiary: #718096;
+    --text-muted: #a0aec0;
+    --border: #e2e8f0;
+    --border-light: #edf2f7;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Dark mode colors */
+[data-theme="dark"] {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #252525;
+    --bg-tertiary: #2d2d2d;
+    --bg-hover: #333333;
+    --text-primary: #e5e7eb;
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    --text-muted: #6b7280;
+    --border: #3a3a3a;
+    --border-light: #2d2d2d;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 10px 10px -5px rgba(0, 0, 0, 0.6);
+}
+
+/* Dark mode adjustments for specific elements */
+[data-theme="dark"] body {
+    background: #0f0f0f;
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .header-minimal {
+    background: rgba(26, 26, 26, 0.95);
+    border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .footer-minimal {
+    background: var(--bg-primary);
+    border-top-color: var(--border);
+}
+
+[data-theme="dark"] #agenda-view {
+    background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 50%);
+}
+
+[data-theme="dark"] .agenda-header {
+    background: var(--bg-primary);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .agenda-filters-section {
+    background: var(--bg-primary);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .filter-select,
+[data-theme="dark"] .search-input {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .filter-select:hover,
+[data-theme="dark"] .search-input:hover {
+    border-color: var(--primary);
+}
+
+[data-theme="dark"] .stat-badge {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .stat-badge.total {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1a2f4d 100%);
+    border-color: #2d5a8c;
+}
+
+[data-theme="dark"] .stat-badge.pending {
+    background: linear-gradient(135deg, #4a3c1a 0%, #3d3215 100%);
+    border-color: #6b5a28;
+}
+
+[data-theme="dark"] .stat-badge.completed {
+    background: linear-gradient(135deg, #1a4d2e 0%, #163d25 100%);
+    border-color: #2d6b4a;
+}
+
+[data-theme="dark"] .tasks-section {
+    background: var(--bg-primary);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .section-header {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .date-group-header {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+}
+
+[data-theme="dark"] .date-group-count {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .task-card {
+    background: var(--bg-primary);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .task-card:hover {
+    border-color: var(--primary);
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .task-card.completed {
+    background: var(--bg-secondary);
+    opacity: 0.6;
+}
+
+[data-theme="dark"] .task-check-btn {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .task-check-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .badge.reminder {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1a2f4d 100%);
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .badge.priority.high {
+    background: linear-gradient(135deg, #4a1a1a 0%, #3d1515 100%);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .badge.priority.medium {
+    background: linear-gradient(135deg, #4a3c1a 0%, #3d3215 100%);
+    color: #fde68a;
+}
+
+[data-theme="dark"] .badge.priority.low {
+    background: linear-gradient(135deg, #1a4d2e 0%, #163d25 100%);
+    color: #86efac;
+}
+
+[data-theme="dark"] .action-btn {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .action-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+/* Theme toggle button */
+.theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 1.5px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 1rem;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.theme-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle-btn .icon {
+    transition: transform 0.3s ease;
+}
+
+[data-theme="dark"] .theme-toggle-btn:hover {
+    background: var(--bg-hover);
+}
+
+/* Animation for theme icon */
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.theme-toggle-btn.animating .icon {
+    animation: rotate 0.5s ease-in-out;
+}
+
+/* Header adjustments for dark mode */
+[data-theme="dark"] .header-modern {
+    background: var(--bg-primary);
+    border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .nav-item {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .nav-item:hover,
+[data-theme="dark"] .nav-item.active {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .user-btn {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .user-btn:hover {
+    background: var(--bg-hover);
+}
+
+/* Calendar view dark mode */
+[data-theme="dark"] #calendar-view {
+    background: var(--bg-primary);
+}
+
+[data-theme="dark"] .calendar-day {
+    background: var(--bg-primary);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .calendar-day:hover {
+    background: var(--bg-hover);
+    border-color: var(--primary);
+}
+
+[data-theme="dark"] .calendar-day.today {
+    background: linear-gradient(135deg, #2d4a6a 0%, #1e3a5f 100%);
+    border-color: var(--primary);
+}
+
+[data-theme="dark"] .calendar-day.has-tasks {
+    background: var(--bg-secondary);
+}
+
+/* Modal dark mode */
+[data-theme="dark"] .modal-content {
+    background: var(--bg-primary);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal input,
+[data-theme="dark"] .modal textarea,
+[data-theme="dark"] .modal select {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal input:focus,
+[data-theme="dark"] .modal textarea:focus,
+[data-theme="dark"] .modal select:focus {
+    border-color: var(--primary);
+    background: var(--bg-tertiary);
+}
+
+/* Smooth transition for theme changes */
+* {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Preserve transitions that should be different */
+button,
+.task-card,
+.nav-item,
+.action-btn {
+    transition: all 0.2s ease;
+}

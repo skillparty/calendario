@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "name": "calendario-backend",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/node",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/server.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "SUPABASE_URL": "https://ldsqjckncfedgvqclfwb.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxkc3FqY2tuY2ZlZGd2cWNsZndiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NDE5MTIsImV4cCI6MjA4MzAxNzkxMn0.Z8X0sjgujFXx46iF6tWfpEggtD_1v3MDGSirdxW4zyM",
+    "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxkc3FqY2tuY2ZlZGd2cWNsZndiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzQ0MTkxMiwiZXhwIjoyMDgzMDE3OTEyfQ.JPk94jq_6S1uwWuyHL2weJa-XXWhzBEzkx2kWeP66Yc",
+    "FRONTEND_URL": "https://skillparty.github.io",
+    "JWT_SECRET": "calendario_super_secret_key_2026_change_in_production",
+    "GITHUB_CLIENT_ID": "Ov23liO2tcNCvR8xrHov",
+    "GITHUB_CLIENT_SECRET": "8c93bba13e9d8f23f825fbf8ccee95e9b7593289"
+  },
+  "functions": {
+    "server.js": {
+      "maxDuration": 30
+    }
+  }
+}
