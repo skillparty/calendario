@@ -12,7 +12,7 @@ import { state, setTasks, getTasks } from './state.js';
 // IMPORTANTE: Después de crear el backend en Vercel, actualiza esta URL
 export const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000'
-  : 'https://calendario-backend-one.vercel.app; // Cambiar por tu URL de backend
+  : 'https://calendario-backend-one.vercel.app';
 
 /** @returns {boolean} */
 export function isLoggedInWithBackend() {
