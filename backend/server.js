@@ -88,9 +88,10 @@ app.get('/api/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     message: 'Calendario Backend API - Supabase Edition',
-    version: '2.0.0',
+    version: '2.0.1',
     documentation: '/api/health',
     endpoints: {
+      auth: '/api/auth/github',
       tasks: '/api/tasks'
     }
   });
