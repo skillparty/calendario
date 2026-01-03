@@ -122,12 +122,17 @@ app.use('*', (req, res) => {
 // Error handling
 app.use(errorHandler);
 
-// Start server (sin inicialización de DB local)
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Calendar10 Backend - Supabase Edition`);
-  console.log(`📡 Server running on 0.0.0.0:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`☁️  Database: Supabase`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🔗 API Base: http://localhost:${PORT}/api`);
-});
+// Export for Vercel serverless
+module.exports = app;
+
+// Start server only if not in serverless environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Calendar10 Backend - Supabase Edition`);
+    console.log(`📡 Server running on 0.0.0.0:${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`☁️  Database: Supabase`);
+    console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`🔗 API Base: http://localhost:${PORT}/api`);
+  });
+}
