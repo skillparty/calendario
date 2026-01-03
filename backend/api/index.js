@@ -144,7 +144,8 @@ app.post('/api/auth/github', async (req, res) => {
         avatar_url: user.avatar_url,
         github_id: user.github_id
       },
-      jwt: jwtToken,
+      token: jwtToken,
+      jwt: jwtToken, // mantener ambos por compatibilidad
       github_access_token: accessToken
     });
 
