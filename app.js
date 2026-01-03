@@ -13,7 +13,7 @@ import { renderAgenda } from './agenda.js';
 import { showPdfExportModal } from './pdf.js';
 
 // GitHub OAuth constants
-const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
+const GITHUB_CLIENT_ID = 'Ov23liO2tcNCvR8xrHov';
 const GITHUB_REDIRECT_URI = window.location.origin; // Usar el dominio actual
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
