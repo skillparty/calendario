@@ -11,7 +11,7 @@ import { state, setTasks, getTasks } from './state.js';
 /** @type {string} */
 export const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000'
-  : 'https://calendario-backend.vercel.app';
+  : 'https://backend-khaki-psi-28.vercel.app';
 
 /** @returns {boolean} */
 export function isLoggedInWithBackend() {
