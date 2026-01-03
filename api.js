@@ -9,7 +9,9 @@
 import { state, setTasks, getTasks } from './state.js';
 
 /** @type {string} */
-export const API_BASE_URL = 'https://calendario-backend-v2.fly.dev';
+export const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:3000'
+  : 'https://tu-backend-production.vercel.app'; // Cambiar cuando despliegues
 
 /** @returns {boolean} */
 export function isLoggedInWithBackend() {

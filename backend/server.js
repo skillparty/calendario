@@ -3,12 +3,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
-const { initDatabase } = require('./utils/db.js');
-const { runMigrations } = require('./run-migrations.js');
 const { errorHandler } = require('./middleware/errorHandler.js');
-const authRoutes = require('./routes/auth.js');
-const taskRoutes = require('./routes/tasks.js');
-const syncRoutes = require('./routes/sync.js');
+const taskRoutes = require('./routes/tasks-supabase.js');
 
 // Load environment variables
 dotenv.config();
@@ -87,13 +83,11 @@ app.get('/api/health', (req, res) => {
 // Root endpoint  
 app.get('/', (req, res) => {
   res.json({
-    message: 'Calendario Backend API',
-    version: '1.0.0',
+    message: 'Calendario Backend API - Supabase Edition',
+    version: '2.0.0',
     documentation: '/api/health',
     endpoints: {
-      auth: '/api/auth',
-      tasks: '/api/tasks', 
-      sync: '/api/sync'
+      tasks: '/api/tasks'
     }
   });
 });
@@ -103,14 +97,13 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0'
+    version: '2.0.0',
+    database: 'Supabase'
   });
 });
 
 // API routes
-app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
-app.use('/api/sync', syncRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -123,27 +116,12 @@ app.use('*', (req, res) => {
 // Error handling
 app.use(errorHandler);
 
-// Initialize database and start server
-async function startServer() {
-  try {
-    // Initialize database
-    await initDatabase();
-    console.log('✅ Database initialized successfully');
-
-    // Run migrations
-    await runMigrations();
-    console.log('✅ Migrations completed successfully');
-
-    // Start server
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on 0.0.0.0:${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
-}
-
-startServer();
+// Start server (sin inicialización de DB local)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Calendar10 Backend - Supabase Edition`);
+  console.log(`📡 Server running on 0.0.0.0:${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`☁️  Database: Supabase`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔗 API Base: http://localhost:${PORT}/api`);
+});
