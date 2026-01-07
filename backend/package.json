@@ -1,7 +1,7 @@
 {
   "name": "calendario-backend",
-  "version": "1.0.0",
-  "description": "Backend API para Calendario Digital",
+  "version": "2.1.0",
+  "description": "Backend API para Calendario Digital con Calendarios Grupales",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
