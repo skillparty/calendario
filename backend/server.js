@@ -90,11 +90,13 @@ app.get('/api/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     message: 'Calendario Backend API - Supabase Edition',
-    version: '2.0.1',
+    version: '2.1.0',
     documentation: '/api/health',
     endpoints: {
       auth: '/api/auth/github',
-      tasks: '/api/tasks'
+      tasks: '/api/tasks',
+      groups: '/api/groups',
+      cron: '/api/cron'
     }
   });
 });
