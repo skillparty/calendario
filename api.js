@@ -163,6 +163,7 @@ export async function loadTasksIntoState() {
   
   // Then, preserve local tasks that aren't in the backend yet
   // (these are tasks created locally but not yet synced or failed to sync)
+  // BUT only if they belong to the CURRENT calendar
   Object.entries(localTasks).forEach(([dateKey, tasks]) => {
     tasks.forEach(task => {
       const taskId = String(task.id);
@@ -171,9 +172,19 @@ export async function loadTasksIntoState() {
       const isLocalOnly = !backendIds.has(taskId) && taskId.length >= 13;
       
       if (isLocalOnly) {
-        console.log('[SYNC] Preserving local task not in backend:', task.title, 'ID:', taskId);
-        if (!byDate[dateKey]) byDate[dateKey] = [];
-        byDate[dateKey].push({ ...task, _needsSync: true });
+        // Check if task belongs to current calendar
+        const taskGroupId = task.group_id;
+        const belongsToCurrentCalendar = 
+          (currentCalendar.type === 'personal' && !taskGroupId) ||
+          (currentCalendar.type === 'group' && taskGroupId === currentCalendar.id);
+        
+        if (belongsToCurrentCalendar) {
+          console.log('[SYNC] Preserving local task not in backend:', task.title, 'ID:', taskId);
+          if (!byDate[dateKey]) byDate[dateKey] = [];
+          byDate[dateKey].push({ ...task, _needsSync: true });
+        } else {
+          console.log('[SYNC] Skipping task from different calendar:', task.title, 'group_id:', taskGroupId);
+        }
       }
     });
   });
