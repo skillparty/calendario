@@ -184,12 +184,17 @@ export async function pushLocalTasksToBackend() {
   for (const t of localList) {
     const existing = serverById.get(String(t.id));
     if (!existing) {
+      // Map numeric priority to text priority for Supabase
+      const priorityMap = { 1: 'baja', 2: 'baja', 3: 'media', 4: 'alta', 5: 'alta' };
+      const priorityValue = t.priority ? parseInt(t.priority, 10) : 3;
+      const textPriority = priorityMap[priorityValue] || 'media';
+      
       /** @type {any} */
       const payload = {
         title: t.title,
         completed: Boolean(t.completed),
         is_reminder: t.isReminder !== undefined ? Boolean(t.isReminder) : true,
-        priority: parseInt(t.priority || 1, 10),
+        priority: textPriority,
         tags: Array.isArray(t.tags) ? t.tags : []
       };
       
@@ -227,12 +232,20 @@ export async function pushLocalTasksToBackend() {
       const exRem = existing.is_reminder !== undefined ? existing.is_reminder : true;
       const loRem = t.isReminder !== undefined ? t.isReminder : true;
       if (exRem !== loRem) diff.is_reminder = loRem;
-      if ((existing.priority || 1) !== (t.priority || 1)) diff.priority = t.priority || 1;
+      
+      // Convert numeric priority to text for comparison and update
+      const priorityMap = { 1: 'baja', 2: 'baja', 3: 'media', 4: 'alta', 5: 'alta' };
+      const existingPriority = typeof existing.priority === 'string' ? existing.priority : priorityMap[existing.priority || 3] || 'media';
+      const localPriorityNum = t.priority ? parseInt(t.priority, 10) : 3;
+      const localPriority = priorityMap[localPriorityNum] || 'media';
+      if (existingPriority !== localPriority) diff.priority = localPriority;
+      
       const exTags = JSON.stringify(existing.tags || []);
       const loTags = JSON.stringify(t.tags || []);
       if (exTags !== loTags) diff.tags = t.tags || [];
       if (Object.keys(diff).length > 0) {
-        await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff) });
+        // Use updateTaskOnBackend which handles priority conversion
+        await updateTaskOnBackend(existing.id, diff);
       }
     }
   }
