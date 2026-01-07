@@ -7,6 +7,7 @@ const { errorHandler } = require('./middleware/errorHandler.js');
 const taskRoutes = require('./routes/tasks-supabase.js');
 const authRoutes = require('./routes/auth-supabase.js');
 const cronRoutes = require('./routes/cron.js');
+const groupRoutes = require('./routes/groups.js');
 
 // Load environment variables
 dotenv.config();
@@ -112,6 +113,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/cron', cronRoutes);
+app.use('/api/groups', groupRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

@@ -39,15 +39,40 @@ function handleValidationErrors(req, res, next) {
 
 // GET /api/tasks - Obtener todas las tareas del usuario
 router.get('/', asyncHandler(async (req, res) => {
-  const { date, start_date, end_date, completed, month, year } = req.query;
+  const { date, start_date, end_date, completed, month, year, group_id } = req.query;
   
+  // Si se especifica group_id, verificar membership
+  if (group_id && group_id !== 'null' && group_id !== 'personal') {
+    const { data: membership } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', group_id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (!membership) {
+      throw new AppError('User is not a member of this group', 403);
+    }
+  }
+
   let query = supabase
     .from('tasks')
     .select('*')
-    .eq('user_id', req.user.id)
     .order('date', { ascending: true });
 
-  // Filtros opcionales
+  // Filtrar por grupo o tareas personales
+  if (group_id === 'personal' || group_id === 'null') {
+    // Solo tareas personales (sin grupo)
+    query = query.eq('user_id', req.user.id).is('group_id', null);
+  } else if (group_id) {
+    // Tareas de un grupo específico
+    query = query.eq('group_id', group_id);
+  } else {
+    // Por defecto: todas las tareas del usuario (personales)
+    query = query.eq('user_id', req.user.id).is('group_id', null);
+  }
+
+  // Filtros adicionales
   if (date) query = query.eq('date', date);
   if (start_date && end_date) query = query.gte('date', start_date).lte('date', end_date);
   if (completed !== undefined) query = query.eq('completed', completed === 'true');
@@ -89,7 +114,21 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // POST /api/tasks - Crear una nueva tarea
 router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req, res) => {
-  const { title, description, date, time, completed, priority } = req.body;
+  const { title, description, date, time, completed, priority, group_id } = req.body;
+
+  // Si se especifica group_id, verificar que el usuario es miembro
+  if (group_id) {
+    const { data: membership } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', group_id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (!membership) {
+      throw new AppError('User is not a member of this group', 403);
+    }
+  }
 
   const newTask = {
     user_id: req.user.id,
@@ -98,7 +137,8 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
     date,
     time: time || null,
     completed: completed || false,
-    priority: priority || 'media'
+    priority: priority || 'media',
+    group_id: group_id || null
   };
 
   const { data, error } = await supabase
@@ -112,7 +152,8 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
     throw new AppError('Error creating task', 500);
   }
 
-  logger.info(`Task created: ${data.id} by user ${req.user.id}`);
+  logger.info(`Task created: ${data.id} by user ${req.user.id}${group_id ? ` in group ${group_id}` : ''}`);
+
 
   res.status(201).json({
     success: true,
