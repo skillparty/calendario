@@ -209,10 +209,26 @@ app.post('/api/auth/github', async (req, res) => {
 // Get tasks
 app.get('/api/tasks', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { group_id } = req.query;
+    
+    let query = supabase
       .from('tasks')
-      .select('*')
-      .order('date', { ascending: true });
+      .select('*');
+    
+    // Filter by calendar type
+    if (group_id !== undefined) {
+      if (group_id === 'null' || group_id === '') {
+        // Personal calendar - only tasks without group_id
+        query = query.is('group_id', null);
+      } else {
+        // Group calendar - only tasks with this group_id
+        query = query.eq('group_id', parseInt(group_id));
+      }
+    }
+    
+    query = query.order('date', { ascending: true });
+    
+    const { data, error } = await query;
 
     if (error) throw error;
     res.json(data || []);
