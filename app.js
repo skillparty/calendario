@@ -188,10 +188,13 @@ async function handleOAuthCallback() {
         return res.json();
       }).then(async (data) => {
         if (!data || !data.success || !data.token || !data.user) throw new Error('Auth payload inválido');
+        console.log('[AUTH] ✅ Login successful, setting session');
         setUserSession({ jwt: data.token, user: data.user, loginTime: Date.now() });
         const cleanUrl = window.location.origin + window.location.pathname; window.history.replaceState({}, document.title, cleanUrl);
         updateLoginButton();
+        console.log('[AUTH] Loading tasks from backend after login...');
         await loadTasksIntoState();
+        console.log('[AUTH] Tasks loaded successfully');
         showAuthStatus('Inicio de sesión exitoso');
       }).catch(err => {
         console.error('Code exchange failed:', err);
@@ -217,7 +220,9 @@ async function handleOAuthCallback() {
         updateLoginButton();
         if (sess && sess.user) {
           if (sess.jwt) {
+            console.log('[AUTH] Loading tasks from backend (stored session)...');
             await loadTasksIntoState();
+            console.log('[AUTH] Tasks loaded from backend');
           } else {
             await findExistingGist();
             await loadTasksFromGist();

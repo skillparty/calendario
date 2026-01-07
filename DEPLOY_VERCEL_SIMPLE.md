@@ -12,9 +12,9 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 Ve a: https://supabase.com/dashboard/project/phdvhvvdvkmvdxgrkfei/settings/api
 
 Copia y guarda:
-- **URL**: `https://phdvhvvdvkmvdxgrkfei.supabase.co`
-- **anon/public key**: (la clave anon)
-- **service_role key**: (⚠️ mantener secreta)
+- **URL**: `https://ldsqjckncfedgvqclfwb.supabase.co`
+- **anon/public key**: sb_publishable_B21fpwAZfDKz3x2eqGYP9Q_TV72CMTo
+- **service_role key**: sb_secret_iUQBHBoQKfJWJw_JazjpTg_MnFGzffE
 
 ### 3. Configura GitHub OAuth App
 Ve a: https://github.com/settings/developers

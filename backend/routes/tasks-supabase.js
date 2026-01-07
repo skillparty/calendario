@@ -22,7 +22,7 @@ router.use(authenticate);
 // Validación
 const taskValidation = [
   body('title').trim().isLength({ min: 1, max: 500 }).withMessage('Title required'),
-  body('date').isISO8601().withMessage('Valid date required'),
+  body('date').optional({ nullable: true }).isISO8601().withMessage('Valid date required'),
   body('time').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid time format HH:MM'),
   body('description').optional().isLength({ max: 2000 }),
   body('completed').optional().isBoolean(),

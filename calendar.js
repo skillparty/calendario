@@ -449,21 +449,53 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   console.log('taskDate:', taskDate);
   console.log('Final task object:', task);
   console.log('Task has date field:', 'date' in task);
+  console.log('Task ID:', task.id);
   console.log('Checking backend login status:', isLoggedInWithBackend());
   if (isLoggedInWithBackend()) {
-    console.log('Creating task on backend:', task);
-    console.log('User session:', state.userSession);
+    console.log('[TASK] Creating task on backend:', task.title);
+    console.log('[TASK] User session JWT present:', !!state.userSession?.jwt);
     createTaskOnBackend(task)
-      .then(() => {
-        console.log('Task created successfully on backend');
+      .then((response) => {
+        console.log('[TASK] ✅ Task created successfully on backend');
+        console.log('[TASK] Backend response:', response);
+        
+        // Update local task with server ID to mark it as synced
+        if (response && response.data && response.data.id) {
+          updateTasks(draft => {
+            const key = taskDate ? taskDate : 'undated';
+            if (draft[key]) {
+              const taskIndex = draft[key].findIndex(t => t.id === task.id);
+              if (taskIndex !== -1) {
+                draft[key][taskIndex].id = String(response.data.id);
+                draft[key][taskIndex]._synced = true;
+                console.log('[TASK] Updated local task with backend ID:', response.data.id);
+              }
+            }
+          });
+        }
+        
         showSyncStatus('Guardado ✅');
       })
       .catch(async (err) => {
-        console.error('Create task failed:', err);
+        console.error('[TASK] ❌ Create task failed:', err);
+        console.error('[TASK] Error details:', err.message);
+        
+        // Mark task as needing sync
+        updateTasks(draft => {
+          const key = taskDate ? taskDate : 'undated';
+          if (draft[key]) {
+            const taskIndex = draft[key].findIndex(t => t.id === task.id);
+            if (taskIndex !== -1) {
+              draft[key][taskIndex]._needsSync = true;
+              console.log('[TASK] Marked task as needing sync');
+            }
+          }
+        });
+        
         showSyncStatus('Guardado localmente (sin conexión)', true);
       });
   } else {
-    console.log('Not logged in with backend - saving locally only');
+    console.log('[TASK] Not logged in with backend - saving locally only');
   }
 
   if (isReminder && 'Notification' in window) {

@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT,
-    date DATE NOT NULL,
+    date DATE,  -- NULL permitido para tareas sin fecha específica
     time TIME,
     completed BOOLEAN DEFAULT FALSE,
     priority TEXT CHECK (priority IN ('baja', 'media', 'alta')) DEFAULT 'media',
@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_date ON tasks(date);
 CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
+CREATE INDEX IF NOT EXISTS idx_tasks_no_date ON tasks(user_id) WHERE date IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id);
 
 -- Función para actualizar updated_at automáticamente

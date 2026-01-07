@@ -90,12 +90,36 @@ export async function fetchAllTasksFromBackend(limit = 100) {
 /** @returns {Promise<boolean>} */
 export async function loadTasksIntoState() {
   if (!isLoggedInWithBackend()) return false;
+  
+  console.log('[SYNC] Loading tasks from backend...');
   const list = await fetchAllTasksFromBackend(100);
+  console.log('[SYNC] Fetched', list.length, 'tasks from backend');
+  
+  // Get current local tasks
+  const localTasks = getTasks();
+  console.log('[SYNC] Current local tasks:', Object.keys(localTasks).length, 'dates');
+  
   /** @type {TasksByDate} */
   const byDate = {};
+  
+  // Map text priority back to numeric for frontend
+  const textToNumericPriority = {
+    'baja': 2,
+    'media': 3,
+    'alta': 4
+  };
+  
+  // First, add all backend tasks (server is source of truth for synced tasks)
+  const backendIds = new Set();
   list.forEach(t => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
+    
+    // Convert text priority to numeric if needed
+    const priority = typeof t.priority === 'string' 
+      ? (textToNumericPriority[t.priority] || 3)
+      : (t.priority || 3);
+    
     /** @type {Task} */
     const mapped = {
       id: String(t.id),
@@ -105,12 +129,44 @@ export async function loadTasksIntoState() {
       time: t.time || null,
       completed: !!t.completed,
       isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
-      priority: t.priority || 1,
-      tags: t.tags || []
+      priority: priority,
+      tags: t.tags || [],
+      _synced: true // Mark as synced with backend
     };
     byDate[dateKey].push(mapped);
+    backendIds.add(String(t.id));
   });
+  
+  // Then, preserve local tasks that aren't in the backend yet
+  // (these are tasks created locally but not yet synced or failed to sync)
+  Object.entries(localTasks).forEach(([dateKey, tasks]) => {
+    tasks.forEach(task => {
+      const taskId = String(task.id);
+      // Only keep local tasks that are NOT in backend
+      // Use timestamp-based IDs to detect local-only tasks
+      const isLocalOnly = !backendIds.has(taskId) && taskId.length >= 13;
+      
+      if (isLocalOnly) {
+        console.log('[SYNC] Preserving local task not in backend:', task.title, 'ID:', taskId);
+        if (!byDate[dateKey]) byDate[dateKey] = [];
+        byDate[dateKey].push({ ...task, _needsSync: true });
+      }
+    });
+  });
+  
+  console.log('[SYNC] Final merged tasks:', Object.keys(byDate).length, 'dates');
   setTasks(byDate);
+  
+  // Automatically push any local-only tasks to backend
+  setTimeout(() => {
+    console.log('[SYNC] Checking for tasks needing sync...');
+    pushLocalTasksToBackend().then(() => {
+      console.log('[SYNC] Auto-sync completed');
+    }).catch(err => {
+      console.error('[SYNC] Auto-sync failed:', err);
+    });
+  }, 1000);
+  
   return true;
 }
 
@@ -192,12 +248,23 @@ export async function pushLocalTasksToBackend() {
 export async function createTaskOnBackend(payload) {
   console.log('Original payload received:', payload);
   
+  // Map numeric priority to text priority for Supabase
+  const priorityMap = {
+    '1': 'baja',
+    '2': 'baja', 
+    '3': 'media',
+    '4': 'alta',
+    '5': 'alta'
+  };
+  const priorityValue = payload.priority ? String(payload.priority) : '3';
+  const textPriority = priorityMap[priorityValue] || 'media';
+  
   // Ensure payload matches backend validation exactly
   const cleanPayload = {
     title: payload.title || '',
     completed: Boolean(payload.completed),
     is_reminder: Boolean(payload.isReminder || payload.is_reminder),
-    priority: parseInt(payload.priority || '3'),
+    priority: textPriority,
     tags: Array.isArray(payload.tags) ? payload.tags : []
   };
 
@@ -241,6 +308,13 @@ export async function createTaskOnBackend(payload) {
 
 /** @param {number|string} serverId @param {Partial<{title:string;description:string|null;date:string|null;time:string|null;completed:boolean;is_reminder:boolean;priority:number;tags:string[]}>} payload */
 export async function updateTaskOnBackend(serverId, payload) {
+  // Convert numeric priority to text if present
+  if (payload.priority !== undefined) {
+    const priorityMap = { 1: 'baja', 2: 'baja', 3: 'media', 4: 'alta', 5: 'alta' };
+    const textPriority = priorityMap[payload.priority] || 'media';
+    payload = { ...payload, priority: textPriority };
+  }
+  
   const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
