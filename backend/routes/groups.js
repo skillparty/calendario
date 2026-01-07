@@ -4,19 +4,51 @@ const { supabase } = require('../utils/supabase.js');
 const { emailService } = require('../utils/emailService.js');
 const { asyncHandler, AppError } = require('../middleware/errorHandler.js');
 const logger = require('../utils/logger.js');
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
-// Middleware de autenticación (reutilizar del tasks-supabase)
-const authenticate = (req, res, next) => {
-  // TODO: Implementar autenticación real con JWT
-  // Por ahora usar el mismo usuario de prueba
-  req.user = {
-    id: '00000000-0000-0000-0000-000000000001',
-    username: 'usuario_prueba'
-  };
-  next();
-};
+// JWT secret (debe coincidir con auth.js)
+const JWT_SECRET = process.env.JWT_SECRET || 'calendario-secret-key-change-in-production';
+
+// Middleware de autenticación con JWT y Supabase
+const authenticate = asyncHandler(async (req, res, next) => {
+  // Get token from header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new AppError('Access token required', 401);
+  }
+
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  
+  try {
+    // Verify JWT token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Get user from Supabase
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, github_id, username, email, avatar_url')
+      .eq('id', decoded.userId)
+      .single();
+
+    if (error || !user) {
+      throw new AppError('User not found', 401);
+    }
+
+    // Add user to request object
+    req.user = user;
+    next();
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      throw new AppError('Invalid token', 401);
+    }
+    if (error.name === 'TokenExpiredError') {
+      throw new AppError('Token expired', 401);
+    }
+    throw error;
+  }
+});
 
 router.use(authenticate);
 

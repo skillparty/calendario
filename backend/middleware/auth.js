@@ -8,11 +8,21 @@ const JWT_SECRET = process.env.JWT_SECRET || 'calendario-secret-key-change-in-pr
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 // Generate JWT token
-function generateToken(userId, githubId) {
+function generateToken(payload) {
+  // Support both object and positional arguments for backward compatibility
+  if (typeof payload !== 'object') {
+    // Old style: generateToken(userId, githubId)
+    payload = { 
+      userId: arguments[0], 
+      githubId: arguments[1]
+    };
+  }
+  
   return jwt.sign(
     { 
-      userId, 
-      githubId,
+      userId: payload.userId,
+      githubId: payload.githubId,
+      username: payload.username,
       iat: Math.floor(Date.now() / 1000)
     },
     JWT_SECRET,
