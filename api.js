@@ -70,12 +70,19 @@ export async function apiFetch(path, options = {}, retries = 3) {
 }
 
 // Pagination utility to retrieve all tasks from the backend
-/** @param {number} [limit=100] @returns {Promise<APITask[]>} */
-export async function fetchAllTasksFromBackend(limit = 100) {
+/** @param {number} [limit=100] @param {number} [groupId=null] @returns {Promise<APITask[]>} */
+export async function fetchAllTasksFromBackend(limit = 100, groupId = null) {
   const aggregate = [];
   let offset = 0;
+  
+  // Build query params
+  let queryParams = `limit=${limit}`;
+  if (groupId !== null && groupId !== undefined) {
+    queryParams += `&group_id=${groupId}`;
+  }
+  
   while (true) {
-    const res = await apiFetch(`/api/tasks?limit=${limit}&offset=${offset}`);
+    const res = await apiFetch(`/api/tasks?${queryParams}&offset=${offset}`);
     if (!res.ok) throw new Error('Tasks list HTTP ' + res.status);
     const data = await res.json();
     const chunk = data.data || [];
@@ -91,8 +98,25 @@ export async function fetchAllTasksFromBackend(limit = 100) {
 export async function loadTasksIntoState() {
   if (!isLoggedInWithBackend()) return false;
   
-  console.log('[SYNC] Loading tasks from backend...');
-  const list = await fetchAllTasksFromBackend(100);
+  // Import currentCalendar from groups-ui.js if available
+  let currentCalendar = { type: 'personal', id: null };
+  if (typeof window !== 'undefined' && window.currentCalendar) {
+    currentCalendar = window.currentCalendar;
+  } else {
+    try {
+      const groupsModule = await import('./groups-ui.js');
+      if (groupsModule.currentCalendar) {
+        currentCalendar = groupsModule.currentCalendar;
+      }
+    } catch (err) {
+      console.log('[SYNC] Groups module not available, using personal calendar');
+    }
+  }
+  
+  const groupId = currentCalendar.type === 'group' ? currentCalendar.id : null;
+  
+  console.log('[SYNC] Loading tasks from backend for calendar:', currentCalendar);
+  const list = await fetchAllTasksFromBackend(100, groupId);
   console.log('[SYNC] Fetched', list.length, 'tasks from backend');
   
   // Get current local tasks
@@ -305,6 +329,12 @@ export async function createTaskOnBackend(payload) {
     } else {
       console.warn('Invalid date format, skipping date field:', dateStr);
     }
+  }
+  
+  // Include group_id if present (for group calendar tasks)
+  if (payload.group_id !== undefined && payload.group_id !== null) {
+    cleanPayload.group_id = payload.group_id;
+    console.log('[GROUPS] Adding group_id to payload:', cleanPayload.group_id);
   }
 
   console.log('Clean payload to send:', cleanPayload);

@@ -432,6 +432,15 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
       task.time = time;
     }
   }
+  
+  // Add group_id if creating task in a group calendar
+  if (typeof window !== 'undefined' && window.currentCalendar) {
+    const currentCal = window.currentCalendar;
+    if (currentCal.type === 'group' && currentCal.id) {
+      task.group_id = currentCal.id;
+      console.log('[TASK] Creating task in group:', currentCal.id);
+    }
+  }
 
   updateTasks(draft => {
     const key = taskDate ? taskDate : 'undated';
@@ -449,6 +458,7 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   console.log('taskDate:', taskDate);
   console.log('Final task object:', task);
   console.log('Task has date field:', 'date' in task);
+  console.log('Task has group_id field:', 'group_id' in task);
   console.log('Task ID:', task.id);
   console.log('Checking backend login status:', isLoggedInWithBackend());
   if (isLoggedInWithBackend()) {

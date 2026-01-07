@@ -11,6 +11,7 @@ import { API_BASE_URL, isLoggedInWithBackend, loadTasksIntoState, pushLocalTasks
 import { renderCalendar, initCalendar, showTaskInputModal } from './calendar.js';
 import { renderAgenda } from './agenda.js';
 import { showPdfExportModal } from './pdf.js';
+import { initGroups, currentCalendar } from './groups-ui.js';
 
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liO2tcNCvR8xrHov';
@@ -120,10 +121,27 @@ function updateLoginButton() {
     if (userStatus && !userStatus.querySelector('.online-indicator')) {
       const online = document.createElement('span'); online.className = 'online-indicator'; online.textContent = '●'; online.title = 'En línea'; userInfo.appendChild(online);
     }
+    
+    // Show calendar selector for logged-in users
+    const calendarSelector = document.getElementById('calendar-selector');
+    if (calendarSelector) {
+      calendarSelector.style.display = 'flex';
+    }
+    
+    // Initialize groups system
+    if (typeof initGroups === 'function') {
+      initGroups().catch(err => console.error('[GROUPS] Init error:', err));
+    }
   } else {
     if (loginBtn) loginBtn.style.display = 'flex';
     if (userInfo) { userInfo.style.display = 'none'; userInfo.classList.add('hidden'); userInfo.classList.remove('show'); }
     const ind = document.querySelector('.online-indicator'); if (ind) ind.remove();
+    
+    // Hide calendar selector for logged-out users
+    const calendarSelector = document.getElementById('calendar-selector');
+    if (calendarSelector) {
+      calendarSelector.style.display = 'none';
+    }
   }
 }
 
@@ -460,6 +478,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // Re-render views when tasks change
   document.addEventListener('tasksUpdated', () => {
     if (calendarView && !calendarView.classList.contains('hidden')) renderCalendar();
+    if (agendaView && !agendaView.classList.contains('hidden')) {
+      const m = (document.getElementById('month-filter') || {}).value || 'all';
+      const s = (document.getElementById('status-filter') || {}).value || 'all';
+      renderAgenda(m, s);
+    }
+  });
+
+  // Re-render views when calendar changes (personal/group switch)
+  window.addEventListener('calendar-changed', async (e) => {
+    console.log('[APP] Calendar changed:', e.detail);
+    
+    // Reload tasks from backend for the selected calendar
+    if (isLoggedInWithBackend()) {
+      await loadTasksIntoState();
+    }
+    
+    // Re-render current view
+    if (calendarView && !calendarView.classList.contains('hidden')) {
+      renderCalendar();
+    }
     if (agendaView && !agendaView.classList.contains('hidden')) {
       const m = (document.getElementById('month-filter') || {}).value || 'all';
       const s = (document.getElementById('status-filter') || {}).value || 'all';

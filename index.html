@@ -49,6 +49,11 @@
             </nav>
             
             <div class="header-right">
+                <!-- Calendar Selector (for logged-in users with groups) -->
+                <div id="calendar-selector" class="calendar-selector-container" style="display: none;">
+                    <!-- Rendered by groups-ui.js -->
+                </div>
+                
                 <button id="theme-toggle-btn" class="theme-toggle-btn" title="Cambiar tema" aria-label="Alternar modo oscuro">
                     <span id="theme-icon" class="icon"></span>
                 </button>
@@ -259,6 +264,9 @@
     
     <!-- Dark Mode -->
     <script type="module" src="./dark-mode.js"></script>
+    
+    <!-- Groups CSS -->
+    <link rel="stylesheet" href="groups.css">
     
     <!-- Initialize icons -->
     <script type="module" src="./init-icons.js"></script>
