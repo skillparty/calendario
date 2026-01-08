@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "calendar10-frontend",
+  "name": "calendario-frontend",
   "builds": [
     {
       "src": "index.html",

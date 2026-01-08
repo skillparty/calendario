@@ -14,7 +14,7 @@ import { showPdfExportModal } from './pdf.js';
 
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
-const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
+const GITHUB_REDIRECT_URI = 'https://calendario-frontend-ashy.vercel.app';
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const GITHUB_DEVICE_TOKEN_URL = 'https://github.com/login/oauth/access_token';
