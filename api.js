@@ -9,10 +9,10 @@
 import { state, setTasks, getTasks } from './state.js';
 
 /** @type {string} */
-// IMPORTANTE: Después de crear el backend en Vercel, actualiza esta URL
+// Backend URL - actualizado con el nuevo despliegue de Vercel
 export const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000'
-  : 'https://calendario-backend-one.vercel.app';
+  : 'https://backend-eight-zeta-snldyompdv.vercel.app';
 
 /** @returns {boolean} */
 export function isLoggedInWithBackend() {
@@ -70,19 +70,12 @@ export async function apiFetch(path, options = {}, retries = 3) {
 }
 
 // Pagination utility to retrieve all tasks from the backend
-/** @param {number} [limit=100] @param {number} [groupId=null] @returns {Promise<APITask[]>} */
-export async function fetchAllTasksFromBackend(limit = 100, groupId = null) {
+/** @param {number} [limit=100] @returns {Promise<APITask[]>} */
+export async function fetchAllTasksFromBackend(limit = 100) {
   const aggregate = [];
   let offset = 0;
-  
-  // Build query params
-  let queryParams = `limit=${limit}`;
-  if (groupId !== null && groupId !== undefined) {
-    queryParams += `&group_id=${groupId}`;
-  }
-  
   while (true) {
-    const res = await apiFetch(`/api/tasks?${queryParams}&offset=${offset}`);
+    const res = await apiFetch(`/api/tasks?limit=${limit}&offset=${offset}`);
     if (!res.ok) throw new Error('Tasks list HTTP ' + res.status);
     const data = await res.json();
     const chunk = data.data || [];
@@ -97,53 +90,12 @@ export async function fetchAllTasksFromBackend(limit = 100, groupId = null) {
 /** @returns {Promise<boolean>} */
 export async function loadTasksIntoState() {
   if (!isLoggedInWithBackend()) return false;
-  
-  // Import currentCalendar from groups-ui.js if available
-  let currentCalendar = { type: 'personal', id: null };
-  if (typeof window !== 'undefined' && window.currentCalendar) {
-    currentCalendar = window.currentCalendar;
-  } else {
-    try {
-      const groupsModule = await import('./groups-ui.js');
-      if (groupsModule.currentCalendar) {
-        currentCalendar = groupsModule.currentCalendar;
-      }
-    } catch (err) {
-      console.log('[SYNC] Groups module not available, using personal calendar');
-    }
-  }
-  
-  const groupId = currentCalendar.type === 'group' ? currentCalendar.id : null;
-  
-  console.log('[SYNC] Loading tasks from backend for calendar:', currentCalendar);
-  const list = await fetchAllTasksFromBackend(100, groupId);
-  console.log('[SYNC] Fetched', list.length, 'tasks from backend');
-  
-  // Get current local tasks
-  const localTasks = getTasks();
-  console.log('[SYNC] Current local tasks:', Object.keys(localTasks).length, 'dates');
-  
+  const list = await fetchAllTasksFromBackend(100);
   /** @type {TasksByDate} */
   const byDate = {};
-  
-  // Map text priority back to numeric for frontend
-  const textToNumericPriority = {
-    'baja': 2,
-    'media': 3,
-    'alta': 4
-  };
-  
-  // First, add all backend tasks (server is source of truth for synced tasks)
-  const backendIds = new Set();
   list.forEach(t => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
-    
-    // Convert text priority to numeric if needed
-    const priority = typeof t.priority === 'string' 
-      ? (textToNumericPriority[t.priority] || 3)
-      : (t.priority || 3);
-    
     /** @type {Task} */
     const mapped = {
       id: String(t.id),
@@ -153,55 +105,12 @@ export async function loadTasksIntoState() {
       time: t.time || null,
       completed: !!t.completed,
       isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
-      priority: priority,
-      tags: t.tags || [],
-      _synced: true // Mark as synced with backend
+      priority: t.priority || 1,
+      tags: t.tags || []
     };
     byDate[dateKey].push(mapped);
-    backendIds.add(String(t.id));
   });
-  
-  // Then, preserve local tasks that aren't in the backend yet
-  // (these are tasks created locally but not yet synced or failed to sync)
-  // BUT only if they belong to the CURRENT calendar
-  Object.entries(localTasks).forEach(([dateKey, tasks]) => {
-    tasks.forEach(task => {
-      const taskId = String(task.id);
-      // Only keep local tasks that are NOT in backend
-      // Use timestamp-based IDs to detect local-only tasks
-      const isLocalOnly = !backendIds.has(taskId) && taskId.length >= 13;
-      
-      if (isLocalOnly) {
-        // Check if task belongs to current calendar
-        const taskGroupId = task.group_id;
-        const belongsToCurrentCalendar = 
-          (currentCalendar.type === 'personal' && !taskGroupId) ||
-          (currentCalendar.type === 'group' && taskGroupId === currentCalendar.id);
-        
-        if (belongsToCurrentCalendar) {
-          console.log('[SYNC] Preserving local task not in backend:', task.title, 'ID:', taskId);
-          if (!byDate[dateKey]) byDate[dateKey] = [];
-          byDate[dateKey].push({ ...task, _needsSync: true });
-        } else {
-          console.log('[SYNC] Skipping task from different calendar:', task.title, 'group_id:', taskGroupId);
-        }
-      }
-    });
-  });
-  
-  console.log('[SYNC] Final merged tasks:', Object.keys(byDate).length, 'dates');
   setTasks(byDate);
-  
-  // Automatically push any local-only tasks to backend
-  setTimeout(() => {
-    console.log('[SYNC] Checking for tasks needing sync...');
-    pushLocalTasksToBackend().then(() => {
-      console.log('[SYNC] Auto-sync completed');
-    }).catch(err => {
-      console.error('[SYNC] Auto-sync failed:', err);
-    });
-  }, 1000);
-  
   return true;
 }
 
@@ -219,17 +128,12 @@ export async function pushLocalTasksToBackend() {
   for (const t of localList) {
     const existing = serverById.get(String(t.id));
     if (!existing) {
-      // Map numeric priority to text priority for Supabase
-      const priorityMap = { 1: 'baja', 2: 'baja', 3: 'media', 4: 'alta', 5: 'alta' };
-      const priorityValue = t.priority ? parseInt(t.priority, 10) : 3;
-      const textPriority = priorityMap[priorityValue] || 'media';
-      
       /** @type {any} */
       const payload = {
         title: t.title,
         completed: Boolean(t.completed),
         is_reminder: t.isReminder !== undefined ? Boolean(t.isReminder) : true,
-        priority: textPriority,
+        priority: parseInt(t.priority || 1, 10),
         tags: Array.isArray(t.tags) ? t.tags : []
       };
       
@@ -267,20 +171,12 @@ export async function pushLocalTasksToBackend() {
       const exRem = existing.is_reminder !== undefined ? existing.is_reminder : true;
       const loRem = t.isReminder !== undefined ? t.isReminder : true;
       if (exRem !== loRem) diff.is_reminder = loRem;
-      
-      // Convert numeric priority to text for comparison and update
-      const priorityMap = { 1: 'baja', 2: 'baja', 3: 'media', 4: 'alta', 5: 'alta' };
-      const existingPriority = typeof existing.priority === 'string' ? existing.priority : priorityMap[existing.priority || 3] || 'media';
-      const localPriorityNum = t.priority ? parseInt(t.priority, 10) : 3;
-      const localPriority = priorityMap[localPriorityNum] || 'media';
-      if (existingPriority !== localPriority) diff.priority = localPriority;
-      
+      if ((existing.priority || 1) !== (t.priority || 1)) diff.priority = t.priority || 1;
       const exTags = JSON.stringify(existing.tags || []);
       const loTags = JSON.stringify(t.tags || []);
       if (exTags !== loTags) diff.tags = t.tags || [];
       if (Object.keys(diff).length > 0) {
-        // Use updateTaskOnBackend which handles priority conversion
-        await updateTaskOnBackend(existing.id, diff);
+        await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff) });
       }
     }
   }
@@ -296,23 +192,12 @@ export async function pushLocalTasksToBackend() {
 export async function createTaskOnBackend(payload) {
   console.log('Original payload received:', payload);
   
-  // Map numeric priority to text priority for Supabase
-  const priorityMap = {
-    '1': 'baja',
-    '2': 'baja', 
-    '3': 'media',
-    '4': 'alta',
-    '5': 'alta'
-  };
-  const priorityValue = payload.priority ? String(payload.priority) : '3';
-  const textPriority = priorityMap[priorityValue] || 'media';
-  
   // Ensure payload matches backend validation exactly
   const cleanPayload = {
     title: payload.title || '',
     completed: Boolean(payload.completed),
     is_reminder: Boolean(payload.isReminder || payload.is_reminder),
-    priority: textPriority,
+    priority: parseInt(payload.priority || '3'),
     tags: Array.isArray(payload.tags) ? payload.tags : []
   };
 
@@ -341,12 +226,6 @@ export async function createTaskOnBackend(payload) {
       console.warn('Invalid date format, skipping date field:', dateStr);
     }
   }
-  
-  // Include group_id if present (for group calendar tasks)
-  if (payload.group_id !== undefined && payload.group_id !== null) {
-    cleanPayload.group_id = payload.group_id;
-    console.log('[GROUPS] Adding group_id to payload:', cleanPayload.group_id);
-  }
 
   console.log('Clean payload to send:', cleanPayload);
   console.log('Payload keys:', Object.keys(cleanPayload));
@@ -362,13 +241,6 @@ export async function createTaskOnBackend(payload) {
 
 /** @param {number|string} serverId @param {Partial<{title:string;description:string|null;date:string|null;time:string|null;completed:boolean;is_reminder:boolean;priority:number;tags:string[]}>} payload */
 export async function updateTaskOnBackend(serverId, payload) {
-  // Convert numeric priority to text if present
-  if (payload.priority !== undefined) {
-    const priorityMap = { 1: 'baja', 2: 'baja', 3: 'media', 4: 'alta', 5: 'alta' };
-    const textPriority = priorityMap[payload.priority] || 'media';
-    payload = { ...payload, priority: textPriority };
-  }
-  
   const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();

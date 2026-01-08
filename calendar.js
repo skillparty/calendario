@@ -32,28 +32,14 @@ export function renderCalendar() {
   const startDate = new Date(firstDay);
   startDate.setDate(startDate.getDate() - firstDay.getDay());
 
-  const prevMonth = month === 0 ? 11 : month - 1;
-  const prevMonthYear = month === 0 ? year - 1 : year;
-  const nextMonth = month === 11 ? 0 : month + 1;
-  const nextMonthYear = month === 11 ? year + 1 : year;
-
   let html = `
-        <div class="calendar-navigation">
-            <button id="prev-month" class="calendar-nav-btn calendar-nav-prev" title="Ir a ${getMonthName(prevMonth)} ${prevMonthYear}" aria-label="Mes anterior">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-                <span class="nav-month-label">${getMonthName(prevMonth)}</span>
+        <div class="calendar-nav">
+            <button id="prev-month" title="Mes anterior">
+                ← ${getMonthName(month === 0 ? 11 : month - 1)}
             </button>
-            <div class="calendar-current-month">
-                <h2 class="calendar-month-name">${getMonthName(month)}</h2>
-                <span class="calendar-year">${year}</span>
-            </div>
-            <button id="next-month" class="calendar-nav-btn calendar-nav-next" title="Ir a ${getMonthName(nextMonth)} ${nextMonthYear}" aria-label="Mes siguiente">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-                <span class="nav-month-label">${getMonthName(nextMonth)}</span>
+            <h2>${getMonthName(month)} ${year}</h2>
+            <button id="next-month" title="Mes siguiente">
+                ${getMonthName(month === 11 ? 0 : month + 1)} →
             </button>
         </div>
         <div class="calendar-grid">
@@ -93,38 +79,20 @@ export function renderCalendar() {
           if (!b.time) return -1;
           return a.time.localeCompare(b.time);
         })
-        .slice(0, 3);
+        .slice(0, 2);
       taskPreview = sortedTasks.map(task => {
-        const timeStr = task.time ? `${task.time}` : '';
-        const title = task.title.length > 20 ? task.title.substring(0, 20) + '...' : task.title;
-        const priorityClass = task.priority === 1 ? 'high' : task.priority === 2 ? 'medium' : 'low';
-        return `<div class="task-preview-item ${priorityClass}">
-          ${timeStr ? `<span class="task-time">${timeStr}</span>` : ''}
-          <span class="task-title">${title}</span>
-        </div>`;
+        const timeStr = task.time ? `${task.time} - ` : '';
+        const title = task.title.length > 15 ? task.title.substring(0, 15) + '...' : task.title;
+        return `<div class="task-preview" style="font-size: 10px; color: #666; margin: 1px 0;">${timeStr}${title}</div>`;
       }).join('');
     }
 
-    const hasTasksClass = dayTasks.length > 0 ? ' has-tasks' : '';
-
-    html += `<div class="${dayClass}${todayClass}${pastClass}${hasTasksClass}" data-date="${dateKey}">
+    html += `<div class="${dayClass}${todayClass}${pastClass}" data-date="${dateKey}">
             <div class="day-content">
-                <div class="day-header">
-                    <span class="day-number">${date.getDate()}</span>
-                    ${!isPastDate ? `<button class="day-add-btn" data-date="${dateKey}" title="Agregar tarea">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                    </button>` : ''}
-                </div>
-                ${totalTasks > 0 ? `
-                    <div class="task-info">
-                        <span class="task-badge pending">${pendingTasks}</span>
-                        ${completedTasks > 0 ? `<span class="task-badge completed">${completedTasks}</span>` : ''}
-                    </div>
-                ` : ''}
-                ${taskPreview ? `<div class="task-preview-list">${taskPreview}</div>` : ''}
+                <span class="day-number">${date.getDate()}</span>
+                ${totalTasks > 0 ? `<small class="task-count">${pendingTasks} pendiente(s)</small>` : ''}
+                ${taskPreview}
+                ${!isPastDate ? `<button class="day-add-btn" data-date="${dateKey}" title="Agregar recordatorio">+</button>` : ''}
             </div>
         </div>`;
   }
@@ -432,15 +400,6 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
       task.time = time;
     }
   }
-  
-  // Add group_id if creating task in a group calendar
-  if (typeof window !== 'undefined' && window.currentCalendar) {
-    const currentCal = window.currentCalendar;
-    if (currentCal.type === 'group' && currentCal.id) {
-      task.group_id = currentCal.id;
-      console.log('[TASK] Creating task in group:', currentCal.id);
-    }
-  }
 
   updateTasks(draft => {
     const key = taskDate ? taskDate : 'undated';
@@ -458,54 +417,21 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   console.log('taskDate:', taskDate);
   console.log('Final task object:', task);
   console.log('Task has date field:', 'date' in task);
-  console.log('Task has group_id field:', 'group_id' in task);
-  console.log('Task ID:', task.id);
   console.log('Checking backend login status:', isLoggedInWithBackend());
   if (isLoggedInWithBackend()) {
-    console.log('[TASK] Creating task on backend:', task.title);
-    console.log('[TASK] User session JWT present:', !!state.userSession?.jwt);
+    console.log('Creating task on backend:', task);
+    console.log('User session:', state.userSession);
     createTaskOnBackend(task)
-      .then((response) => {
-        console.log('[TASK] ✅ Task created successfully on backend');
-        console.log('[TASK] Backend response:', response);
-        
-        // Update local task with server ID to mark it as synced
-        if (response && response.data && response.data.id) {
-          updateTasks(draft => {
-            const key = taskDate ? taskDate : 'undated';
-            if (draft[key]) {
-              const taskIndex = draft[key].findIndex(t => t.id === task.id);
-              if (taskIndex !== -1) {
-                draft[key][taskIndex].id = String(response.data.id);
-                draft[key][taskIndex]._synced = true;
-                console.log('[TASK] Updated local task with backend ID:', response.data.id);
-              }
-            }
-          });
-        }
-        
+      .then(() => {
+        console.log('Task created successfully on backend');
         showSyncStatus('Guardado ✅');
       })
       .catch(async (err) => {
-        console.error('[TASK] ❌ Create task failed:', err);
-        console.error('[TASK] Error details:', err.message);
-        
-        // Mark task as needing sync
-        updateTasks(draft => {
-          const key = taskDate ? taskDate : 'undated';
-          if (draft[key]) {
-            const taskIndex = draft[key].findIndex(t => t.id === task.id);
-            if (taskIndex !== -1) {
-              draft[key][taskIndex]._needsSync = true;
-              console.log('[TASK] Marked task as needing sync');
-            }
-          }
-        });
-        
+        console.error('Create task failed:', err);
         showSyncStatus('Guardado localmente (sin conexión)', true);
       });
   } else {
-    console.log('[TASK] Not logged in with backend - saving locally only');
+    console.log('Not logged in with backend - saving locally only');
   }
 
   if (isReminder && 'Notification' in window) {

@@ -11,11 +11,10 @@ import { API_BASE_URL, isLoggedInWithBackend, loadTasksIntoState, pushLocalTasks
 import { renderCalendar, initCalendar, showTaskInputModal } from './calendar.js';
 import { renderAgenda } from './agenda.js';
 import { showPdfExportModal } from './pdf.js';
-import { initGroups, currentCalendar } from './groups-ui.js';
 
 // GitHub OAuth constants
-const GITHUB_CLIENT_ID = 'Ov23liO2tcNCvR8xrHov';
-const GITHUB_REDIRECT_URI = window.location.origin; // Usar el dominio actual
+const GITHUB_CLIENT_ID = 'Ov23liyk7oqj7OI75MfO';
+const GITHUB_REDIRECT_URI = 'https://skillparty.github.io/calendario';
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const GITHUB_DEVICE_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -121,27 +120,10 @@ function updateLoginButton() {
     if (userStatus && !userStatus.querySelector('.online-indicator')) {
       const online = document.createElement('span'); online.className = 'online-indicator'; online.textContent = '●'; online.title = 'En línea'; userInfo.appendChild(online);
     }
-    
-    // Show calendar selector for logged-in users
-    const calendarSelector = document.getElementById('calendar-selector');
-    if (calendarSelector) {
-      calendarSelector.style.display = 'flex';
-    }
-    
-    // Initialize groups system
-    if (typeof initGroups === 'function') {
-      initGroups().catch(err => console.error('[GROUPS] Init error:', err));
-    }
   } else {
     if (loginBtn) loginBtn.style.display = 'flex';
     if (userInfo) { userInfo.style.display = 'none'; userInfo.classList.add('hidden'); userInfo.classList.remove('show'); }
     const ind = document.querySelector('.online-indicator'); if (ind) ind.remove();
-    
-    // Hide calendar selector for logged-out users
-    const calendarSelector = document.getElementById('calendar-selector');
-    if (calendarSelector) {
-      calendarSelector.style.display = 'none';
-    }
   }
 }
 
@@ -157,8 +139,9 @@ function handleLogin() {
 function handleLogout() {
   setUserSession(null);
   setUserGistId(null);
-  // Reload tasks from local storage only
-  setTasks(JSON.parse(localStorage.getItem('calendarTasks')) || {});
+  // Clear all tasks on logout - user data is private
+  setTasks({});
+  localStorage.removeItem('calendarTasks');
   updateLoginButton();
   showCalendar();
 }
@@ -206,13 +189,10 @@ async function handleOAuthCallback() {
         return res.json();
       }).then(async (data) => {
         if (!data || !data.success || !data.token || !data.user) throw new Error('Auth payload inválido');
-        console.log('[AUTH] ✅ Login successful, setting session');
         setUserSession({ jwt: data.token, user: data.user, loginTime: Date.now() });
         const cleanUrl = window.location.origin + window.location.pathname; window.history.replaceState({}, document.title, cleanUrl);
         updateLoginButton();
-        console.log('[AUTH] Loading tasks from backend after login...');
         await loadTasksIntoState();
-        console.log('[AUTH] Tasks loaded successfully');
         showAuthStatus('Inicio de sesión exitoso');
       }).catch(err => {
         console.error('Code exchange failed:', err);
@@ -238,9 +218,7 @@ async function handleOAuthCallback() {
         updateLoginButton();
         if (sess && sess.user) {
           if (sess.jwt) {
-            console.log('[AUTH] Loading tasks from backend (stored session)...');
             await loadTasksIntoState();
-            console.log('[AUTH] Tasks loaded from backend');
           } else {
             await findExistingGist();
             await loadTasksFromGist();
@@ -478,26 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Re-render views when tasks change
   document.addEventListener('tasksUpdated', () => {
     if (calendarView && !calendarView.classList.contains('hidden')) renderCalendar();
-    if (agendaView && !agendaView.classList.contains('hidden')) {
-      const m = (document.getElementById('month-filter') || {}).value || 'all';
-      const s = (document.getElementById('status-filter') || {}).value || 'all';
-      renderAgenda(m, s);
-    }
-  });
-
-  // Re-render views when calendar changes (personal/group switch)
-  window.addEventListener('calendar-changed', async (e) => {
-    console.log('[APP] Calendar changed:', e.detail);
-    
-    // Reload tasks from backend for the selected calendar
-    if (isLoggedInWithBackend()) {
-      await loadTasksIntoState();
-    }
-    
-    // Re-render current view
-    if (calendarView && !calendarView.classList.contains('hidden')) {
-      renderCalendar();
-    }
     if (agendaView && !agendaView.classList.contains('hidden')) {
       const m = (document.getElementById('month-filter') || {}).value || 'all';
       const s = (document.getElementById('status-filter') || {}).value || 'all';

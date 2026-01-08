@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { supabase } = require('../utils/supabase.js');
+const { supabaseAdmin } = require('../utils/supabase.js');
 const { asyncHandler, AppError } = require('../middleware/errorHandler.js');
 const logger = require('../utils/logger.js');
 const jwt = require('jsonwebtoken');
@@ -25,7 +25,7 @@ const authenticate = asyncHandler(async (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     
     // Get user from Supabase
-    const { data: user, error } = await supabase
+    const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('id, github_id, username, email, avatar_url')
       .eq('id', decoded.userId)
@@ -75,7 +75,7 @@ router.get('/', asyncHandler(async (req, res) => {
   
   // Si se especifica group_id, verificar membership
   if (group_id && group_id !== 'null' && group_id !== 'personal') {
-    const { data: membership } = await supabase
+    const { data: membership } = await supabaseAdmin
       .from('group_members')
       .select('id')
       .eq('group_id', group_id)
@@ -87,10 +87,10 @@ router.get('/', asyncHandler(async (req, res) => {
     }
   }
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('tasks')
     .select('*')
-    .order('date', { ascending: true });
+    .order('date', { ascending: true, nullsFirst: false });
 
   // Filtrar por grupo o tareas personales
   if (group_id === 'personal' || group_id === 'null') {
@@ -104,7 +104,7 @@ router.get('/', asyncHandler(async (req, res) => {
     query = query.eq('user_id', req.user.id).is('group_id', null);
   }
 
-  // Filtros adicionales
+  // Filtros adicionales - NO aplicar filtros de fecha si no están especificados explícitamente
   if (date) query = query.eq('date', date);
   if (start_date && end_date) query = query.gte('date', start_date).lte('date', end_date);
   if (completed !== undefined) query = query.eq('completed', completed === 'true');
@@ -115,6 +115,8 @@ router.get('/', asyncHandler(async (req, res) => {
     logger.error('Error fetching tasks:', error);
     throw new AppError('Error fetching tasks', 500);
   }
+
+  logger.info(`Fetched ${data?.length || 0} tasks for user ${req.user.id}`);
 
   res.json({
     success: true,
@@ -127,7 +129,7 @@ router.get('/', asyncHandler(async (req, res) => {
 router.get('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('tasks')
     .select('*')
     .eq('id', id)
@@ -150,7 +152,7 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
 
   // Si se especifica group_id, verificar que el usuario es miembro
   if (group_id) {
-    const { data: membership } = await supabase
+    const { data: membership } = await supabaseAdmin
       .from('group_members')
       .select('id')
       .eq('group_id', group_id)
@@ -173,7 +175,7 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
     group_id: group_id || null
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('tasks')
     .insert([newTask])
     .select()
@@ -210,7 +212,7 @@ router.put('/:id', taskValidation, handleValidationErrors, asyncHandler(async (r
   // Remover campos undefined
   Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('tasks')
     .update(updates)
     .eq('id', id)
@@ -240,7 +242,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   delete updates.user_id;
   delete updates.created_at;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('tasks')
     .update(updates)
     .eq('id', id)
@@ -262,7 +264,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('tasks')
     .delete()
     .eq('id', id)
@@ -294,7 +296,7 @@ router.post('/sync', asyncHandler(async (req, res) => {
     user_id: req.user.id
   }));
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('tasks')
     .upsert(tasksWithUser, { onConflict: 'id' })
     .select();
