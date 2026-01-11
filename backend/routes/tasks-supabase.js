@@ -1,60 +1,28 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { supabaseAdmin } = require('../utils/supabase.js');
+const { supabase } = require('../utils/supabase.js');
 const { asyncHandler, AppError } = require('../middleware/errorHandler.js');
 const logger = require('../utils/logger.js');
-const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
-// JWT secret (debe coincidir con auth.js)
-const JWT_SECRET = process.env.JWT_SECRET || 'calendario-secret-key-change-in-production';
-
-// Middleware de autenticación con JWT y Supabase
-const authenticate = asyncHandler(async (req, res, next) => {
-  // Get token from header
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new AppError('Access token required', 401);
-  }
-
-  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-  
-  try {
-    // Verify JWT token
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    // Get user from Supabase
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('id, github_id, username, email, avatar_url')
-      .eq('id', decoded.userId)
-      .single();
-
-    if (error || !user) {
-      throw new AppError('User not found', 401);
-    }
-
-    // Add user to request object
-    req.user = user;
-    next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      throw new AppError('Invalid token', 401);
-    }
-    if (error.name === 'TokenExpiredError') {
-      throw new AppError('Token expired', 401);
-    }
-    throw error;
-  }
-});
+// Middleware de autenticación simple (sin JWT por ahora)
+const authenticate = (req, res, next) => {
+  // Por ahora, crear un usuario de prueba
+  // TODO: Implementar autenticación real con GitHub OAuth
+  req.user = {
+    id: '00000000-0000-0000-0000-000000000001', // UUID de prueba
+    username: 'usuario_prueba'
+  };
+  next();
+};
 
 router.use(authenticate);
 
 // Validación
 const taskValidation = [
   body('title').trim().isLength({ min: 1, max: 500 }).withMessage('Title required'),
-  body('date').optional({ nullable: true }).isISO8601().withMessage('Valid date required'),
+  body('date').isISO8601().withMessage('Valid date required'),
   body('time').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid time format HH:MM'),
   body('description').optional().isLength({ max: 2000 }),
   body('completed').optional().isBoolean(),
@@ -71,40 +39,15 @@ function handleValidationErrors(req, res, next) {
 
 // GET /api/tasks - Obtener todas las tareas del usuario
 router.get('/', asyncHandler(async (req, res) => {
-  const { date, start_date, end_date, completed, month, year, group_id } = req.query;
+  const { date, start_date, end_date, completed, month, year } = req.query;
   
-  // Si se especifica group_id, verificar membership
-  if (group_id && group_id !== 'null' && group_id !== 'personal') {
-    const { data: membership } = await supabaseAdmin
-      .from('group_members')
-      .select('id')
-      .eq('group_id', group_id)
-      .eq('user_id', req.user.id)
-      .single();
-
-    if (!membership) {
-      throw new AppError('User is not a member of this group', 403);
-    }
-  }
-
-  let query = supabaseAdmin
+  let query = supabase
     .from('tasks')
     .select('*')
-    .order('date', { ascending: true, nullsFirst: false });
+    .eq('user_id', req.user.id)
+    .order('date', { ascending: true });
 
-  // Filtrar por grupo o tareas personales
-  if (group_id === 'personal' || group_id === 'null') {
-    // Solo tareas personales (sin grupo)
-    query = query.eq('user_id', req.user.id).is('group_id', null);
-  } else if (group_id) {
-    // Tareas de un grupo específico
-    query = query.eq('group_id', group_id);
-  } else {
-    // Por defecto: todas las tareas del usuario (personales)
-    query = query.eq('user_id', req.user.id).is('group_id', null);
-  }
-
-  // Filtros adicionales - NO aplicar filtros de fecha si no están especificados explícitamente
+  // Filtros opcionales
   if (date) query = query.eq('date', date);
   if (start_date && end_date) query = query.gte('date', start_date).lte('date', end_date);
   if (completed !== undefined) query = query.eq('completed', completed === 'true');
@@ -115,8 +58,6 @@ router.get('/', asyncHandler(async (req, res) => {
     logger.error('Error fetching tasks:', error);
     throw new AppError('Error fetching tasks', 500);
   }
-
-  logger.info(`Fetched ${data?.length || 0} tasks for user ${req.user.id}`);
 
   res.json({
     success: true,
@@ -129,7 +70,7 @@ router.get('/', asyncHandler(async (req, res) => {
 router.get('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('tasks')
     .select('*')
     .eq('id', id)
@@ -148,21 +89,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // POST /api/tasks - Crear una nueva tarea
 router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req, res) => {
-  const { title, description, date, time, completed, priority, group_id } = req.body;
-
-  // Si se especifica group_id, verificar que el usuario es miembro
-  if (group_id) {
-    const { data: membership } = await supabaseAdmin
-      .from('group_members')
-      .select('id')
-      .eq('group_id', group_id)
-      .eq('user_id', req.user.id)
-      .single();
-
-    if (!membership) {
-      throw new AppError('User is not a member of this group', 403);
-    }
-  }
+  const { title, description, date, time, completed, priority } = req.body;
 
   const newTask = {
     user_id: req.user.id,
@@ -171,11 +98,10 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
     date,
     time: time || null,
     completed: completed || false,
-    priority: priority || 'media',
-    group_id: group_id || null
+    priority: priority || 'media'
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('tasks')
     .insert([newTask])
     .select()
@@ -186,8 +112,7 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
     throw new AppError('Error creating task', 500);
   }
 
-  logger.info(`Task created: ${data.id} by user ${req.user.id}${group_id ? ` in group ${group_id}` : ''}`);
-
+  logger.info(`Task created: ${data.id} by user ${req.user.id}`);
 
   res.status(201).json({
     success: true,
@@ -212,7 +137,7 @@ router.put('/:id', taskValidation, handleValidationErrors, asyncHandler(async (r
   // Remover campos undefined
   Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('tasks')
     .update(updates)
     .eq('id', id)
@@ -242,7 +167,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   delete updates.user_id;
   delete updates.created_at;
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('tasks')
     .update(updates)
     .eq('id', id)
@@ -264,7 +189,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const { error } = await supabaseAdmin
+  const { error } = await supabase
     .from('tasks')
     .delete()
     .eq('id', id)
@@ -296,7 +221,7 @@ router.post('/sync', asyncHandler(async (req, res) => {
     user_id: req.user.id
   }));
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('tasks')
     .upsert(tasksWithUser, { onConflict: 'id' })
     .select();

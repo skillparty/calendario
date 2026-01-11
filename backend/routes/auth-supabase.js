@@ -6,6 +6,11 @@ const logger = require('../utils/logger.js');
 
 const router = express.Router();
 
+// Test endpoint
+router.get('/test', (req, res) => {
+  res.json({ message: 'Auth routes working', timestamp: new Date().toISOString() });
+});
+
 // GitHub OAuth configuration
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -79,23 +84,33 @@ async function getGitHubUser(accessToken) {
 
 // POST /api/auth/github
 // Exchange GitHub authorization code for access token and user info
-router.post('/github', validateAuth, handleValidationErrors, async (req, res) => {
+router.post('/github', async (req, res) => {
   try {
+    console.log('[AUTH /github] Request received:', { body: req.body, hasCode: !!req.body.code });
     const { code } = req.body;
+    
+    if (!code) {
+      console.log('[AUTH /github] No code provided');
+      return res.status(400).json({ error: 'Code is required' });
+    }
 
+    console.log('[AUTH /github] Exchanging code for token...');
     // Step 1: Exchange code for access token
     const accessToken = await exchangeCodeForToken(code);
     
     if (!accessToken) {
+      console.log('[AUTH /github] No access token received');
       return res.status(400).json({
         error: 'Failed to obtain access token from GitHub'
       });
     }
 
+    console.log('[AUTH /github] Getting GitHub user...');
     // Step 2: Get user information from GitHub
     const githubUser = await getGitHubUser(accessToken);
     
     if (!githubUser) {
+      console.log('[AUTH /github] No GitHub user received');
       return res.status(400).json({
         error: 'Failed to get user information from GitHub'
       });

@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { query } = require('../utils/db.js');
+const { supabase } = require('../utils/supabase.js');
 const logger = require('../utils/logger.js');
 const { AppError } = require('./errorHandler.js');
 
@@ -51,18 +51,19 @@ async function authenticate(req, res, next) {
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     const decoded = verifyToken(token);
 
-    // Get user from database
-    const result = await query(
-      'SELECT id, github_id, username, name, email, avatar_url FROM users WHERE id = $1',
-      [decoded.userId]
-    );
+    // Get user from Supabase
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, github_id, username, name, email, avatar_url')
+      .eq('id', decoded.userId)
+      .single();
 
-    if (result.rows.length === 0) {
+    if (error || !user) {
       throw new AppError('User not found', 401);
     }
 
     // Add user to request object
-    req.user = result.rows[0];
+    req.user = user;
     next();
   } catch (error) {
     if (error instanceof AppError) {
@@ -81,13 +82,14 @@ async function optionalAuth(req, res, next) {
       const token = authHeader.substring(7);
       const decoded = verifyToken(token);
       
-      const result = await query(
-        'SELECT id, github_id, username, name, email, avatar_url FROM users WHERE id = $1',
-        [decoded.userId]
-      );
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id, github_id, username, name, email, avatar_url')
+        .eq('id', decoded.userId)
+        .single();
 
-      if (result.rows.length > 0) {
-        req.user = result.rows[0];
+      if (!error && user) {
+        req.user = user;
       }
     }
     next();
@@ -114,16 +116,17 @@ function authorize(resourceUserIdField = 'user_id') {
         const tableName = req.route.path.includes('tasks') ? 'tasks' : 'users';
         
         if (tableName === 'tasks') {
-          const result = await query(
-            'SELECT user_id FROM tasks WHERE id = $1',
-            [resourceId]
-          );
+          const { data: resource, error } = await supabase
+            .from('tasks')
+            .select('user_id')
+            .eq('id', resourceId)
+            .single();
           
-          if (result.rows.length === 0) {
+          if (error || !resource) {
             throw new AppError('Resource not found', 404);
           }
           
-          if (result.rows[0].user_id !== req.user.id) {
+          if (resource.user_id !== req.user.id) {
             throw new AppError('Access denied', 403);
           }
         }

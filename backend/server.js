@@ -46,34 +46,13 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, etc.)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:8000',
-      'http://localhost:8079',
-      'https://skillparty.github.io',
-      'https://calendario-6qe4wbh2w-jose-alejandro-rollano-revollos-projects.vercel.app',
-      'https://calendar10.vercel.app',
-      process.env.FRONTEND_URL
-    ].filter(Boolean);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+// CORS configuration - SIMPLIFICADO para permitir todas las origenes
+app.use(cors({
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-};
-
-app.use(cors(corsOptions));
+}));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -112,10 +91,15 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+console.log('[SERVER] Mounting auth routes...');
 app.use('/api/auth', authRoutes);
+console.log('[SERVER] Mounting task routes...');
 app.use('/api/tasks', taskRoutes);
+console.log('[SERVER] Mounting cron routes...');
 app.use('/api/cron', cronRoutes);
+console.log('[SERVER] Mounting group routes...');
 app.use('/api/groups', groupRoutes);
+console.log('[SERVER] All routes mounted');
 
 // 404 handler
 app.use('*', (req, res) => {
