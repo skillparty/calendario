@@ -84,7 +84,7 @@ app.get('/api/health', (req, res) => {
 app.post('/api/auth/github', async (req, res) => {
   try {
     console.log('[AUTH] Starting GitHub OAuth flow');
-    const { code } = req.body;
+    const { code, redirect_uri } = req.body;
     
     if (!code) {
       console.log('[AUTH] No code provided');
@@ -102,7 +102,8 @@ app.post('/api/auth/github', async (req, res) => {
       body: JSON.stringify({
         client_id: process.env.GITHUB_CLIENT_ID,
         client_secret: process.env.GITHUB_CLIENT_SECRET,
-        code: code
+        code: code,
+        redirect_uri: redirect_uri
       })
     });
 
