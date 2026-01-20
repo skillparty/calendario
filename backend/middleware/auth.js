@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { supabase } = require('../utils/supabase.js');
+const { supabaseAdmin: supabase } = require('../utils/supabase.js');
 const logger = require('../utils/logger.js');
 const { AppError } = require('./errorHandler.js');
 
@@ -12,14 +12,14 @@ function generateToken(payload) {
   // Support both object and positional arguments for backward compatibility
   if (typeof payload !== 'object') {
     // Old style: generateToken(userId, githubId)
-    payload = { 
-      userId: arguments[0], 
+    payload = {
+      userId: arguments[0],
       githubId: arguments[1]
     };
   }
-  
+
   return jwt.sign(
-    { 
+    {
       userId: payload.userId,
       githubId: payload.githubId,
       username: payload.username,
@@ -81,7 +81,7 @@ async function optionalAuth(req, res, next) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       const decoded = verifyToken(token);
-      
+
       const { data: user, error } = await supabase
         .from('users')
         .select('id, github_id, username, name, email, avatar_url')
@@ -110,28 +110,28 @@ function authorize(resourceUserIdField = 'user_id') {
       // For route parameters like :id
       if (req.params.id && resourceUserIdField === 'user_id') {
         const resourceId = req.params.id;
-        
+
         // Check if the resource belongs to the authenticated user
         // This will be implemented per resource type
         const tableName = req.route.path.includes('tasks') ? 'tasks' : 'users';
-        
+
         if (tableName === 'tasks') {
           const { data: resource, error } = await supabase
             .from('tasks')
             .select('user_id')
             .eq('id', resourceId)
             .single();
-          
+
           if (error || !resource) {
             throw new AppError('Resource not found', 404);
           }
-          
+
           if (resource.user_id !== req.user.id) {
             throw new AppError('Access denied', 403);
           }
         }
       }
-      
+
       next();
     } catch (error) {
       next(error);

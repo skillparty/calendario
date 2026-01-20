@@ -10,7 +10,7 @@ import { state, setTasks, getTasks } from './state.js';
 
 /** @type {string} */
 // Backend URL - actualizado con el nuevo despliegue de Vercel
-export const API_BASE_URL = window.location.hostname === 'localhost' 
+export const API_BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3000'
   : 'https://backend-eight-zeta-snldyompdv.vercel.app';
 
@@ -42,18 +42,18 @@ export async function apiFetch(path, options = {}, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(API_BASE_URL + path, init);
-      
+
       console.log('API Response:', {
         status: res.status,
         statusText: res.statusText,
         url: res.url
       });
-      
+
       if (!res.ok) {
         const errorText = await res.clone().text();
         console.error('API Error Response:', errorText);
       }
-      
+
       if ((res.status === 502 || res.status === 503) && attempt < retries) {
         await new Promise(r => setTimeout(r, 1000 * attempt));
         continue;
@@ -136,25 +136,25 @@ export async function pushLocalTasksToBackend() {
         priority: parseInt(t.priority || 1, 10),
         tags: Array.isArray(t.tags) ? t.tags : []
       };
-      
+
       // Only add description if it's not empty
       if (t.description && t.description.trim() !== '') {
         payload.description = t.description.trim();
       }
-      
+
       // Only add date if it's valid (not null, not empty, not 'undated')
       if (t.date && t.date !== 'undated' && t.date.trim() !== '') {
         const dateStr = t.date.trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
           payload.date = dateStr;
-          
+
           // Only add time if date is present and time is valid
           if (t.time && t.time.trim() !== '') {
             payload.time = t.time.trim();
           }
         }
       }
-      
+
       await apiFetch('/api/tasks', {
         method: 'POST',
         body: JSON.stringify(payload)
@@ -191,13 +191,19 @@ export async function pushLocalTasksToBackend() {
 
 export async function createTaskOnBackend(payload) {
   console.log('Original payload received:', payload);
-  
+
   // Ensure payload matches backend validation exactly
   const cleanPayload = {
     title: payload.title || '',
     completed: Boolean(payload.completed),
     is_reminder: Boolean(payload.isReminder || payload.is_reminder),
-    priority: parseInt(payload.priority || '3'),
+    // Map priority integer to string enum for DB
+    priority: (function () {
+      const p = parseInt(payload.priority || '3');
+      if (p === 1) return 'alta';
+      if (p === 2) return 'media';
+      return 'baja'; // Default (3)
+    })(),
     tags: Array.isArray(payload.tags) ? payload.tags : []
   };
 
@@ -207,17 +213,17 @@ export async function createTaskOnBackend(payload) {
   }
 
   // Only include date if it's a valid date string (not null, not empty, not undefined)
-  if (payload.date && 
-      typeof payload.date === 'string' && 
-      payload.date.trim() !== '' && 
-      payload.date !== 'null' && 
-      payload.date !== 'undefined') {
-    
+  if (payload.date &&
+    typeof payload.date === 'string' &&
+    payload.date.trim() !== '' &&
+    payload.date !== 'null' &&
+    payload.date !== 'undefined') {
+
     const dateStr = payload.date.trim();
     // Validate date format (YYYY-MM-DD)
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       cleanPayload.date = dateStr;
-      
+
       // Only include time if date is present and time is valid
       if (payload.time && typeof payload.time === 'string' && payload.time.trim() !== '') {
         cleanPayload.time = payload.time.trim();
@@ -229,7 +235,7 @@ export async function createTaskOnBackend(payload) {
 
   console.log('Clean payload to send:', cleanPayload);
   console.log('Payload keys:', Object.keys(cleanPayload));
-  
+
   const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(cleanPayload) });
   if (!res.ok) {
     const errorText = await res.text();

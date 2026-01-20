@@ -91,15 +91,19 @@ app.post('/api/auth/github', async (req, res) => {
       return res.status(400).json({ error: 'Code is required' });
     }
 
+    // Clean environment variables (remove whitespace/newlines)
+    const clientId = (process.env.GITHUB_CLIENT_ID || '').trim();
+    const clientSecret = (process.env.GITHUB_CLIENT_SECRET || '').trim();
+
     console.log('[AUTH] Code received:', code.substring(0, 10) + '...');
     console.log('[AUTH] Redirect URI:', redirect_uri);
-    console.log('[AUTH] Client ID:', process.env.GITHUB_CLIENT_ID);
-    console.log('[AUTH] Client Secret exists:', !!process.env.GITHUB_CLIENT_SECRET);
+    console.log('[AUTH] Client ID:', clientId);
+    console.log('[AUTH] Client Secret exists:', !!clientSecret);
     console.log('[AUTH] Exchanging code for token...');
     
     const requestBody = {
-      client_id: process.env.GITHUB_CLIENT_ID,
-      client_secret: process.env.GITHUB_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       code: code,
       redirect_uri: redirect_uri
     };

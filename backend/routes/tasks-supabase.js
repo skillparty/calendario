@@ -1,21 +1,11 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { supabase } = require('../utils/supabase.js');
+const { supabaseAdmin: supabase } = require('../utils/supabase.js');
 const { asyncHandler, AppError } = require('../middleware/errorHandler.js');
 const logger = require('../utils/logger.js');
 
+const { authenticate } = require('../middleware/auth.js');
 const router = express.Router();
-
-// Middleware de autenticación simple (sin JWT por ahora)
-const authenticate = (req, res, next) => {
-  // Por ahora, crear un usuario de prueba
-  // TODO: Implementar autenticación real con GitHub OAuth
-  req.user = {
-    id: '00000000-0000-0000-0000-000000000001', // UUID de prueba
-    username: 'usuario_prueba'
-  };
-  next();
-};
 
 router.use(authenticate);
 
@@ -26,7 +16,8 @@ const taskValidation = [
   body('time').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid time format HH:MM'),
   body('description').optional().isLength({ max: 2000 }),
   body('completed').optional().isBoolean(),
-  body('priority').optional().isIn(['baja', 'media', 'alta'])
+  body('completed').optional().isBoolean()
+  // body('priority').optional().isIn(['baja', 'media', 'alta']) // Removed to allow normalizePriority in handler
 ];
 
 function handleValidationErrors(req, res, next) {
@@ -40,7 +31,7 @@ function handleValidationErrors(req, res, next) {
 // GET /api/tasks - Obtener todas las tareas del usuario
 router.get('/', asyncHandler(async (req, res) => {
   const { date, start_date, end_date, completed, month, year } = req.query;
-  
+
   let query = supabase
     .from('tasks')
     .select('*')
@@ -51,7 +42,7 @@ router.get('/', asyncHandler(async (req, res) => {
   if (date) query = query.eq('date', date);
   if (start_date && end_date) query = query.gte('date', start_date).lte('date', end_date);
   if (completed !== undefined) query = query.eq('completed', completed === 'true');
-  
+
   const { data, error } = await query;
 
   if (error) {
@@ -87,9 +78,23 @@ router.get('/:id', asyncHandler(async (req, res) => {
   });
 }));
 
+// Helper para normalizar prioridad
+function normalizePriority(p) {
+  if (!p) return 'media';
+  if (['alta', 'media', 'baja'].includes(p)) return p;
+
+  // Manejar números/strings numéricos legados
+  const n = parseInt(p);
+  if (n === 1) return 'alta';
+  if (n === 2) return 'media';
+  if (n === 3) return 'baja';
+
+  return 'media'; // Default seguro
+}
+
 // POST /api/tasks - Crear una nueva tarea
 router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req, res) => {
-  const { title, description, date, time, completed, priority } = req.body;
+  const { title, description, date, time, completed, priority, is_reminder, tags } = req.body;
 
   const newTask = {
     user_id: req.user.id,
@@ -98,7 +103,9 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
     date,
     time: time || null,
     completed: completed || false,
-    priority: priority || 'media'
+    priority: normalizePriority(priority),
+    is_reminder: is_reminder !== undefined ? is_reminder : true,
+    tags: Array.isArray(tags) ? tags : []
   };
 
   const { data, error } = await supabase
@@ -123,7 +130,7 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
 // PUT /api/tasks/:id - Actualizar una tarea
 router.put('/:id', taskValidation, handleValidationErrors, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { title, description, date, time, completed, priority } = req.body;
+  const { title, description, date, time, completed, priority, is_reminder, tags } = req.body;
 
   const updates = {
     title,
@@ -131,7 +138,9 @@ router.put('/:id', taskValidation, handleValidationErrors, asyncHandler(async (r
     date,
     time,
     completed,
-    priority
+    priority: normalizePriority(priority),
+    is_reminder,
+    tags
   };
 
   // Remover campos undefined
@@ -160,18 +169,32 @@ router.put('/:id', taskValidation, handleValidationErrors, asyncHandler(async (r
 // PATCH /api/tasks/:id - Actualización parcial
 router.patch('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const updates = req.body;
+  const { title, description, date, time, completed, priority, is_reminder, tags } = req.body;
 
-  // Remover campos que no deben actualizarse
-  delete updates.id;
-  delete updates.user_id;
-  delete updates.created_at;
+  // Solo permitir actualización de estos campos
+  const updates = {
+    title,
+    description,
+    date,
+    time,
+    completed,
+    priority: priority !== undefined ? normalizePriority(priority) : undefined,
+    is_reminder,
+    tags
+  };
+
+  // Remover campos undefined
+  Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update' });
+  }
 
   const { data, error } = await supabase
     .from('tasks')
     .update(updates)
     .eq('id', id)
-    .eq('user_id', req.user.id)
+    .eq('user_id', req.user.id) // Ensure users can only update their own tasks
     .select()
     .single();
 
