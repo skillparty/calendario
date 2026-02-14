@@ -31,6 +31,18 @@
     height: 14px;
 }
 
+/* Named icon sizes for SVG rendering */
+.agenda-icon svg { width: 28px; height: 28px; }
+.filter-icon svg { width: 16px; height: 16px; }
+.btn-icon svg { width: 18px; height: 18px; }
+.section-icon svg { width: 22px; height: 22px; }
+.sidebar-icon svg { width: 20px; height: 20px; }
+.meta-icon svg { width: 14px; height: 14px; }
+.action-icon svg { width: 16px; height: 16px; }
+.date-group-icon svg { width: 20px; height: 20px; }
+.confirm-icon svg { width: 24px; height: 24px; }
+.check-icon svg { width: 14px; height: 14px; }
+
 /* ========== AGENDA VIEW CONTAINER ========== */
 #agenda-view {
     padding: 0;
@@ -199,6 +211,7 @@
     position: relative;
     display: flex;
     align-items: center;
+    grid-column: 1 / -1;
 }
 
 .search-input {
@@ -324,6 +337,26 @@
 /* ========== TASK LIST ========== */
 .task-list-container {
     padding: var(--space-6);
+    max-height: calc(100vh - 400px);
+    overflow-y: auto;
+}
+
+.task-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.task-list-container::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+}
+
+.task-list-container::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+.task-list-container::-webkit-scrollbar-thumb:hover {
+    background: var(--gray);
 }
 
 .task-list {
@@ -466,6 +499,12 @@
 .task-check-btn.checked {
     background: var(--success);
     border-color: var(--success);
+}
+
+.task-card-check {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .task-check-btn .check-icon {
@@ -614,6 +653,52 @@
     background: var(--error);
     border-color: var(--error);
     color: white;
+}
+
+/* ========== EMPTY STATE CIRCLES ========== */
+.empty-state-circles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.empty-state-circles .circle {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    opacity: 0.15;
+}
+
+.empty-state-circles .circle-1 {
+    width: 120px;
+    height: 120px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse-circle 3s ease-in-out infinite;
+}
+
+.empty-state-circles .circle-2 {
+    width: 80px;
+    height: 80px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse-circle 3s ease-in-out infinite 0.5s;
+}
+
+.empty-state-circles .circle-3 {
+    width: 40px;
+    height: 40px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse-circle 3s ease-in-out infinite 1s;
+}
+
+@keyframes pulse-circle {
+    0%, 100% { opacity: 0.1; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.25; transform: translate(-50%, -50%) scale(1.1); }
 }
 
 /* ========== EMPTY STATE ========== */
