@@ -7,6 +7,8 @@
  */
 export interface Task {
   id: string;
+  /** Numeric backend ID when task has been synced */
+  serverId?: number;
   title: string;
   description?: string;
   /** YYYY-MM-DD or null for undated tasks */
@@ -18,6 +20,8 @@ export interface Task {
   isReminder: boolean;
   priority?: number;
   tags?: string[];
+  /** Unix timestamp of last modification */
+  lastModified?: number;
 }
 
 /** A task that is assigned to a specific calendar date (YYYY-MM-DD). */
@@ -87,3 +91,35 @@ export interface AppState {
   maxSyncIntervalMs: number;
   filters: FiltersState;
 }
+
+declare global {
+  interface Window {
+    showPdfExportModal?: () => void;
+    closePdfExportModal?: () => void;
+    generatePDF?: () => void;
+    toggleExportOptions?: () => void;
+
+    handleLogin?: () => void;
+    handleLogout?: () => void;
+    testNotification?: () => void;
+
+    showTaskInputModal?: (date?: string | null, existingTask?: Task | null) => void;
+    saveTaskFromModal?: (originalDate: string, existingTaskId: string | null) => void;
+    showDayTasks?: (date: string) => void;
+    addTask?: (date: string) => void;
+
+    renderAgenda?: (...args: any[]) => void;
+    toggleTask?: (id: string) => void;
+    toggleTaskWithAnimation?: (id: string, filterMonth: string, filterStatus: string) => void;
+    confirmDeleteTask?: (id: string, title: string, filterMonth: string, filterStatus: string) => void;
+    deleteTaskConfirmed?: (id: string, filterMonth: string, filterStatus: string) => void;
+    deleteTask?: (id: string) => void;
+
+    enhancedState?: unknown;
+    jspdf?: {
+      jsPDF: new () => any;
+    };
+  }
+}
+
+export {};

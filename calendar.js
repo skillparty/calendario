@@ -6,6 +6,8 @@
 
 import { state, setCurrentDate, getTasks, updateTasks, formatDateLocal, notifyTasksUpdated } from './state.js';
 import { isLoggedInWithBackend, createTaskOnBackend, updateTaskOnBackend, pushLocalTasksToBackend } from './api.js';
+import { showSyncToast, showToast } from './utils/UIFeedback.js';
+import { openModal, closeModal } from './utils/modal.js';
 
 // Utilities
 /** @param {number} month @returns {string} */
@@ -18,6 +20,57 @@ function getMonthName(month) {
 function isToday(date) {
   const today = new Date();
   return date.toDateString() === today.toDateString();
+}
+
+/** @returns {string} */
+function createLocalTaskId() {
+  return `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * @param {string} unsafe
+ * @returns {string}
+ */
+function escapeHtml(unsafe) {
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * @param {{ id?: string|number; serverId?: number } | null | undefined} task
+ * @returns {number | null}
+ */
+function getServerTaskId(task) {
+  if (!task) return null;
+  if (typeof task.serverId === 'number') return task.serverId;
+  if (typeof task.id === 'number') return task.id;
+  if (typeof task.id === 'string' && /^\d+$/.test(task.id)) return parseInt(task.id, 10);
+  return null;
+}
+
+/**
+ * @param {string} id
+ * @returns {Task | null}
+ */
+function findTaskById(id) {
+  const all = Object.values(getTasks());
+  for (const list of all) {
+    const task = (list || []).find((t) => String(t.id) === String(id));
+    if (task) return task;
+  }
+  return null;
+}
+
+/** @returns {void} */
+function closeTaskInputModal() {
+  const modal = document.querySelector('.modal[data-modal-type="task-input"]');
+  if (modal instanceof HTMLElement) {
+    closeModal(modal, { removeFromDom: true });
+  }
 }
 
 /** @returns {void} */
@@ -80,11 +133,11 @@ export function renderCalendar() {
           return a.time.localeCompare(b.time);
         })
         .slice(0, 2);
-      taskPreview = sortedTasks.map(task => {
-        const timeStr = task.time ? `${task.time} - ` : '';
+      const previewItems = sortedTasks.map(task => {
         const title = task.title.length > 15 ? task.title.substring(0, 15) + '...' : task.title;
-        return `<div class="task-preview" style="font-size: 10px; color: #666; margin: 1px 0;">${timeStr}${title}</div>`;
+        return `<div class="task-preview-item"><span class="task-time">${task.time || ''}</span><span class="task-title">${escapeHtml(title)}</span></div>`;
       }).join('');
+      taskPreview = `<div class="task-preview-list">${previewItems}</div>`;
     }
 
     html += `<div class="${dayClass}${todayClass}${pastClass}" data-date="${dateKey}">
@@ -109,16 +162,20 @@ export function renderCalendar() {
 export function initCalendar() {
   // Event delegation for calendar interactions
   document.addEventListener('click', (e) => {
-    const addBtn = e.target.closest('.day-add-btn');
+    const target = /** @type {HTMLElement} */ (e.target);
+    const addBtn = target?.closest('.day-add-btn');
     if (addBtn) {
       e.stopPropagation();
-      const date = addBtn.dataset.date;
+      const date = /** @type {HTMLElement} */ (addBtn).dataset.date;
       if (date) {
         const selectedDate = new Date(date + 'T00:00:00');
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (selectedDate < today) {
-          alert('No puedes agregar tareas a fechas pasadas. Por favor selecciona la fecha actual o una fecha futura.');
+          showToast('No puedes agregar tareas a fechas pasadas.', {
+            type: 'warning',
+            duration: 3800
+          });
           return;
         }
         addTask(date);
@@ -126,9 +183,9 @@ export function initCalendar() {
       return;
     }
 
-    const dayContent = e.target.closest('.day-content');
-    if (dayContent && !e.target.closest('.day-add-btn')) {
-      const day = dayContent.closest('.day:not(.other-month)');
+    const dayContent = target?.closest('.day-content');
+    if (dayContent && !target?.closest('.day-add-btn')) {
+      const day = /** @type {HTMLElement | null} */ (dayContent.closest('.day:not(.other-month)'));
       const calendarView = document.getElementById('calendar-view');
       if (day && day.dataset.date && calendarView && !calendarView.classList.contains('hidden')) {
         e.stopPropagation();
@@ -145,103 +202,89 @@ export function addTask(date) {
 
 /** @param {string} message @param {boolean} [isError=false] */
 function showSyncStatus(message, isError = false) {
-  let el = document.getElementById('sync-status-banner');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'sync-status-banner';
-    el.style.position = 'fixed';
-    el.style.bottom = '16px';
-    el.style.left = '16px';
-    el.style.padding = '6px 12px';
-    el.style.fontSize = '12px';
-    el.style.fontFamily = 'JetBrains Mono, monospace';
-    el.style.borderRadius = '8px';
-    el.style.zIndex = '99999';
-    el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
-    el.style.maxWidth = '60vw';
-    el.style.whiteSpace = 'nowrap';
-    el.style.overflow = 'hidden';
-    el.style.textOverflow = 'ellipsis';
-    document.body.appendChild(el);
-  }
-  el.textContent = message;
-  el.style.background = isError ? '#d1495b' : '#829399';
-  el.style.color = '#fff';
-  clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, isError ? 5000 : 2200);
+  showSyncToast(message, isError);
 }
 
 /** @param {string|null} [date=null] @param {Task|null} [existingTask=null] */
 export function showTaskInputModal(date = null, existingTask = null) {
-  // Remove any existing task input modals first
-  const existingModals = document.querySelectorAll('.modal');
-  existingModals.forEach(m => {
-    if (m.querySelector('#task-title-input')) {
-      m.remove();
-    }
-  });
+  // Remove any existing task input modal first
+  closeTaskInputModal();
 
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.setAttribute('data-modal-type', 'task-input');
+  modal.setAttribute('aria-hidden', 'true');
   modal.innerHTML = `
-        <div class="modal-content">
-            <span class="close-btn" onclick="this.parentElement.parentElement.remove()">&times;</span>
-            <h3>${existingTask ? 'Editar Tarea' : (date ? 'Nueva Tarea' : 'Nueva Tarea Rápida')}</h3>
-            <div style="margin: 15px 0;">
-                <label for="task-title-input">Título:</label>
+        <div class="modal-content task-input-modal-content" role="dialog" aria-modal="true" aria-labelledby="task-input-modal-title">
+            <button type="button" class="close-btn" data-action="close-task-modal" aria-label="Cerrar modal">&times;</button>
+            <h3 id="task-input-modal-title">${existingTask ? 'Editar Tarea' : (date ? 'Nueva Tarea' : 'Nueva Tarea Rápida')}</h3>
+            <div class="task-input-form-group">
+                <label for="task-title-input">Título</label>
                 <input type="text" id="task-title-input" placeholder="Ingrese el título de la tarea" 
                        value="${existingTask ? existingTask.title : ''}" 
-                       style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;">
+                       class="task-input-control">
             </div>
             ${!date ? `
-            <div style="margin: 15px 0;">
-                <label for="task-date-input">Fecha (opcional):</label>
+            <div class="task-input-form-group">
+                <label for="task-date-input">Fecha (opcional)</label>
                 <input type="date" id="task-date-input" 
                        value="${existingTask && existingTask.date ? existingTask.date : ''}"
-                       style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;">
+                       class="task-input-control">
             </div>
             ` : ''}
-            <div style="margin: 15px 0;">
-                <label for="task-time-input">Hora (opcional):</label>
+            <div class="task-input-form-group">
+                <label for="task-time-input">Hora (opcional)</label>
                 <input type="time" id="task-time-input" 
                        value="${existingTask && existingTask.time ? existingTask.time : ''}"
-                       style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;">
+                       class="task-input-control">
             </div>
-            <div style="margin: 15px 0;">
+            <div class="task-input-form-group">
                 <label>
                     <input type="checkbox" id="task-reminder-input" ${existingTask ? (existingTask.isReminder ? 'checked' : '') : 'checked'}>
                     Es un recordatorio
                 </label>
             </div>
-            <div style="text-align: right; margin-top: 20px;">
-                <button onclick="this.parentElement.parentElement.parentElement.remove()" 
-                        style="background: #f44336; color: white; border: none; padding: 8px 16px; margin-right: 8px; cursor: pointer; border-radius: 4px;">
+            <div class="task-input-actions">
+                <button type="button" data-action="close-task-modal" class="task-input-cancel-btn">
                     Cancelar
                 </button>
-                <button onclick="saveTaskFromModal('${date || ''}', ${existingTask ? `'${existingTask.id}'` : 'null'})" 
-                        style="background: #4CAF50; color: white; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px;">
+                <button type="button" data-action="save-task-modal" class="task-input-save-btn">
                     ${existingTask ? 'Actualizar' : 'Guardar'}
                 </button>
             </div>
         </div>
     `;
   document.body.appendChild(modal);
-  
-  // Prevent multiple modal opens
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.remove();
-    }
+
+  modal.querySelectorAll('[data-action="close-task-modal"]').forEach((button) => {
+    button.addEventListener('click', () => closeModal(modal, { removeFromDom: true }));
   });
-  
-  const titleInput = document.getElementById('task-title-input');
-  if (titleInput) titleInput.focus();
+
+  const saveButton = modal.querySelector('[data-action="save-task-modal"]');
+  if (saveButton) {
+    saveButton.addEventListener('click', () => saveTaskFromModal(date || '', existingTask ? String(existingTask.id) : null));
+  }
+
+  const titleInput = modal.querySelector('#task-title-input');
+  if (titleInput) {
+    titleInput.addEventListener('keydown', (event) => {
+      if (/** @type {KeyboardEvent} */ (event).key === 'Enter') {
+        event.preventDefault();
+        saveTaskFromModal(date || '', existingTask ? String(existingTask.id) : null);
+      }
+    });
+  }
+
+  openModal(modal, {
+    initialFocusSelector: '#task-title-input',
+    removeOnClose: true
+  });
 }
 
 /** @param {string} dateString @returns {string} */
 function formatDateForDisplay(dateString) {
   const date = new Date(dateString + 'T00:00:00');
+  /** @type {Intl.DateTimeFormatOptions} */
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   return date.toLocaleDateString('es-ES', options);
 }
@@ -265,7 +308,7 @@ export function showDayTasks(date) {
   const dayTasks = getTasks()[date] || [];
   if (dayTasks.length === 0) {
     modalTasks.innerHTML = isPastDate
-      ? '<p style="color: var(--text-muted); font-style: italic;">No se agregaron tareas para esta fecha.</p>'
+      ? '<p class="modal-empty-muted">No se agregaron tareas para esta fecha.</p>'
       : '<p>No hay tareas para este día.</p>';
   } else {
     dayTasks.forEach(task => {
@@ -273,13 +316,13 @@ export function showDayTasks(date) {
       div.className = `modal-task ${task.completed ? 'completed' : 'pending'}`;
       div.innerHTML = `
                 <div class="task-content">
-                    <strong>${task.title}</strong>
-                    ${task.time ? `<small style="color: var(--text-secondary);">⏰ ${task.time}</small>` : ''}
+                    <strong>${escapeHtml(task.title)}</strong>
+                    ${task.time ? `<small class="modal-task-time">⏰ ${escapeHtml(task.time)}</small>` : ''}
                     <div class="task-actions">
-                        <button onclick="toggleTask('${task.id}'); setTimeout(() => showDayTasks('${date}'), 100)">
+                        <button type="button" data-action="toggle-task" data-task-id="${task.id}" data-date="${date}">
                             ${task.completed ? 'Desmarcar' : 'Marcar como hecho'}
                         </button>
-                        ${!isPastDate ? `<button onclick="deleteTask('${task.id}')" class="delete-btn">🗑️ Eliminar</button>` : ''}
+                        ${!isPastDate ? `<button type="button" data-action="delete-task" data-task-id="${task.id}" class="delete-btn">🗑️ Eliminar</button>` : ''}
                     </div>
                 </div>
             `;
@@ -287,22 +330,42 @@ export function showDayTasks(date) {
     });
   }
 
+  modalTasks.onclick = (event) => {
+    const target = event.target instanceof HTMLElement ? event.target.closest('button[data-action]') : null;
+    if (!(target instanceof HTMLElement)) return;
+
+    const taskId = target.dataset.taskId;
+    if (!taskId) return;
+
+    if (target.dataset.action === 'toggle-task') {
+      if (typeof window.toggleTask === 'function') {
+        window.toggleTask(taskId);
+        setTimeout(() => showDayTasks(date), 100);
+      }
+    }
+
+    if (target.dataset.action === 'delete-task') {
+      if (typeof window.deleteTask === 'function') {
+        window.deleteTask(taskId);
+        showDayTasks(date);
+      }
+    }
+  };
+
   addTaskBtn.style.display = isPastDate ? 'none' : 'block';
   if (!isPastDate) addTaskBtn.onclick = () => addTask(date);
 
-  modal.classList.remove('hidden');
-  modal.style.display = 'flex';
+  const closeBtn = /** @type {HTMLElement | null} */ (modal.querySelector('.close-btn'));
+  if (closeBtn) {
+    closeBtn.onclick = (/** @type {MouseEvent} */ event) => {
+      event.stopPropagation();
+      closeModal(modal);
+    };
+  }
 
-  const closeBtn = modal.querySelector('.close-btn');
-  const closeModal = () => {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-    document.removeEventListener('keydown', onEsc);
-  };
-  const onEsc = (e) => { if (e.key === 'Escape') closeModal(); };
-  if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); closeModal(); };
-  modal.onclick = (e) => { if (e.target === modal) closeModal(); };
-  document.addEventListener('keydown', onEsc);
+  openModal(modal, {
+    initialFocusSelector: isPastDate ? '.close-btn' : '#add-task-modal-btn'
+  });
 }
 
 /** @param {string} originalDate @param {string|null} existingTaskId */
@@ -312,28 +375,38 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   const timeInput = document.getElementById('task-time-input');
   const reminderInput = document.getElementById('task-reminder-input');
 
-  if (!titleInput || !titleInput.value || !titleInput.value.trim()) {
-    alert('Por favor ingrese un título para la tarea');
+  const titleEl = /** @type {HTMLInputElement | null} */ (titleInput);
+  const dateEl = /** @type {HTMLInputElement | null} */ (dateInput);
+  const timeEl = /** @type {HTMLInputElement | null} */ (timeInput);
+  const reminderEl = /** @type {HTMLInputElement | null} */ (reminderInput);
+  if (!titleEl || !titleEl.value || !titleEl.value.trim()) {
+    showToast('Por favor ingrese un título para la tarea.', {
+      type: 'warning',
+      duration: 3600
+    });
     return;
   }
-  const title = titleInput.value.trim();
+  const title = titleEl.value.trim();
 
   let taskDate = null;
-  if (dateInput && dateInput.value && dateInput.value.trim() !== '') {
-    taskDate = dateInput.value;
+  if (dateEl && dateEl.value && dateEl.value.trim() !== '') {
+    taskDate = dateEl.value;
   } else if (originalDate && originalDate.trim() !== '') {
     taskDate = originalDate;
   }
   if (taskDate === '') taskDate = null;
 
-  const time = timeInput.value || null;
-  const isReminder = !!(reminderInput && reminderInput.checked);
+  const time = timeEl ? timeEl.value || null : null;
+  const isReminder = !!(reminderEl && reminderEl.checked);
 
   if (!existingTaskId && taskDate) {
     const selectedDate = new Date(taskDate + 'T00:00:00');
     const today = new Date(); today.setHours(0, 0, 0, 0);
     if (selectedDate < today) {
-      alert('No puedes agregar tareas a fechas pasadas. Por favor selecciona la fecha actual o una fecha futura.');
+      showToast('No puedes agregar tareas a fechas pasadas.', {
+        type: 'warning',
+        duration: 3800
+      });
       return;
     }
   }
@@ -360,14 +433,14 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
       });
     });
 
-    // Close modal immediately after local update (before backend sync)
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(m => m.remove());
+    // Close task input modal immediately after local update (before backend sync)
+    closeTaskInputModal();
     notifyTasksUpdated();
 
     // Backend update if logged in (async, doesn't block UI)
     if (isLoggedInWithBackend()) {
-      const serverId = /^\d+$/.test(existingTaskId) ? existingTaskId : null;
+      const existingTask = findTaskById(existingTaskId);
+      const serverId = getServerTaskId(existingTask || { id: existingTaskId });
       if (serverId) {
         updateTaskOnBackend(serverId, {
           title,
@@ -384,22 +457,16 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   }
 
   // Create new task
+  const localTaskId = createLocalTaskId();
+  /** @type {Task} */
   const task = {
-    id: Date.now().toString(),
+    id: localTaskId,
     title,
+    date: taskDate && taskDate.trim() !== '' ? taskDate : null,
+    time: taskDate && time && time.trim() !== '' ? time : null,
     completed: false,
     isReminder
   };
-
-  // Only add date if it's valid
-  if (taskDate && taskDate.trim() !== '') {
-    task.date = taskDate;
-    
-    // Only add time if date is present
-    if (time && time.trim() !== '') {
-      task.time = time;
-    }
-  }
 
   updateTasks(draft => {
     const key = taskDate ? taskDate : 'undated';
@@ -407,31 +474,36 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
     draft[key].push(task);
   });
 
-  // Close modal immediately after local save (before backend sync)
-  const modals = document.querySelectorAll('.modal');
-  modals.forEach(m => m.remove());
+  // Close task input modal immediately after local save (before backend sync)
+  closeTaskInputModal();
   notifyTasksUpdated();
 
   // Backend sync if logged in (async, doesn't block UI)
-  console.log('=== TASK CREATION DEBUG ===');
-  console.log('taskDate:', taskDate);
-  console.log('Final task object:', task);
-  console.log('Task has date field:', 'date' in task);
-  console.log('Checking backend login status:', isLoggedInWithBackend());
   if (isLoggedInWithBackend()) {
-    console.log('Creating task on backend:', task);
-    console.log('User session:', state.userSession);
     createTaskOnBackend(task)
-      .then(() => {
-        console.log('Task created successfully on backend');
+      .then((createdTask) => {
+        const serverId = createdTask && createdTask.id !== undefined ? Number(createdTask.id) : null;
+        if (serverId && Number.isFinite(serverId)) {
+          updateTasks((draft) => {
+            Object.keys(draft).forEach((key) => {
+              draft[key] = (draft[key] || []).map((item) => {
+                if (String(item.id) !== localTaskId) return item;
+                return {
+                  ...item,
+                  id: String(serverId),
+                  serverId
+                };
+              });
+            });
+          });
+          notifyTasksUpdated();
+        }
         showSyncStatus('Guardado ✅');
       })
       .catch(async (err) => {
         console.error('Create task failed:', err);
         showSyncStatus('Guardado localmente (sin conexión)', true);
       });
-  } else {
-    console.log('Not logged in with backend - saving locally only');
   }
 
   if (isReminder && 'Notification' in window) {

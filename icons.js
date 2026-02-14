@@ -69,6 +69,11 @@ export const icons = {
 };
 
 // Helper function to get icon HTML
+/**
+ * @param {keyof typeof icons} name
+ * @param {string} [className='']
+ * @returns {string}
+ */
 export function getIcon(name, className = '') {
   const icon = icons[name];
   if (!icon) {
@@ -79,6 +84,11 @@ export function getIcon(name, className = '') {
 }
 
 // Helper function to create icon element
+/**
+ * @param {keyof typeof icons} name
+ * @param {string} [className='']
+ * @returns {HTMLSpanElement}
+ */
 export function createIconElement(name, className = '') {
   const span = document.createElement('span');
   span.className = `icon ${className}`;

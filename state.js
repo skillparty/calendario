@@ -1,12 +1,15 @@
 // Centralized application state for Calendar10
 // Provides simple setters/getters and a tasksUpdated event to notify UI modules
 
+/** @param {string} key */
 function safeGetItem(key) {
   try { return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null; } catch { return null; }
 }
+/** @param {string} key @param {string} value */
 function safeSetItem(key, value) {
   try { if (typeof localStorage !== 'undefined') localStorage.setItem(key, value); } catch {}
 }
+/** @param {string} key */
 function safeRemoveItem(key) {
   try { if (typeof localStorage !== 'undefined') localStorage.removeItem(key); } catch {}
 }

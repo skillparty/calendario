@@ -10,6 +10,7 @@ export class IndexedDBManager {
   constructor() {
     this.dbName = 'Calendar10DB';
     this.version = 1;
+    /** @type {any} */
     this.db = null;
     this.isReady = false;
     this.readyPromise = this.init();
@@ -36,7 +37,7 @@ export class IndexedDBManager {
       };
 
       request.onupgradeneeded = (event) => {
-        const db = event.target.result;
+        const db = /** @type {IDBOpenDBRequest} */ (event.target).result;
 
         // Tasks store
         if (!db.objectStoreNames.contains('tasks')) {
@@ -226,14 +227,14 @@ export class IndexedDBManager {
         timestamp: Date.now()
       });
 
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => resolve(/** @type {number} */ (request.result));
       request.onerror = () => reject(request.error);
     });
   }
 
   /**
    * Get all pending operations
-   * @returns {Promise<Array>}
+   * @returns {Promise<any[]>}
    */
   async getPendingOperations() {
     await this.ensureReady();
@@ -385,8 +386,8 @@ export class IndexedDBManager {
       const range = IDBKeyRange.upperBound(cutoff);
       const request = index.openCursor(range);
 
-      request.onsuccess = (event) => {
-        const cursor = event.target.result;
+      request.onsuccess = (/** @type {any} */ event) => {
+        const cursor = /** @type {IDBRequest<IDBCursorWithValue | null>} */ (event.target).result;
         if (cursor) {
           store.delete(cursor.primaryKey);
           cursor.continue();
@@ -444,7 +445,7 @@ export class IndexedDBManager {
     const task = await this.getTask(taskId);
     if (task) {
       task.syncStatus = 'error';
-      task.syncError = error;
+      /** @type {any} */ (task).syncError = error;
       await this.saveTask(task);
     }
   }
@@ -457,6 +458,7 @@ export class IndexedDBManager {
     await this.ensureReady();
 
     const stores = ['tasks', 'pendingOps', 'preferences', 'cacheMetadata'];
+    /** @type {Record<string, number>} */
     const sizes = {};
 
     for (const storeName of stores) {

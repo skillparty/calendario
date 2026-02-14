@@ -17,7 +17,9 @@ export class StateManager {
   constructor() {
     /** @type {AppState} */
     this.state = this.getInitialState();
+    /** @type {Set<(state: AppState, prevState: AppState | null) => void>} */
     this.subscribers = new Set();
+    /** @type {AppState[]} */
     this.history = [];
     this.maxHistorySize = 50;
     this.setupPersistence();
@@ -46,7 +48,7 @@ export class StateManager {
       },
       ui: {
         isLoading: false,
-        loadingMessage: null,
+        loadingMessage: undefined,
         error: null,
         activeModal: null,
         selectedTaskId: null,
@@ -57,7 +59,7 @@ export class StateManager {
 
   /**
    * Subscribe to state changes
-   * @param {(state: AppState, prevState: AppState) => void} callback 
+   * @param {(state: AppState, prevState: AppState | null) => void} callback 
    * @returns {Unsubscribe}
    */
   subscribe(callback) {
@@ -191,9 +193,9 @@ export class StateManager {
   /**
    * Set loading state
    * @param {boolean} isLoading 
-   * @param {string} [message]
+   * @param {string | undefined} [message]
    */
-  setLoading(isLoading, message = null) {
+  setLoading(isLoading, message = undefined) {
     this.setState({
       ui: {
         ...this.state.ui,
@@ -207,9 +209,9 @@ export class StateManager {
   /**
    * Set error state
    * @param {string | null} error 
-   * @param {string} [code]
+   * @param {string | undefined} [code]
    */
-  setError(error, code = null) {
+  setError(error, code = undefined) {
     const errorState = error ? {
       message: error,
       code,
@@ -263,10 +265,12 @@ export class StateManager {
     }
 
     // Apply tag filter
-    if (filters.tags && filters.tags.length > 0) {
-      allTasks = allTasks.filter(task => 
-        task.tags && filters.tags.some(tag => task.tags.includes(tag))
-      );
+    const activeTags = filters.tags || [];
+    if (activeTags.length > 0) {
+      allTasks = allTasks.filter(task => {
+        const taskTags = task.tags || [];
+        return activeTags.some(tag => taskTags.includes(tag));
+      });
     }
 
     // Apply search filter
@@ -287,9 +291,11 @@ export class StateManager {
   undo() {
     if (this.history.length > 0) {
       const prevState = this.history.pop();
-      this.state = prevState;
-      this.notifySubscribers(prevState);
-      this.persistState();
+      if (prevState) {
+        this.state = prevState;
+        this.notifySubscribers(prevState);
+        this.persistState();
+      }
     }
   }
 
@@ -307,6 +313,7 @@ export class StateManager {
 
   /**
    * @private
+   * @param {AppState | null} prevState
    */
   notifySubscribers(prevState) {
     this.subscribers.forEach(callback => {
@@ -320,6 +327,7 @@ export class StateManager {
 
   /**
    * @private
+   * @param {AppState} state
    */
   addToHistory(state) {
     this.history.push(state);
@@ -389,6 +397,7 @@ export class StateManager {
 
   /**
    * @private
+   * @param {string} key
    */
   safeGetItem(key) {
     try {
@@ -400,6 +409,8 @@ export class StateManager {
 
   /**
    * @private
+   * @param {string} key
+   * @param {string} value
    */
   safeSetItem(key, value) {
     try {
@@ -413,6 +424,7 @@ export class StateManager {
 
   /**
    * @private
+   * @param {string} key
    */
   safeRemoveItem(key) {
     try {

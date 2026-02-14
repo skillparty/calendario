@@ -7,6 +7,139 @@
 import { state, getTasks, setFilters, updateTasks } from './state.js';
 import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLocalTasksToBackend } from './api.js';
 import { showTaskInputModal } from './calendar.js';
+import { openModal, closeModal } from './utils/modal.js';
+
+let agendaSearchTerm = '';
+
+/**
+ * @param {() => void} fn
+ * @param {number} [delay=180]
+ * @returns {() => void}
+ */
+function debounce(fn, delay = 180) {
+  /** @type {number | null} */
+  let timer = null;
+  return () => {
+    if (timer) window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      fn();
+    }, delay);
+  };
+}
+
+/**
+ * @param {string} text
+ * @returns {string}
+ */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * @param {Task} task
+ * @returns {string}
+ */
+function serializeTask(task) {
+  return encodeURIComponent(JSON.stringify(task));
+}
+
+/**
+ * @param {string} encoded
+ * @returns {Task | null}
+ */
+function parseTask(encoded) {
+  if (!encoded) return null;
+  try {
+    return JSON.parse(decodeURIComponent(encoded));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {Task | null} task
+ * @returns {number | null}
+ */
+function getServerTaskId(task) {
+  if (!task) return null;
+  if (typeof task.serverId === 'number') return task.serverId;
+  if (/^\d+$/.test(String(task.id))) return parseInt(String(task.id), 10);
+  return null;
+}
+
+/**
+ * @param {MouseEvent} event
+ */
+function handleAgendaActionClick(event) {
+  const target = event.target instanceof HTMLElement ? event.target.closest('[data-action]') : null;
+  if (!(target instanceof HTMLElement)) return;
+
+  const action = target.dataset.action;
+  if (!action) return;
+
+  if (action === 'open-task-modal') {
+    event.preventDefault();
+    showTaskInputModal(null);
+    return;
+  }
+
+  if (action === 'open-pdf-modal') {
+    event.preventDefault();
+    if (typeof window.showPdfExportModal === 'function') {
+      window.showPdfExportModal();
+    }
+    return;
+  }
+
+  if (action === 'test-notification') {
+    event.preventDefault();
+    if (typeof window.testNotification === 'function') {
+      window.testNotification();
+    }
+    return;
+  }
+
+  const filterMonth = state.filters.month || 'all';
+  const filterStatus = state.filters.status || 'all';
+
+  if (action === 'toggle-task') {
+    event.preventDefault();
+    event.stopPropagation();
+    const taskId = target.dataset.taskId;
+    if (taskId) toggleTaskWithAnimation(taskId, filterMonth, filterStatus);
+    return;
+  }
+
+  if (action === 'edit-task') {
+    event.preventDefault();
+    event.stopPropagation();
+    const task = parseTask(target.dataset.task || '');
+    if (task) showTaskInputModal(null, task);
+    return;
+  }
+
+  if (action === 'delete-task') {
+    event.preventDefault();
+    event.stopPropagation();
+    const taskId = target.dataset.taskId;
+    const taskTitle = target.dataset.taskTitle || '';
+    if (taskId) confirmDeleteTask(taskId, taskTitle, filterMonth, filterStatus);
+  }
+}
+
+/**
+ * @param {KeyboardEvent} event
+ */
+function handleAgendaActionKeydown(event) {
+  const trigger = event.target instanceof HTMLElement ? event.target.closest('[data-action]') : null;
+  if (!(trigger instanceof HTMLElement)) return;
+
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  trigger.click();
+}
 
 /**
  * Render the agenda list view
@@ -29,7 +162,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                     <span class="agenda-icon">📋</span>
                     <span class="title-text">Agenda de Tareas</span>
                 </h2>
-                <button onclick="showTaskInputModal(null)" class="btn-add-task-header">
+                <button type="button" data-action="open-task-modal" class="btn-add-task-header">
                     <span class="btn-icon">➕</span>
                     <span class="btn-text">Nueva Tarea</span>
                 </button>
@@ -117,7 +250,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
       if (!a.date && !b.date) return 0;
       if (!a.date) return -1;
       if (!b.date) return 1;
-      return new Date(a.date) - new Date(b.date);
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
     });
 
   if (filterMonth !== 'all') {
@@ -133,12 +266,14 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
   }
 
   // Función para obtener color por día de la semana
+  /** @param {string|null} dateString */
   function getColorByDay(dateString) {
     if (!dateString) return { bg: 'rgba(156, 163, 175, 0.1)', border: '#9ca3af', text: '#6b7280' }; // Gris para sin fecha
     
     const date = new Date(dateString + 'T00:00:00');
     const dayOfWeek = date.getDay(); // 0 = Domingo, 1 = Lunes, etc.
     
+    /** @type {Record<number, {bg: string, border: string, text: string}>} */
     const dayColors = {
       0: { bg: 'rgba(239, 68, 68, 0.1)', border: '#ef4444', text: '#dc2626' },   // Domingo - Rojo
       1: { bg: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6', text: '#2563eb' }, // Lunes - Azul
@@ -174,7 +309,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
             ? 'No se encontraron tareas con los filtros actuales. Prueba ajustando los filtros o crea una nueva tarea.'
             : '¡Comienza agregando tu primera tarea del día!'}
         </p>
-        <button onclick="showTaskInputModal(null)" class="btn-primary empty-state-btn">
+        <button type="button" data-action="open-task-modal" class="btn-primary empty-state-btn">
           <span class="btn-icon">➕</span>
           <span>Agregar Primera Tarea</span>
         </button>
@@ -182,7 +317,9 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     `;
   } else {
     // Agrupar tareas por fecha
+    /** @type {Record<string, Task[]>} */
     const tasksByDate = {};
+    /** @type {Task[]} */
     const undatedTasks = [];
     
     allTasks.forEach(task => {
@@ -253,6 +390,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     });
   }
   
+  /** @param {Task} task @param {string} filterMonth @param {string} filterStatus */
   function renderTaskCard(task, filterMonth, filterStatus) {
     const completedClass = task.completed ? ' completed' : '';
     const timeDisplay = task.time ? task.time : '';
@@ -264,19 +402,12 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     
     const dayColors = getColorByDay(task.date);
     
-    // Escape HTML to prevent XSS
-    const escapeHtml = (text) => {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    };
-    
     return `
       <li class="task-card${completedClass}" data-task-id="${task.id}" data-priority="${task.priority}">
         <div class="task-card-content">
           <div class="task-card-header">
             <div class="task-card-check">
-              <button onclick="event.stopPropagation(); toggleTaskWithAnimation('${task.id}', '${filterMonth}', '${filterStatus}')"
+              <button type="button" data-action="toggle-task" data-task-id="${task.id}"
                       class="task-check-btn${task.completed ? ' checked' : ''}"
                       title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}"
                       aria-label="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}"
@@ -312,13 +443,13 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
             </div>
           </div>
           <div class="task-card-actions">
-            <button onclick="event.stopPropagation(); showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})"
+            <button type="button" data-action="edit-task" data-task="${serializeTask(task)}"
                     class="task-action-btn edit"
                     title="Editar"
                     aria-label="Editar tarea">
               <span class="action-icon">✏️</span>
             </button>
-            <button onclick="event.stopPropagation(); confirmDeleteTask('${task.id}', '${escapeHtml(task.title)}', '${filterMonth}', '${filterStatus}')"
+            <button type="button" data-action="delete-task" data-task-id="${task.id}" data-task-title="${escapeHtml(task.title)}"
                     class="task-action-btn delete"
                     title="Eliminar"
                     aria-label="Eliminar tarea">
@@ -330,8 +461,10 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     `;
   }
   
+  /** @param {string} dateString */
   function formatDateShort(dateString) {
     const date = new Date(dateString + 'T00:00:00');
+    /** @type {Intl.DateTimeFormatOptions} */
     const options = { day: 'numeric', month: 'short' };
     return date.toLocaleDateString('es-ES', options);
   }
@@ -349,15 +482,15 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                                 <span>Acciones Rápidas</span>
                             </h3>
                             <div class="quick-actions">
-                                <button onclick="showTaskInputModal(null)" class="btn-action primary">
+                                <button type="button" data-action="open-task-modal" class="btn-action primary">
                                     <span class="btn-icon">➕</span>
                                     <span>Nueva Tarea</span>
                                 </button>
-                                <button onclick="showPdfExportModal()" class="btn-action secondary">
+                                <button type="button" data-action="open-pdf-modal" class="btn-action secondary">
                                     <span class="btn-icon">📄</span>
                                     <span>Exportar PDF</span>
                                 </button>
-                                <button onclick="testNotification()" class="btn-action secondary">
+                                <button type="button" data-action="test-notification" class="btn-action secondary">
                                     <span class="btn-icon">🔔</span>
                                     <span>Test Notificaciones</span>
                                 </button>
@@ -411,6 +544,12 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
 
   agendaView.innerHTML = html;
 
+  if (!agendaView.dataset.actionsBound) {
+    agendaView.addEventListener('click', (event) => handleAgendaActionClick(/** @type {MouseEvent} */ (event)));
+    agendaView.addEventListener('keydown', (event) => handleAgendaActionKeydown(/** @type {KeyboardEvent} */ (event)));
+    agendaView.dataset.actionsBound = 'true';
+  }
+
   // Actualizar badges de estadísticas
   setTimeout(() => {
     const totalBadge = document.getElementById('total-tasks-badge');
@@ -419,15 +558,15 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     
     if (totalBadge) {
       const numberEl = totalBadge.querySelector('.stat-number');
-      if (numberEl) numberEl.textContent = totalTasks;
+      if (numberEl) numberEl.textContent = String(totalTasks);
     }
     if (pendingBadge) {
       const numberEl = pendingBadge.querySelector('.stat-number');
-      if (numberEl) numberEl.textContent = pendingTasks;
+      if (numberEl) numberEl.textContent = String(pendingTasks);
     }
     if (completedBadge) {
       const numberEl = completedBadge.querySelector('.stat-number');
-      if (numberEl) numberEl.textContent = completedTasks;
+      if (numberEl) numberEl.textContent = String(completedTasks);
     }
   }, 0);
 
@@ -438,8 +577,8 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     
     if (todayGroup && taskListContainer) {
       // Calcular posición con offset para dejar espacio arriba
-      const containerTop = taskListContainer.offsetTop;
-      const todayGroupTop = todayGroup.offsetTop;
+      const containerTop = /** @type {HTMLElement} */ (taskListContainer).offsetTop;
+      const todayGroupTop = /** @type {HTMLElement} */ (todayGroup).offsetTop;
       const offset = 100; // Espacio superior para mejor visualización
       
       // Hacer scroll suave hacia la fecha actual
@@ -449,65 +588,88 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
       });
       
       // Agregar animación de highlight temporal a la fecha de hoy
-      const todayHeader = todayGroup.querySelector('.date-group-header');
+      const todayHeader = /** @type {HTMLElement | null} */ (todayGroup.querySelector('.date-group-header'));
       if (todayHeader) {
         todayHeader.style.animation = 'highlightToday 2s ease-in-out';
       }
     }
   });
 
-  const monthSel = document.getElementById('month-filter');
-  const statusSel = document.getElementById('status-filter');
-  const searchInput = document.getElementById('search-filter');
+  const monthSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
+  const statusSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
+  const searchInput = /** @type {HTMLInputElement | null} */ (document.getElementById('search-filter'));
   
   if (monthSel) monthSel.value = filterMonth;
   if (statusSel) statusSel.value = filterStatus;
   
-  if (monthSel) monthSel.addEventListener('change', e => renderAgenda(e.target.value, filterStatus));
-  if (statusSel) statusSel.addEventListener('change', e => renderAgenda(filterMonth, e.target.value));
-  
-  // Añadir funcionalidad de búsqueda
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      const searchTerm = e.target.value.toLowerCase();
-      const taskCards = document.querySelectorAll('.task-card');
-      const dateGroups = document.querySelectorAll('.task-date-group');
-      
-      taskCards.forEach(card => {
-        const title = card.querySelector('.task-card-title')?.textContent.toLowerCase() || '';
-        const description = card.querySelector('.task-card-description')?.textContent.toLowerCase() || '';
-        const shouldShow = title.includes(searchTerm) || description.includes(searchTerm);
-        
-        card.style.display = shouldShow ? '' : 'none';
-      });
-      
-      // Ocultar grupos de fecha vacíos
-      dateGroups.forEach(group => {
-        const visibleTasks = group.querySelectorAll('.task-card:not([style*="display: none"])');
-        group.style.display = visibleTasks.length > 0 ? '' : 'none';
-      });
-      
-      // Mostrar mensaje si no hay resultados
-      const visibleCards = document.querySelectorAll('.task-card:not([style*="display: none"])');
-      const emptySearch = document.querySelector('.empty-search');
-      
-      if (visibleCards.length === 0 && searchTerm) {
-        if (!emptySearch) {
-          const container = document.querySelector('.task-list-container');
-          const emptyDiv = document.createElement('div');
-          emptyDiv.className = 'empty-search';
-          emptyDiv.innerHTML = `
-            <div class="empty-search-icon">🔍</div>
-            <h3>No se encontraron tareas</h3>
-            <p>No hay tareas que coincidan con "${searchTerm}"</p>
-          `;
-          container.appendChild(emptyDiv);
-        }
-      } else if (emptySearch) {
-        emptySearch.remove();
+  if (monthSel) {
+    monthSel.addEventListener('change', (e) => {
+      const target = e.target;
+      if (target instanceof HTMLSelectElement) {
+        renderAgenda(target.value, statusSel?.value || 'all');
       }
     });
   }
+  if (statusSel) {
+    statusSel.addEventListener('change', (e) => {
+      const target = e.target;
+      if (target instanceof HTMLSelectElement) {
+        renderAgenda(monthSel?.value || 'all', target.value);
+      }
+    });
+  }
+
+  const applySearchFilter = () => {
+    const searchTerm = agendaSearchTerm.trim().toLowerCase();
+    const taskCards = document.querySelectorAll('.task-card');
+    const dateGroups = document.querySelectorAll('.task-date-group');
+
+    taskCards.forEach(card => {
+      const title = card.querySelector('.task-card-title')?.textContent?.toLowerCase() || '';
+      const description = card.querySelector('.task-card-description')?.textContent?.toLowerCase() || '';
+      const shouldShow = title.includes(searchTerm) || description.includes(searchTerm);
+      card.classList.toggle('hidden-by-search', !shouldShow);
+    });
+
+    dateGroups.forEach(group => {
+      const visibleTasks = group.querySelectorAll('.task-card:not(.hidden-by-search)');
+      group.classList.toggle('hidden-by-search', visibleTasks.length === 0);
+    });
+
+    const visibleCards = document.querySelectorAll('.task-card:not(.hidden-by-search)');
+    const emptySearch = document.querySelector('.empty-search');
+
+    if (visibleCards.length === 0 && searchTerm) {
+      if (!emptySearch) {
+        const container = document.querySelector('.task-list-container');
+        if (!container) return;
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-search';
+        emptyDiv.innerHTML = `
+          <div class="empty-search-icon">🔍</div>
+          <h3>No se encontraron tareas</h3>
+          <p>No hay tareas que coincidan con "${escapeHtml(searchTerm)}"</p>
+        `;
+        container.appendChild(emptyDiv);
+      }
+    } else if (emptySearch) {
+      emptySearch.remove();
+    }
+  };
+  
+  if (searchInput) {
+    searchInput.value = agendaSearchTerm;
+    const debouncedSearch = debounce(applySearchFilter, 180);
+    searchInput.addEventListener('input', (e) => {
+      const target = e.target;
+      if (target instanceof HTMLInputElement) {
+        agendaSearchTerm = target.value;
+        debouncedSearch();
+      }
+    });
+  }
+
+  applySearchFilter();
 }
 
 /** @param {Task[]} allTasks @returns {Task[]} */
@@ -515,11 +677,12 @@ function filterUpcomingTasks(allTasks) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   return allTasks
     .filter(t => !t.completed && t.date)
-    .filter(t => new Date(t.date + 'T00:00:00') >= today)
-    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .filter(t => t.date ? new Date(t.date + 'T00:00:00') >= today : false)
+    .sort((a, b) => new Date(a.date || '').getTime() - new Date(b.date || '').getTime())
     .slice(0, 5);
 }
 
+/** @param {Task[]} allTasks */
 function getUpcomingTasksHTML(allTasks) {
   const list = filterUpcomingTasks(allTasks);
   if (list.length === 0) return '<p class="no-upcoming">No hay tareas próximas programadas</p>';
@@ -529,9 +692,9 @@ function getUpcomingTasksHTML(allTasks) {
     const isToday = taskDate.toDateString() === today.toDateString();
     const tom = new Date(today); tom.setDate(tom.getDate() + 1);
     const isTomorrow = taskDate.toDateString() === tom.toDateString();
-    const label = isToday ? 'Hoy' : (isTomorrow ? 'Mañana' : formatDateForDisplay(task.date));
-    return `<div class="upcoming-task" onclick="showTaskInputModal(null, ${JSON.stringify(task).replace(/"/g, '&quot;')})">
-              <div class="upcoming-task-title">${task.title}</div>
+    const label = isToday ? 'Hoy' : (isTomorrow ? 'Mañana' : formatDateForDisplay(task.date || ''));
+    return `<div class="upcoming-task" data-action="edit-task" data-task="${serializeTask(task)}" role="button" tabindex="0">
+              <div class="upcoming-task-title">${escapeHtml(task.title)}</div>
               <div class="upcoming-task-date">${label}${task.time ? ` - ${task.time}` : ''}</div>
             </div>`;
   }).join('');
@@ -540,6 +703,7 @@ function getUpcomingTasksHTML(allTasks) {
 /** @param {string} dateString @returns {string} */
 function formatDateForDisplay(dateString) {
   const date = new Date(dateString + 'T00:00:00');
+  /** @type {Intl.DateTimeFormatOptions} */
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   return date.toLocaleDateString('es-ES', options);
 }
@@ -563,14 +727,15 @@ function toggleTask(id) {
       return false;
     });
     if (found) {
-      const serverId = /^\d+$/.test(found.id) ? found.id : null;
-      const promise = serverId ? updateTaskOnBackend(serverId, { completed: found.completed }) : pushLocalTasksToBackend();
+      const serverId = getServerTaskId(/** @type {Task} */ (found));
+      const promise = serverId ? updateTaskOnBackend(serverId, { completed: /** @type {Task} */ (found).completed }) : pushLocalTasksToBackend();
       Promise.resolve(promise).catch(() => {/* soft-fail */});
     }
   }
 }
 
 // Toggle task without animation, preserving scroll position
+/** @param {string} id @param {string} filterMonth @param {string} filterStatus */
 function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
   // Save current scroll position
   const taskListContainer = document.querySelector('.task-list-container');
@@ -590,106 +755,52 @@ function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
 }
 
 // Improved delete confirmation
+/** @param {string} id @param {string} title @param {string} filterMonth @param {string} filterStatus */
 function confirmDeleteTask(id, title, filterMonth, filterStatus) {
+  const existing = document.querySelector('.delete-confirm-modal');
+  if (existing instanceof HTMLElement) {
+    closeModal(existing, { removeFromDom: true });
+  }
+
   const modal = document.createElement('div');
   modal.className = 'delete-confirm-modal';
+  modal.setAttribute('aria-hidden', 'true');
   modal.innerHTML = `
-    <div class="delete-confirm-content">
+    <div class="delete-confirm-content" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
       <h3>⚠️ Confirmar eliminación</h3>
       <p>¿Estás seguro de que deseas eliminar la tarea?</p>
-      <p class="task-title-preview">"${title}"</p>
+      <p class="task-title-preview">"${escapeHtml(title)}"</p>
       <div class="delete-confirm-actions">
-        <button onclick="this.closest('.delete-confirm-modal').remove()" class="btn-cancel">Cancelar</button>
-        <button onclick="deleteTaskConfirmed('${id}', '${filterMonth}', '${filterStatus}')" class="btn-delete-confirm">Eliminar</button>
+        <button type="button" data-action="cancel-delete" class="btn-cancel">Cancelar</button>
+        <button type="button" data-action="confirm-delete" class="btn-delete-confirm">Eliminar</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
-  
-  // Add styles for the modal
-  const style = document.createElement('style');
-  style.textContent = `
-    .delete-confirm-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      animation: fadeIn 0.2s ease;
-    }
-    
-    .delete-confirm-content {
-      background: white;
-      padding: 2rem;
-      border-radius: 16px;
-      max-width: 400px;
-      width: 90%;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-      animation: slideUp 0.3s ease;
-    }
-    
-    .delete-confirm-content h3 {
-      margin: 0 0 1rem 0;
-      color: #dc2626;
-    }
-    
-    .task-title-preview {
-      background: #f3f4f6;
-      padding: 0.75rem;
-      border-radius: 8px;
-      font-weight: 500;
-      margin: 1rem 0;
-    }
-    
-    .delete-confirm-actions {
-      display: flex;
-      gap: 1rem;
-      justify-content: flex-end;
-      margin-top: 1.5rem;
-    }
-    
-    .btn-cancel {
-      padding: 0.75rem 1.5rem;
-      background: #e5e7eb;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-    
-    .btn-delete-confirm {
-      padding: 0.75rem 1.5rem;
-      background: #dc2626;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    @keyframes slideUp {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-  `;
-  document.head.appendChild(style);
+
+  const cancelBtn = modal.querySelector('[data-action="cancel-delete"]');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => closeModal(modal, { removeFromDom: true }));
+  }
+
+  const confirmBtn = modal.querySelector('[data-action="confirm-delete"]');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => {
+      closeModal(modal, { removeFromDom: true });
+      deleteTaskConfirmed(id, filterMonth, filterStatus);
+    });
+  }
+
+  openModal(modal, {
+    dialogSelector: '.delete-confirm-content',
+    initialFocusSelector: '[data-action="confirm-delete"]',
+    removeOnClose: true
+  });
 }
 
+/** @param {string} id @param {string} filterMonth @param {string} filterStatus */
 function deleteTaskConfirmed(id, filterMonth, filterStatus) {
-  const modal = document.querySelector('.delete-confirm-modal');
-  if (modal) modal.remove();
-  
-  const taskCard = document.querySelector(`[data-task-id="${id}"]`);
+  const taskCard = /** @type {HTMLElement | null} */ (document.querySelector(`[data-task-id="${id}"]`));
   if (taskCard) {
     taskCard.style.transition = 'all 0.3s ease';
     taskCard.style.transform = 'translateX(-100%)';
@@ -715,7 +826,7 @@ function deleteTask(id) {
   });
 
   if (isLoggedInWithBackend()) {
-    const serverId = id && /^\d+$/.test(id) ? id : null;
+    const serverId = /^\d+$/.test(String(id)) ? parseInt(String(id), 10) : null;
     const promise = serverId ? deleteTaskOnBackend(serverId) : pushLocalTasksToBackend();
     Promise.resolve(promise).catch(() => {/* soft-fail */});
   }

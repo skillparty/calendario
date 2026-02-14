@@ -4,13 +4,14 @@
  */
 
 import { state as legacyState, setTasks as legacySetTasks, setUserSession as legacySetUserSession, notifyTasksUpdated } from './state.js';
+import { API_BASE_URL, pushLocalTasksToBackend } from './api.js';
 import { eventBus } from './utils/EventBus.js';
 import { indexedDBManager } from './utils/IndexedDBManager.js';
 
 /**
- * @typedef {import('./types-enhanced').Task} Task
- * @typedef {import('./types-enhanced').TasksByDate} TasksByDate
- * @typedef {import('./types-enhanced').AppState} AppState
+ * @typedef {import('./types').Task} Task
+ * @typedef {import('./types').TasksByDate} TasksByDate
+ * @typedef {import('./types').AppState} AppState
  */
 
 class EnhancedStateManager {
@@ -63,6 +64,7 @@ class EnhancedStateManager {
    * @returns {TasksByDate}
    */
   groupTasksByDate(tasks) {
+    /** @type {Record<string, Task[]>} */
     const grouped = {};
     tasks.forEach(task => {
       const key = task.date || 'undated';
@@ -90,14 +92,20 @@ class EnhancedStateManager {
   async syncPendingOperations() {
     try {
       const pendingOps = await indexedDBManager.getPendingOperations();
+      const sortedOps = [...pendingOps].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
       
-      for (const op of pendingOps) {
+      for (const op of sortedOps) {
         try {
-          const response = await fetch(op.url, {
-            method: op.method,
-            headers: op.headers,
-            body: op.body
-          });
+          const request = this.resolvePendingOperation(op);
+
+          if (!request) {
+            // Fallback when we only have local IDs and cannot build a direct request.
+            await pushLocalTasksToBackend();
+            await indexedDBManager.removePendingOperation(op.id);
+            continue;
+          }
+
+          const response = await fetch(request.url, request.init);
 
           if (response.ok) {
             await indexedDBManager.removePendingOperation(op.id);
@@ -231,24 +239,183 @@ class EnhancedStateManager {
    * @param {any} data 
    */
   async queueOperation(type, data) {
+    /** @type {Record<string, any>} */
     const operation = {
       type,
       data,
-      url: `${API_BASE_URL}/api/tasks`,
-      method: type === 'delete' ? 'DELETE' : type === 'create' ? 'POST' : 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${legacyState.userSession?.jwt || ''}`
-      },
-      body: JSON.stringify(data)
+      timestamp: Date.now()
     };
+
+    const request = this.resolvePendingOperation(operation);
+    if (request) {
+      operation.url = request.url;
+      operation.method = request.init.method;
+      operation.headers = request.init.headers;
+      operation.body = request.init.body;
+    }
 
     await indexedDBManager.addPendingOperation(operation);
     
     // Request background sync if available
-    if ('serviceWorker' in navigator && 'sync' in self.registration) {
-      await self.registration.sync.register('sync-tasks');
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        if ('sync' in registration) {
+          await /** @type {any} */ (registration).sync.register('sync-tasks');
+        }
+      } catch (error) {
+        console.warn('[State] Background sync registration failed:', error);
+      }
     }
+  }
+
+  /**
+   * @param {any} operation
+   * @returns {{ url: string; init: RequestInit } | null}
+   */
+  resolvePendingOperation(operation) {
+    if (operation.url && operation.method) {
+      const init = {
+        method: operation.method,
+        headers: operation.headers || this.getAuthHeaders(),
+        body: operation.body
+      };
+      if (init.method === 'DELETE') delete init.body;
+      return { url: operation.url, init };
+    }
+
+    const type = operation.type;
+    const data = operation.data || {};
+
+    if (type === 'create') {
+      return {
+        url: `${API_BASE_URL}/api/tasks`,
+        init: {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.mapTaskToApiPayload(data))
+        }
+      };
+    }
+
+    const serverId = this.extractServerId(data);
+    if (!serverId) return null;
+
+    if (type === 'update') {
+      return {
+        url: `${API_BASE_URL}/api/tasks/${serverId}`,
+        init: {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.mapTaskUpdateToApiPayload(data))
+        }
+      };
+    }
+
+    if (type === 'delete') {
+      return {
+        url: `${API_BASE_URL}/api/tasks/${serverId}`,
+        init: {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        }
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * @returns {Record<string, string>}
+   */
+  getAuthHeaders() {
+    /** @type {Record<string, string>} */
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    const jwt = legacyState.userSession?.jwt;
+    if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
+    return headers;
+  }
+
+  /**
+   * @param {any} data
+   * @returns {number | null}
+   */
+  extractServerId(data) {
+    if (!data) return null;
+
+    if (typeof data.serverId === 'number') return data.serverId;
+
+    if (typeof data.id === 'number') return data.id;
+    if (typeof data.id === 'string' && /^\d+$/.test(data.id)) {
+      return parseInt(data.id, 10);
+    }
+
+    return null;
+  }
+
+  /**
+   * @param {any} task
+   * @returns {Record<string, any>}
+   */
+  mapTaskToApiPayload(task) {
+    /** @type {Record<string, any>} */
+    const payload = {
+      title: task.title || '',
+      completed: Boolean(task.completed),
+      is_reminder: task.isReminder !== undefined ? Boolean(task.isReminder) : true,
+      priority: this.mapPriority(task.priority),
+      tags: Array.isArray(task.tags) ? task.tags : []
+    };
+
+    if (task.description && task.description.trim() !== '') {
+      payload.description = task.description.trim();
+    }
+
+    if (task.date && task.date !== 'undated' && /^\d{4}-\d{2}-\d{2}$/.test(task.date)) {
+      payload.date = task.date;
+      if (task.time && typeof task.time === 'string' && task.time.trim() !== '') {
+        payload.time = task.time.trim();
+      }
+    }
+
+    return payload;
+  }
+
+  /**
+   * @param {any} task
+   * @returns {Record<string, any>}
+   */
+  mapTaskUpdateToApiPayload(task) {
+    const payload = {};
+
+    if (typeof task.title === 'string') payload.title = task.title;
+    if (task.description !== undefined) payload.description = task.description || null;
+    if (task.completed !== undefined) payload.completed = Boolean(task.completed);
+    if (task.isReminder !== undefined) payload.is_reminder = Boolean(task.isReminder);
+    if (task.priority !== undefined) payload.priority = this.mapPriority(task.priority);
+    if (task.tags !== undefined) payload.tags = Array.isArray(task.tags) ? task.tags : [];
+
+    if (task.date !== undefined) {
+      payload.date = task.date && task.date !== 'undated' ? task.date : null;
+      if (task.time !== undefined) {
+        payload.time = task.time && task.time.trim && task.time.trim() !== '' ? task.time.trim() : null;
+      }
+    }
+
+    return payload;
+  }
+
+  /**
+   * @param {any} priority
+   * @returns {'alta' | 'media' | 'baja'}
+   */
+  mapPriority(priority) {
+    const p = parseInt(priority || '3', 10);
+    if (p === 1) return 'alta';
+    if (p === 2) return 'media';
+    return 'baja';
   }
 
   /**

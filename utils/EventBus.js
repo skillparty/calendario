@@ -20,7 +20,7 @@ export class EventBus {
   /**
    * Subscribe to an event type
    * @param {AppEvent['type']} eventType 
-   * @param {Observer<AppEvent>} callback 
+   * @param {Observer} callback 
    * @returns {Unsubscribe}
    */
   on(eventType, callback) {
@@ -28,7 +28,8 @@ export class EventBus {
       this.listeners.set(eventType, new Set());
     }
     
-    this.listeners.get(eventType).add(callback);
+    const listeners = this.listeners.get(eventType);
+    if (listeners) listeners.add(callback);
     
     // Return unsubscribe function
     return () => {
@@ -45,11 +46,11 @@ export class EventBus {
   /**
    * Subscribe to an event that fires only once
    * @param {AppEvent['type']} eventType 
-   * @param {Observer<AppEvent>} callback 
+   * @param {Observer} callback 
    * @returns {Unsubscribe}
    */
   once(eventType, callback) {
-    const unsubscribe = this.on(eventType, (event) => {
+    const unsubscribe = this.on(eventType, (/** @type {AppEvent} */ event) => {
       callback(event);
       unsubscribe();
     });

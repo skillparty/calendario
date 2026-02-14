@@ -6,7 +6,7 @@
  * @typedef {import('./types').TasksByDate} TasksByDate
  */
 
-import { state, setTasks, getTasks } from './state.js';
+import { state, setTasks, getTasks, updateTasks } from './state.js';
 
 /** @type {string} */
 // Backend URL - actualizado con el nuevo despliegue de Vercel
@@ -20,13 +20,38 @@ export function isLoggedInWithBackend() {
 }
 
 /**
+ * @param {Task & {serverId?: number}} task
+ * @returns {number | null}
+ */
+function getServerId(task) {
+  if (typeof task?.serverId === 'number') return task.serverId;
+  if (typeof task?.id === 'number') return task.id;
+  const id = String(task?.id || '');
+  if (/^\d+$/.test(id)) return parseInt(id, 10);
+  return null;
+}
+
+/**
+ * @param {any} raw
+ * @returns {'alta' | 'media' | 'baja'}
+ */
+function mapPriorityToServer(raw) {
+  if (raw === 'alta' || raw === 'media' || raw === 'baja') return raw;
+  const p = parseInt(raw || '3', 10);
+  if (p === 1) return 'alta';
+  if (p === 2) return 'media';
+  return 'baja';
+}
+
+/**
  * @param {string} path
  * @param {RequestInit} [options]
  * @param {number} [retries=3]
  * @returns {Promise<Response>}
  */
 export async function apiFetch(path, options = {}, retries = 3) {
-  const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+  /** @type {Record<string, string>} */
+  const headers = /** @type {any} */ (Object.assign({ 'Content-Type': 'application/json' }, options.headers || {}));
   if (state.userSession && state.userSession.jwt) {
     headers['Authorization'] = `Bearer ${state.userSession.jwt}`;
   }
@@ -67,6 +92,7 @@ export async function apiFetch(path, options = {}, retries = 3) {
       throw err;
     }
   }
+  throw new Error(`apiFetch failed after ${retries} retries`);
 }
 
 // Pagination utility to retrieve all tasks from the backend
@@ -122,6 +148,7 @@ export async function loadTasksIntoState() {
     /** @type {Task} */
     const mapped = {
       id: String(t.id),
+      serverId: Number(t.id),
       title: t.title,
       description: t.description || '',
       date: dateKey === 'undated' ? null : dateKey,
@@ -145,18 +172,26 @@ export async function pushLocalTasksToBackend() {
   const serverById = new Map(server.map(t => [String(t.id), t]));
 
   const localList = Object.entries(getTasks() || {}).flatMap(([date, list]) => (list || []).map(t => ({ ...t, date })));
-  const localById = new Map(localList.map(t => [String(t.id), t]));
+  const localServerIds = new Set(
+    localList
+      .map(t => getServerId(t))
+      .filter((id) => id !== null)
+      .map((id) => String(id))
+  );
+  /** @type {Array<{ oldId: string; newId: string; serverId: number }>} */
+  const idReplacements = [];
 
   // Create or update
   for (const t of localList) {
-    const existing = serverById.get(String(t.id));
+    const resolvedServerId = getServerId(t);
+    const existing = resolvedServerId ? serverById.get(String(resolvedServerId)) : null;
     if (!existing) {
       /** @type {any} */
       const payload = {
         title: t.title,
         completed: Boolean(t.completed),
         is_reminder: t.isReminder !== undefined ? Boolean(t.isReminder) : true,
-        priority: parseInt(t.priority || 1, 10),
+        priority: mapPriorityToServer(t.priority),
         tags: Array.isArray(t.tags) ? t.tags : []
       };
 
@@ -178,10 +213,22 @@ export async function pushLocalTasksToBackend() {
         }
       }
 
-      await apiFetch('/api/tasks', {
+      const createRes = await apiFetch('/api/tasks', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
+
+      if (createRes.ok) {
+        const created = await createRes.clone().json().catch(() => null);
+        const createdId = created && created.id !== undefined ? Number(created.id) : null;
+        if (createdId && Number.isFinite(createdId)) {
+          serverById.set(String(createdId), created);
+          localServerIds.add(String(createdId));
+          if (String(t.id) !== String(createdId) || t.serverId !== createdId) {
+            idReplacements.push({ oldId: String(t.id), newId: String(createdId), serverId: createdId });
+          }
+        }
+      }
     } else {
       /** @type {Partial<APITask> & {[k: string]: any}} */
       const diff = {};
@@ -206,16 +253,34 @@ export async function pushLocalTasksToBackend() {
 
   // Delete removed on server
   for (const s of server) {
-    if (!localById.has(String(s.id))) {
+    if (!localServerIds.has(String(s.id))) {
       await apiFetch(`/api/tasks/${s.id}`, { method: 'DELETE' });
     }
   }
+
+  if (idReplacements.length > 0) {
+    updateTasks((draft) => {
+      Object.keys(draft).forEach((dateKey) => {
+        draft[dateKey] = (draft[dateKey] || []).map((task) => {
+          const replacement = idReplacements.find((entry) => entry.oldId === String(task.id));
+          if (!replacement) return task;
+          return {
+            ...task,
+            id: replacement.newId,
+            serverId: replacement.serverId
+          };
+        });
+      });
+    });
+  }
 }
 
+/** @param {any} payload */
 export async function createTaskOnBackend(payload) {
   console.log('Original payload received:', payload);
 
   // Ensure payload matches backend validation exactly
+  /** @type {Record<string, any>} */
   const cleanPayload = {
     title: payload.title || '',
     completed: Boolean(payload.completed),

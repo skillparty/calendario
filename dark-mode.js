@@ -30,6 +30,7 @@ function toggleTheme() {
 }
 
 // Update the theme toggle icon
+/** @param {string} theme */
 function updateThemeIcon(theme) {
     const iconContainer = document.getElementById('theme-icon');
     if (iconContainer) {

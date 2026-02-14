@@ -11,6 +11,7 @@ import { API_BASE_URL, isLoggedInWithBackend, loadTasksIntoState, pushLocalTasks
 import { renderCalendar, initCalendar, showTaskInputModal } from './calendar.js';
 import { renderAgenda } from './agenda.js';
 import { showPdfExportModal } from './pdf.js';
+import { showAuthToast, showSyncToast, showToast } from './utils/UIFeedback.js';
 
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liO2tcNCvR8xrHov';
@@ -34,40 +35,12 @@ const OAUTH_PROXY_URL = API_BASE_URL + '/api/auth/github';
 
 /** @param {string} message @param {boolean} [isError=false] */
 function showAuthStatus(message, isError = false) {
-  let el = document.getElementById('auth-status-banner');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'auth-status-banner';
-    Object.assign(el.style, {
-      position: 'fixed', top: '0', left: '50%', transform: 'translateX(-50%)', padding: '6px 14px',
-      fontSize: '12px', fontFamily: 'JetBrains Mono, monospace', borderRadius: '0 0 8px 8px', zIndex: 99999,
-      boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-    });
-    document.body.appendChild(el);
-  }
-  el.textContent = message;
-  el.style.background = isError ? '#d1495b' : '#545f66';
-  el.style.color = '#fff';
-  clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, isError ? 6000 : 3500);
+  showAuthToast(message, isError);
 }
 
 /** @param {string} message @param {boolean} [isError=false] */
 function showSyncStatus(message, isError = false) {
-  let el = document.getElementById('sync-status-banner');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'sync-status-banner';
-    Object.assign(el.style, {
-      position: 'fixed', bottom: '16px', left: '16px', padding: '6px 12px', fontSize: '12px',
-      fontFamily: 'JetBrains Mono, monospace', borderRadius: '8px', zIndex: 99999, boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-      maxWidth: '60vw', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-    });
-    document.body.appendChild(el);
-  }
-  el.textContent = message; el.style.background = isError ? '#d1495b' : '#829399'; el.style.color = '#fff';
-  clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, isError ? 5000 : 2200);
+  showSyncToast(message, isError);
 }
 
 /** @returns {void} */
@@ -83,27 +56,21 @@ function showCalendar() {
 /** @returns {void} */
 function showAgenda() {
   document.body.setAttribute('data-current-view', 'agenda');
-  // FORCE AGENDA VIEW TO ALWAYS BE VISIBLE
-  if (agendaView) {
-    agendaView.classList.remove('hidden');
-    agendaView.style.display = 'block';
-    agendaView.style.visibility = 'visible';
-    agendaView.style.opacity = '1';
-  }
+  if (agendaView) agendaView.classList.remove('hidden');
   if (calendarView) calendarView.classList.add('hidden');
   if (agendaBtn) { agendaBtn.classList.add('active'); agendaBtn.setAttribute('aria-pressed', 'true'); }
   if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
-  const monthFilterEl = document.getElementById('month-filter');
-  const statusFilterEl = document.getElementById('status-filter');
+  const monthFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
+  const statusFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
   renderAgenda(monthFilterEl?.value || 'all', statusFilterEl?.value || 'all');
 }
 
 /** @returns {void} */
 function updateLoginButton() {
-  loginBtn = document.getElementById('login-btn');
-  logoutBtn = document.getElementById('logout-btn');
+  loginBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('login-btn'));
+  logoutBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('logout-btn'));
   userInfo = document.getElementById('user-info');
-  userAvatar = document.getElementById('user-avatar');
+  userAvatar = /** @type {HTMLImageElement | null} */ (document.getElementById('user-avatar'));
   userName = document.getElementById('user-name');
 
   if (state.userSession && (state.userSession.jwt || state.userSession.token)) {
@@ -119,7 +86,7 @@ function updateLoginButton() {
     }
     if (logoutBtn) { logoutBtn.onclick = handleLogout; logoutBtn.style.display = 'inline-block'; }
     const userStatus = document.getElementById('user-status');
-    if (userStatus && !userStatus.querySelector('.online-indicator')) {
+    if (userStatus && userInfo && !userStatus.querySelector('.online-indicator')) {
       const online = document.createElement('span'); online.className = 'online-indicator'; online.textContent = '●'; online.title = 'En línea'; userInfo.appendChild(online);
     }
   } else {
@@ -294,7 +261,7 @@ async function findExistingGist() {
   try {
     const res = await fetch('https://api.github.com/gists?per_page=100', { headers: { 'Authorization': `token ${state.userSession.token}`, 'Accept': 'application/vnd.github.v3+json' } });
     if (!res.ok) return; const gists = await res.json();
-    const match = (gists || []).find(g => g.files && g.files['calendar-tasks.json']);
+    const match = (gists || []).find((/** @type {any} */ g) => g.files && g.files['calendar-tasks.json']);
     if (match && match.id) {
       setUserGistId(match.id);
       if (match.updated_at) setLastGistUpdatedAt(match.updated_at);
@@ -387,9 +354,17 @@ function checkNotifications() {
 
 /** @returns {void} */
 function testNotification() {
-  if (!('Notification' in window)) { alert('Este navegador no soporta notificaciones'); return; }
-  if (Notification.permission !== 'granted') { alert('Por favor, permite las notificaciones primero'); Notification.requestPermission(); return; }
+  if (!('Notification' in window)) {
+    showToast('Este navegador no soporta notificaciones.', { type: 'error' });
+    return;
+  }
+  if (Notification.permission !== 'granted') {
+    showToast('Permite las notificaciones para usar recordatorios.', { type: 'warning', duration: 4200 });
+    Notification.requestPermission();
+    return;
+  }
   new Notification('🧪 Prueba de Notificación', { body: 'El sistema de recordatorios está funcionando correctamente.\n📅 Fecha: ' + new Date().toLocaleString(), icon: '/favicon.ico', requireInteraction: true });
+  showToast('Notificación de prueba enviada.', { type: 'success' });
 }
 
 /** @returns {void} */
@@ -397,18 +372,37 @@ function clearNotificationLog() { localStorage.removeItem('notificationLog'); }
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
-  calendarBtn = document.getElementById('calendar-btn');
-  agendaBtn = document.getElementById('agenda-btn');
-  loginBtn = document.getElementById('login-btn');
-  logoutBtn = document.getElementById('logout-btn');
+  calendarBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('calendar-btn'));
+  agendaBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('agenda-btn'));
+  loginBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('login-btn'));
+  logoutBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('logout-btn'));
   userInfo = document.getElementById('user-info');
-  userAvatar = document.getElementById('user-avatar');
+  userAvatar = /** @type {HTMLImageElement | null} */ (document.getElementById('user-avatar'));
   userName = document.getElementById('user-name');
   calendarView = document.getElementById('calendar-view');
   agendaView = document.getElementById('agenda-view');
   if (calendarBtn) calendarBtn.addEventListener('click', showCalendar);
   if (agendaBtn) agendaBtn.addEventListener('click', showAgenda);
   if (loginBtn) loginBtn.addEventListener('click', handleLogin);
+
+  window.addEventListener('online', () => {
+    showSyncToast('Conexión restaurada.');
+  });
+
+  window.addEventListener('offline', () => {
+    showToast('Sin conexión. Los cambios se guardarán localmente.', {
+      type: 'warning',
+      duration: 4200
+    });
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (/** @type {MessageEvent} */ event) => {
+      if (event.data?.type === 'sync-complete') {
+        showSyncToast('Sincronización offline completada.');
+      }
+    });
+  }
 
   // Initialize the application
   initCalendar();
@@ -423,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Enhanced modules loaded successfully');
     
     // Setup event listeners
-    eventBusModule.eventBus.on('task:created', (event) => {
+    eventBusModule.eventBus.on('task:created', (/** @type {any} */ event) => {
       console.log('Task created:', event.payload);
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Tarea creada', {
@@ -460,8 +454,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('tasksUpdated', () => {
     if (calendarView && !calendarView.classList.contains('hidden')) renderCalendar();
     if (agendaView && !agendaView.classList.contains('hidden')) {
-      const m = (document.getElementById('month-filter') || {}).value || 'all';
-      const s = (document.getElementById('status-filter') || {}).value || 'all';
+      const monthFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
+      const statusFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
+      const m = monthFilter?.value || 'all';
+      const s = statusFilter?.value || 'all';
       renderAgenda(m, s);
     }
   });

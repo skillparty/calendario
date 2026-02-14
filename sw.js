@@ -3,26 +3,45 @@
  * Implements offline-first strategy with intelligent caching
  */
 
-const CACHE_VERSION = 'v1.0.0';
+/// <reference lib="webworker" />
+
+const sw = /** @type {any} */ (self);
+
+const CACHE_VERSION = 'v1.1.0';
 const CACHE_NAME = `calendar10-${CACHE_VERSION}`;
 const API_CACHE = `calendar10-api-${CACHE_VERSION}`;
+const DB_NAME = 'Calendar10DB';
+const DB_VERSION = 1;
+const PENDING_OPS_STORE = 'pendingOps';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './agenda-professional.css',
+  './calendar-navigation.css',
+  './header-footer-minimal.css',
+  './dark-mode.css',
+  './mobile-improvements.css',
   './app.js',
   './state.js',
   './api.js',
   './calendar.js',
   './agenda.js',
   './pdf.js',
+  './dark-mode.js',
+  './init-icons.js',
+  './icons.js',
+  './manifest.json',
+  './favicon.ico',
   './types.d.ts',
   './utils/EventBus.js',
   './utils/StateManager.js',
   './utils/PerformanceMonitor.js',
   './utils/IndexedDBManager.js',
+  './utils/UIFeedback.js',
+  './utils/modal.js',
   './state-enhanced.js',
   './public/app.png',
   './public/loquito.png'
@@ -37,16 +56,17 @@ const API_ROUTES = [
 /**
  * Install event - cache static assets
  */
-self.addEventListener('install', (event) => {
+sw.addEventListener('install', (/** @type {any} */ event) => {
+  const installEvent = /** @type {any} */ (event);
   console.log('[SW] Installing Service Worker');
   
-  event.waitUntil(
+  installEvent.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('[SW] Caching static assets');
         return cache.addAll(STATIC_ASSETS);
       })
-      .then(() => self.skipWaiting())
+      .then(() => sw.skipWaiting())
       .catch(error => {
         console.error('[SW] Failed to cache static assets:', error);
       })
@@ -56,10 +76,11 @@ self.addEventListener('install', (event) => {
 /**
  * Activate event - clean old caches
  */
-self.addEventListener('activate', (event) => {
+sw.addEventListener('activate', (/** @type {any} */ event) => {
+  const activateEvent = /** @type {any} */ (event);
   console.log('[SW] Activating Service Worker');
   
-  event.waitUntil(
+  activateEvent.waitUntil(
     caches.keys()
       .then(cacheNames => {
         return Promise.all(
@@ -71,15 +92,16 @@ self.addEventListener('activate', (event) => {
             })
         );
       })
-      .then(() => self.clients.claim())
+      .then(() => sw.clients.claim())
   );
 });
 
 /**
  * Fetch event - implement caching strategies
  */
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
+sw.addEventListener('fetch', (/** @type {any} */ event) => {
+  const fetchEvent = /** @type {any} */ (event);
+  const { request } = fetchEvent;
   const url = new URL(request.url);
 
   // Skip non-GET requests
@@ -94,18 +116,18 @@ self.addEventListener('fetch', (event) => {
 
   // API requests - Network first, fallback to cache
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirstStrategy(request));
+    fetchEvent.respondWith(networkFirstStrategy(request));
     return;
   }
 
   // Static assets - Cache first, fallback to network
   if (isStaticAsset(url.pathname)) {
-    event.respondWith(cacheFirstStrategy(request));
+    fetchEvent.respondWith(cacheFirstStrategy(request));
     return;
   }
 
   // Default - Network first
-  event.respondWith(networkFirstStrategy(request));
+  fetchEvent.respondWith(networkFirstStrategy(request));
 });
 
 /**
@@ -138,9 +160,8 @@ async function cacheFirstStrategy(request) {
     return response;
   } catch (error) {
     console.error('[SW] Fetch failed:', error);
-    // Return offline page if available
-    const offlinePage = await cache.match('/offline.html');
-    return offlinePage || new Response('Offline', { status: 503 });
+    const appShell = await cache.match('./index.html');
+    return appShell || new Response('Offline', { status: 503 });
   }
 }
 
@@ -201,11 +222,12 @@ function isStaticAsset(pathname) {
 /**
  * Background sync for offline actions
  */
-self.addEventListener('sync', (event) => {
+sw.addEventListener('sync', (/** @type {any} */ event) => {
+  const syncEvent = /** @type {any} */ (event);
   console.log('[SW] Background sync triggered');
   
-  if (event.tag === 'sync-tasks') {
-    event.waitUntil(syncTasks());
+  if (syncEvent.tag === 'sync-tasks') {
+    syncEvent.waitUntil(syncTasks());
   }
 });
 
@@ -219,11 +241,20 @@ async function syncTasks() {
     
     for (const op of pendingOps) {
       try {
-        const response = await fetch(op.url, {
+        if (!op.url || !op.method) {
+          continue;
+        }
+
+        const requestInit = /** @type {any} */ ({
           method: op.method,
-          headers: op.headers,
-          body: op.body
+          headers: op.headers || { 'Content-Type': 'application/json' }
         });
+
+        if (op.body && op.method !== 'DELETE') {
+          requestInit.body = op.body;
+        }
+
+        const response = await fetch(op.url, requestInit);
         
         if (response.ok) {
           await removePendingOperation(op.id);
@@ -234,8 +265,8 @@ async function syncTasks() {
     }
     
     // Notify clients about sync completion
-    const clients = await self.clients.matchAll();
-    clients.forEach(client => {
+    const clients = await sw.clients.matchAll();
+    clients.forEach((/** @type {any} */ client) => {
       client.postMessage({
         type: 'sync-complete',
         timestamp: Date.now()
@@ -248,12 +279,22 @@ async function syncTasks() {
 
 /**
  * Get pending operations from IndexedDB
- * @returns {Promise<Array>}
+ * @returns {Promise<any[]>}
  */
 async function getPendingOperations() {
-  // This would connect to IndexedDB
-  // Placeholder for now
-  return [];
+  try {
+    const db = await openDatabase();
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction([PENDING_OPS_STORE], 'readonly');
+      const store = transaction.objectStore(PENDING_OPS_STORE);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('[SW] Failed to read pending operations:', error);
+    return [];
+  }
 }
 
 /**
@@ -261,18 +302,40 @@ async function getPendingOperations() {
  * @param {string} id 
  */
 async function removePendingOperation(id) {
-  // Remove from IndexedDB
-  // Placeholder for now
+  try {
+    const db = await openDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction([PENDING_OPS_STORE], 'readwrite');
+      const store = transaction.objectStore(PENDING_OPS_STORE);
+      const request = store.delete(id);
+      request.onsuccess = () => resolve(true);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('[SW] Failed to remove pending operation:', id, error);
+  }
+}
+
+/**
+ * @returns {Promise<IDBDatabase>}
+ */
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
 
 /**
  * Handle push notifications
  */
-self.addEventListener('push', (event) => {
+sw.addEventListener('push', (/** @type {any} */ event) => {
+  const pushEvent = /** @type {any} */ (event);
   const options = {
-    body: event.data ? event.data.text() : 'Nueva notificación',
-    icon: '/loquito.png',
-    badge: '/loquito.png',
+    body: pushEvent.data ? pushEvent.data.text() : 'Nueva notificación',
+    icon: '/public/loquito.png',
+    badge: '/public/loquito.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
@@ -281,33 +344,32 @@ self.addEventListener('push', (event) => {
     actions: [
       {
         action: 'explore',
-        title: 'Ver tarea',
-        icon: '/icons/checkmark.png'
+        title: 'Ver tarea'
       },
       {
         action: 'close',
-        title: 'Cerrar',
-        icon: '/icons/xmark.png'
+        title: 'Cerrar'
       }
     ]
   };
 
-  event.waitUntil(
-    self.registration.showNotification('Calendar10', options)
+  pushEvent.waitUntil(
+    sw.registration.showNotification('Calendar10', options)
   );
 });
 
 /**
  * Handle notification clicks
  */
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification click:', event.action);
+sw.addEventListener('notificationclick', (/** @type {any} */ event) => {
+  const notificationEvent = /** @type {any} */ (event);
+  console.log('[SW] Notification click:', notificationEvent.action);
   
-  event.notification.close();
+  notificationEvent.notification.close();
 
-  if (event.action === 'explore') {
-    event.waitUntil(
-      clients.openWindow('/')
+  if (notificationEvent.action === 'explore') {
+    notificationEvent.waitUntil(
+      sw.clients.openWindow('/')
     );
   }
 });
@@ -315,20 +377,19 @@ self.addEventListener('notificationclick', (event) => {
 /**
  * Handle messages from clients
  */
-self.addEventListener('message', (event) => {
-  console.log('[SW] Message from client:', event.data);
+sw.addEventListener('message', (/** @type {any} */ event) => {
+  const messageEvent = /** @type {any} */ (event);
+  console.log('[SW] Message from client:', messageEvent.data);
   
-  if (event.data.type === 'skip-waiting') {
-    self.skipWaiting();
+  if (messageEvent.data.type === 'skip-waiting') {
+    sw.skipWaiting();
   }
   
-  if (event.data.type === 'clear-cache') {
-    event.waitUntil(
-      caches.keys().then(names => {
-        return Promise.all(
-          names.map(name => caches.delete(name))
-        );
-      })
-    );
+  if (messageEvent.data.type === 'clear-cache') {
+    caches.keys().then(names => {
+      return Promise.all(
+        names.map(name => caches.delete(name))
+      );
+    });
   }
 });

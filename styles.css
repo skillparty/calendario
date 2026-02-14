@@ -1440,6 +1440,69 @@ main {
     color: var(--text-secondary);
 }
 
+.hidden-by-search {
+    display: none !important;
+}
+
+/* ========================================
+   TOAST FEEDBACK
+   ======================================== */
+
+.toast-container {
+    position: fixed;
+    z-index: 20000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: min(92vw, 420px);
+    pointer-events: none;
+}
+
+.toast-container[data-position="bottom-left"] {
+    left: 1rem;
+    bottom: 1rem;
+}
+
+.toast-container[data-position="bottom-right"] {
+    right: 1rem;
+    bottom: 1rem;
+}
+
+.toast-container[data-position="top-right"] {
+    right: 1rem;
+    top: 1rem;
+}
+
+.toast-container[data-position="top-center"] {
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.toast {
+    pointer-events: auto;
+    background: #3f4b53;
+    color: #fff;
+    border-radius: 12px;
+    padding: 0.65rem 0.85rem;
+    box-shadow: var(--shadow-heavy);
+    font-size: 0.83rem;
+    line-height: 1.35;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast--visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast--success { background: #1f8b4c; }
+.toast--error { background: #b3263f; }
+.toast--warning { background: #9a6200; }
+.toast--info { background: #374957; }
+
 /* ========================================
    MODAL STYLES
    ======================================== */
@@ -1527,6 +1590,150 @@ main {
     font-size: 1.5rem;
     font-weight: 600;
     color: var(--text-primary);
+}
+
+.modal-empty-muted {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.modal-task-time {
+    color: var(--text-secondary);
+}
+
+.task-input-form-group {
+    margin: 15px 0;
+}
+
+.task-input-form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.task-input-control {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.task-input-actions {
+    text-align: right;
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.task-input-cancel-btn {
+    background: #f44336;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+
+.task-input-save-btn {
+    background: #4caf50;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+
+.pdf-modal-btn {
+    border: none;
+    padding: 12px 24px;
+    cursor: pointer;
+    border-radius: 4px;
+    color: #fff;
+}
+
+.pdf-modal-btn-primary {
+    background: #ff5722;
+    margin-right: 10px;
+}
+
+.pdf-modal-btn-secondary {
+    background: #757575;
+}
+
+.delete-confirm-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+}
+
+.delete-confirm-content {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.3s ease;
+}
+
+.delete-confirm-content h3 {
+    margin: 0 0 1rem 0;
+    color: #dc2626;
+}
+
+.task-title-preview {
+    background: var(--bg-tertiary);
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-weight: 500;
+    margin: 1rem 0;
+}
+
+.delete-confirm-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+
+.btn-cancel {
+    padding: 0.75rem 1.5rem;
+    background: #e5e7eb;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-delete-confirm {
+    padding: 0.75rem 1.5rem;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 /* Modal responsive */

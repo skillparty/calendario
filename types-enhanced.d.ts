@@ -4,7 +4,7 @@
 /**
  * Priority levels for tasks (1-5 scale)
  */
-export type Priority = 1 | 2 | 3 | 4 | 5;
+export type Priority = number;
 
 /**
  * Task synchronization status

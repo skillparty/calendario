@@ -3,7 +3,9 @@
  */
 export class PerformanceMonitor {
   constructor() {
+    /** @type {Map<string, any[]>} */
     this.metrics = new Map();
+    /** @type {Map<string, PerformanceObserver>} */
     this.observers = new Map();
     this.setupObservers();
   }
@@ -41,8 +43,9 @@ export class PerformanceMonitor {
         const layoutShiftObserver = new PerformanceObserver((list) => {
           let clsValue = 0;
           for (const entry of list.getEntries()) {
-            if (!entry.hadRecentInput) {
-              clsValue += entry.value;
+            const shiftEntry = /** @type {any} */ (entry);
+            if (!shiftEntry.hadRecentInput) {
+              clsValue += shiftEntry.value || 0;
             }
           }
           
@@ -67,11 +70,14 @@ export class PerformanceMonitor {
         const lcpObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries();
           const lastEntry = entries[entries.length - 1];
+          if (!lastEntry) return;
+          const lcpEntry = /** @type {any} */ (lastEntry);
+          const lcpValue = lcpEntry.renderTime || lcpEntry.loadTime || 0;
           
-          console.log('[Performance] LCP:', lastEntry.renderTime || lastEntry.loadTime);
+          console.log('[Performance] LCP:', lcpValue);
           
           this.recordMetric('lcp', {
-            value: lastEntry.renderTime || lastEntry.loadTime,
+            value: lcpValue,
             timestamp: Date.now()
           });
         });
@@ -146,6 +152,7 @@ export class PerformanceMonitor {
     }
     
     const metrics = this.metrics.get(name);
+    if (!metrics) return;
     metrics.push(value);
     
     // Keep only last 100 metrics
@@ -165,6 +172,7 @@ export class PerformanceMonitor {
       return this.calculateStats(metrics);
     }
     
+    /** @type {Record<string, any>} */
     const summary = {};
     for (const [key, values] of this.metrics) {
       summary[key] = this.calculateStats(values);
@@ -175,7 +183,7 @@ export class PerformanceMonitor {
 
   /**
    * Calculate statistics for metrics
-   * @param {Array} metrics 
+   * @param {any[]} metrics 
    * @returns {Object}
    */
   calculateStats(metrics) {
@@ -220,11 +228,12 @@ export class PerformanceMonitor {
     this.logWebVitals();
     
     // Memory usage
-    if (performance.memory) {
+    const perfAny = /** @type {any} */ (performance);
+    if (perfAny.memory) {
       console.log('Memory:', {
-        used: Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB',
-        total: Math.round(performance.memory.totalJSHeapSize / 1048576) + ' MB',
-        limit: Math.round(performance.memory.jsHeapSizeLimit / 1048576) + ' MB'
+        used: Math.round(perfAny.memory.usedJSHeapSize / 1048576) + ' MB',
+        total: Math.round(perfAny.memory.totalJSHeapSize / 1048576) + ' MB',
+        limit: Math.round(perfAny.memory.jsHeapSizeLimit / 1048576) + ' MB'
       });
     }
     
@@ -248,7 +257,7 @@ export class PerformanceMonitor {
     console.log('TTI:', tti + 'ms');
     
     // Total Blocking Time (approximate)
-    const tbt = this.metrics.get('longTask')?.reduce((sum, task) => {
+    const tbt = this.metrics.get('longTask')?.reduce((/** @type {number} */ sum, /** @type {any} */ task) => {
       return sum + Math.max(0, task.duration - 50);
     }, 0) || 0;
     console.log('TBT:', tbt.toFixed(2) + 'ms');
@@ -280,15 +289,16 @@ export class PerformanceMonitor {
  * @returns {Function}
  */
 export function debounce(func, wait) {
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
   let timeout;
   
-  return function executedFunction(...args) {
+  return /** @param {...any} args */ function executedFunction(...args) {
     const later = () => {
-      clearTimeout(timeout);
+      if (timeout !== undefined) clearTimeout(timeout);
       func(...args);
     };
     
-    clearTimeout(timeout);
+    if (timeout !== undefined) clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
 }
@@ -300,11 +310,12 @@ export function debounce(func, wait) {
  * @returns {Function}
  */
 export function throttle(func, limit) {
-  let inThrottle;
+  /** @type {boolean} */
+  let inThrottle = false;
   
-  return function(...args) {
+  return /** @param {...any} args */ function throttled(...args) {
     if (!inThrottle) {
-      func.apply(this, args);
+      func(...args);
       inThrottle = true;
       setTimeout(() => inThrottle = false, limit);
     }
@@ -313,14 +324,17 @@ export function throttle(func, limit) {
 
 /**
  * Request idle callback with fallback
- * @param {Function} callback 
- * @param {Object} options 
+ * @param {IdleRequestCallback} callback 
+ * @param {IdleRequestOptions} [options] 
  */
 export function requestIdleCallback(callback, options = {}) {
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(callback, options);
   } else {
-    setTimeout(callback, 1);
+    setTimeout(() => callback({
+      didTimeout: false,
+      timeRemaining: () => 0
+    }), 1);
   }
 }
 
@@ -332,21 +346,23 @@ export function setupLazyLoading() {
     const imageObserver = new IntersectionObserver((entries, observer) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const img = entry.target;
-          img.src = img.dataset.src;
+          const img = /** @type {HTMLImageElement} */ (entry.target);
+          if (img.dataset.src) img.src = img.dataset.src;
           img.classList.remove('lazy');
           observer.unobserve(img);
         }
       });
     });
 
-    document.querySelectorAll('img.lazy').forEach(img => {
+    const lazyImages = /** @type {NodeListOf<HTMLImageElement>} */ (document.querySelectorAll('img.lazy'));
+    lazyImages.forEach(img => {
       imageObserver.observe(img);
     });
   } else {
     // Fallback for older browsers
-    document.querySelectorAll('img.lazy').forEach(img => {
-      img.src = img.dataset.src;
+    const lazyImages = /** @type {NodeListOf<HTMLImageElement>} */ (document.querySelectorAll('img.lazy'));
+    lazyImages.forEach(img => {
+      if (img.dataset.src) img.src = img.dataset.src;
       img.classList.remove('lazy');
     });
   }
@@ -356,11 +372,22 @@ export function setupLazyLoading() {
  * Virtual scrolling helper
  */
 export class VirtualScroller {
+  /**
+   * @param {HTMLElement} container
+   * @param {any[]} items
+   * @param {number} itemHeight
+   * @param {(item: any, index: number) => HTMLElement} renderItem
+   */
   constructor(container, items, itemHeight, renderItem) {
     this.container = container;
     this.items = items;
     this.itemHeight = itemHeight;
     this.renderItem = renderItem;
+    /** @type {HTMLElement | null} */
+    this.viewport = null;
+    /** @type {HTMLElement | null} */
+    this.content = null;
+    /** @type {any[]} */
     this.visibleItems = [];
     
     this.setup();
@@ -383,15 +410,17 @@ export class VirtualScroller {
     this.container.appendChild(this.viewport);
     
     // Setup scroll listener
-    this.container.addEventListener('scroll', throttle(() => {
+    this.container.addEventListener('scroll', /** @type {EventListener} */ (throttle(() => {
       this.render();
-    }, 16)); // ~60fps
+    }, 16))); // ~60fps
     
     // Initial render
     this.render();
   }
 
   render() {
+    if (!this.content) return;
+
     const scrollTop = this.container.scrollTop;
     const containerHeight = this.container.clientHeight;
     
@@ -420,9 +449,12 @@ export class VirtualScroller {
     this.content.style.transform = `translateY(${visibleStart * this.itemHeight}px)`;
   }
 
+  /** @param {any[]} items */
   update(items) {
     this.items = items;
-    this.viewport.style.height = `${this.items.length * this.itemHeight}px`;
+    if (this.viewport) {
+      this.viewport.style.height = `${this.items.length * this.itemHeight}px`;
+    }
     this.render();
   }
 }

@@ -5,34 +5,55 @@
  */
 
 import { state, getTasks } from './state.js';
+import { showToast } from './utils/UIFeedback.js';
+import { openModal, closeModal } from './utils/modal.js';
 
 /** @returns {void} */
 export function showPdfExportModal() {
   const modal = document.getElementById('pdf-export-modal');
   if (!modal) return;
-  modal.classList.remove('hidden');
   const now = new Date();
-  const monthSel = document.getElementById('pdf-month-select');
-  const yearSel = document.getElementById('pdf-year-select');
-  if (monthSel) monthSel.value = now.getMonth();
-  if (yearSel) yearSel.value = now.getFullYear();
+  const monthSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-month-select'));
+  const yearSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-year-select'));
+  if (monthSel) monthSel.value = String(now.getMonth());
+  if (yearSel) yearSel.value = String(now.getFullYear());
   toggleExportOptions();
 
-  const closeBtn = modal.querySelector('.close-btn');
-  if (closeBtn) closeBtn.onclick = closePdfExportModal;
-  modal.onclick = (e) => { if (e.target === modal) closePdfExportModal(); };
+  const closeBtn = /** @type {HTMLElement | null} */ (modal.querySelector('.close-btn'));
+  const cancelBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('cancel-pdf-btn'));
+  const generateBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('generate-pdf-btn'));
+
+  if (closeBtn && !closeBtn.dataset.bound) {
+    closeBtn.addEventListener('click', closePdfExportModal);
+    closeBtn.dataset.bound = 'true';
+  }
+
+  if (cancelBtn && !cancelBtn.dataset.bound) {
+    cancelBtn.addEventListener('click', closePdfExportModal);
+    cancelBtn.dataset.bound = 'true';
+  }
+
+  if (generateBtn && !generateBtn.dataset.bound) {
+    generateBtn.addEventListener('click', generatePDF);
+    generateBtn.dataset.bound = 'true';
+  }
+
+  openModal(modal, {
+    initialFocusSelector: 'input[name="export-type"]:checked'
+  });
 }
 
 /** @returns {void} */
 export function closePdfExportModal() {
   const modal = document.getElementById('pdf-export-modal');
   if (!modal) return;
-  modal.classList.add('hidden');
+  closeModal(modal);
 }
 
 /** @returns {void} */
 export function toggleExportOptions() {
-  const selectedType = document.querySelector('input[name="export-type"]:checked')?.value || 'all';
+  const selectedTypeEl = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="export-type"]:checked'));
+  const selectedType = selectedTypeEl?.value || 'all';
   const monthSelection = document.getElementById('month-selection');
   const customRange = document.getElementById('custom-range');
   if (monthSelection) monthSelection.classList.add('hidden');
@@ -45,19 +66,27 @@ export function toggleExportOptions() {
 export function generatePDF() {
   try {
     if (!window.jspdf || !window.jspdf.jsPDF) {
-      alert('La librería jsPDF no está disponible. Verifica tu conexión e inténtalo de nuevo.');
+      showToast('La librería jsPDF no está disponible. Verifica tu conexión e inténtalo de nuevo.', {
+        type: 'error',
+        duration: 4200
+      });
       return;
     }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    const exportType = document.querySelector('input[name="export-type"]:checked')?.value || 'all';
-    const includeCompleted = document.getElementById('include-completed')?.checked ?? true;
-    const includePending = document.getElementById('include-pending')?.checked ?? true;
+    const exportTypeEl = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="export-type"]:checked'));
+    const includeCompletedEl = /** @type {HTMLInputElement | null} */ (document.getElementById('include-completed'));
+    const includePendingEl = /** @type {HTMLInputElement | null} */ (document.getElementById('include-pending'));
+    const exportType = exportTypeEl?.value || 'all';
+    const includeCompleted = includeCompletedEl?.checked ?? true;
+    const includePending = includePendingEl?.checked ?? true;
 
     const tasks = getFilteredTasksForPDF(exportType, includeCompleted, includePending);
     if (tasks.length === 0) {
-      alert('No hay tareas que coincidan con los criterios seleccionados.');
+      showToast('No hay tareas que coincidan con los criterios seleccionados.', {
+        type: 'warning'
+      });
       return;
     }
 
@@ -65,10 +94,16 @@ export function generatePDF() {
     const filename = generatePDFFilename(exportType);
     doc.save(filename);
     closePdfExportModal();
-    alert(`PDF generado exitosamente: ${filename}`);
+    showToast(`PDF generado exitosamente: ${filename}`, {
+      type: 'success',
+      duration: 3600
+    });
   } catch (e) {
     console.error('Error generating PDF:', e);
-    alert('Error al generar el PDF. Por favor, inténtalo de nuevo.');
+    showToast('Error al generar el PDF. Por favor, inténtalo de nuevo.', {
+      type: 'error',
+      duration: 4200
+    });
   }
 }
 
@@ -81,13 +116,17 @@ export function generatePDF() {
 export function getFilteredTasksForPDF(exportType, includeCompleted, includePending) {
   const allTasks = Object.entries(getTasks()).flatMap(([date, list]) => (list || []).map(t => ({ ...t, date: date === 'undated' ? null : date })));
   if (exportType === 'month') {
-    const selectedMonth = parseInt(document.getElementById('pdf-month-select').value);
-    const selectedYear = parseInt(document.getElementById('pdf-year-select').value);
+    const monthSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-month-select'));
+    const yearSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-year-select'));
+    const selectedMonth = parseInt(monthSelect?.value || '0', 10);
+    const selectedYear = parseInt(yearSelect?.value || String(new Date().getFullYear()), 10);
     return pureFilterTasksForPDF(allTasks, { exportType, includeCompleted, includePending, month: selectedMonth, year: selectedYear });
   }
   if (exportType === 'custom') {
-    const startDate = document.getElementById('start-date').value;
-    const endDate = document.getElementById('end-date').value;
+    const startDateInput = /** @type {HTMLInputElement | null} */ (document.getElementById('start-date'));
+    const endDateInput = /** @type {HTMLInputElement | null} */ (document.getElementById('end-date'));
+    const startDate = startDateInput?.value || '';
+    const endDate = endDateInput?.value || '';
     return pureFilterTasksForPDF(allTasks, { exportType, includeCompleted, includePending, startDate, endDate });
   }
   return pureFilterTasksForPDF(allTasks, { exportType, includeCompleted, includePending });
@@ -139,7 +178,7 @@ export function pureFilterTasksForPDF(allTasks, opts) {
       if (!a.time && b.time) return 1;
       return 0;
     }
-    return da - db;
+    return da.getTime() - db.getTime();
   });
 
   return tasks;
@@ -162,13 +201,17 @@ function generatePDFContent(doc, tasks, exportType) {
   if (exportType === 'all') subtitle = 'Todas las tareas ordenadas por fecha';
   if (exportType === 'month') {
     const names = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const m = parseInt(document.getElementById('pdf-month-select').value);
-    const y = parseInt(document.getElementById('pdf-year-select').value);
+    const monthSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-month-select'));
+    const yearSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-year-select'));
+    const m = parseInt(monthSelect?.value || '0', 10);
+    const y = parseInt(yearSelect?.value || String(new Date().getFullYear()), 10);
     subtitle = `Tareas de ${names[m]} ${y}`;
   }
   if (exportType === 'custom') {
-    const s = document.getElementById('start-date').value;
-    const e = document.getElementById('end-date').value;
+    const startDateInput = /** @type {HTMLInputElement | null} */ (document.getElementById('start-date'));
+    const endDateInput = /** @type {HTMLInputElement | null} */ (document.getElementById('end-date'));
+    const s = startDateInput?.value || '';
+    const e = endDateInput?.value || '';
     subtitle = `Tareas del ${formatDateForDisplay(s)} al ${formatDateForDisplay(e)}`;
   }
   doc.text(subtitle, 20, 35);
@@ -230,6 +273,7 @@ function generatePDFContent(doc, tasks, exportType) {
 /** @param {string} dateString @returns {string} */
 function formatDateForDisplay(dateString) {
   const date = new Date(dateString + 'T00:00:00');
+  /** @type {Intl.DateTimeFormatOptions} */
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   return date.toLocaleDateString('es-ES', options);
 }
@@ -249,18 +293,18 @@ function generatePDFFilename(exportType) {
   
   if (exportType === 'month') {
     const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const monthSelect = document.getElementById('pdf-month-select');
-    const yearSelect = document.getElementById('pdf-year-select');
+    const monthSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-month-select'));
+    const yearSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-year-select'));
     if (monthSelect && yearSelect) {
-      const month = parseInt(monthSelect.value);
-      const year = parseInt(yearSelect.value);
+      const month = parseInt(monthSelect.value, 10);
+      const year = parseInt(yearSelect.value, 10);
       return `Calendar10_${monthNames[month]}_${year}_${dateStr}.pdf`;
     }
   }
   
   if (exportType === 'custom') {
-    const startDateInput = document.getElementById('start-date');
-    const endDateInput = document.getElementById('end-date');
+    const startDateInput = /** @type {HTMLInputElement | null} */ (document.getElementById('start-date'));
+    const endDateInput = /** @type {HTMLInputElement | null} */ (document.getElementById('end-date'));
     if (startDateInput && endDateInput) {
       const startDate = startDateInput.value;
       const endDate = endDateInput.value;
@@ -275,11 +319,12 @@ function generatePDFFilename(exportType) {
 // Attach one-time delegation for export type change
 if (typeof document !== 'undefined') {
   (function attachExportTypeDelegation() {
-    const modal = document.getElementById('pdf-export-modal');
+    const modal = /** @type {HTMLElement | null} */ (document.getElementById('pdf-export-modal'));
     if (!modal) return; // will be attached again when app starts if not present yet
     if (!modal.dataset.listenersAttached) {
       modal.addEventListener('change', (e) => {
-        if (e.target && e.target.name === 'export-type') toggleExportOptions();
+        const target = /** @type {HTMLInputElement | null} */ (e.target instanceof HTMLInputElement ? e.target : null);
+        if (target && target.name === 'export-type') toggleExportOptions();
       });
       modal.dataset.listenersAttached = 'true';
     }
