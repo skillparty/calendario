@@ -39,6 +39,7 @@ const STATIC_ASSETS = [
   './utils/UIFeedback.js',
   './utils/modal.js',
   './utils/helpers.js',
+  './weekly.js',
   './public/app.png',
   './public/loquito.png'
 ];

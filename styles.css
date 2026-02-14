@@ -591,6 +591,250 @@ main {
     }
 }
 
+/* ========================================
+   WEEKLY VIEW
+   ======================================== */
+
+.weekly-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 0;
+}
+
+.weekly-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 200px;
+    text-align: center;
+    text-transform: capitalize;
+}
+
+.weekly-nav-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.weekly-nav-btn:hover {
+    background: var(--hunyadi-yellow);
+    color: #fff;
+    border-color: var(--hunyadi-yellow);
+}
+
+.weekly-today-btn {
+    padding: 0.4rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid var(--hunyadi-yellow);
+    background: transparent;
+    color: var(--hunyadi-yellow);
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.weekly-today-btn:hover {
+    background: var(--hunyadi-yellow);
+    color: #fff;
+}
+
+.weekly-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+}
+
+.weekly-corner {
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+.weekly-day-header {
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.weekly-day-header:last-of-type {
+    border-right: none;
+}
+
+.weekly-day-today {
+    background: rgba(237, 174, 73, 0.1);
+}
+
+.weekly-day-today .weekly-day-number {
+    background: var(--hunyadi-yellow);
+    color: #fff;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.weekly-day-name {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+}
+
+.weekly-day-number {
+    display: inline-block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 0.15rem;
+}
+
+.weekly-time-label {
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.25rem 0.35rem;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--text-muted, #a0aec0);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.weekly-allday-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.6rem;
+}
+
+.weekly-cell {
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    min-height: 48px;
+    padding: 2px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.weekly-cell:hover {
+    background: rgba(237, 174, 73, 0.04);
+}
+
+.weekly-cell-past {
+    background: var(--bg-secondary);
+    opacity: 0.6;
+    cursor: default;
+}
+
+.weekly-allday {
+    min-height: 36px;
+    background: var(--bg-secondary);
+}
+
+.weekly-task {
+    padding: 0.2rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.weekly-task:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-light);
+}
+
+.weekly-task-high {
+    background: rgba(239, 68, 68, 0.12);
+    border-left: 3px solid #ef4444;
+    color: var(--text-primary);
+}
+
+.weekly-task-medium {
+    background: rgba(245, 158, 11, 0.12);
+    border-left: 3px solid #f59e0b;
+    color: var(--text-primary);
+}
+
+.weekly-task-low {
+    background: rgba(34, 197, 94, 0.12);
+    border-left: 3px solid #22c55e;
+    color: var(--text-primary);
+}
+
+.weekly-task-completed {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+.weekly-task-time {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-right: 0.25rem;
+}
+
+.weekly-task-title {
+    font-weight: 500;
+}
+
+/* Weekly Responsive */
+@media (max-width: 768px) {
+    .weekly-grid {
+        grid-template-columns: 45px repeat(7, 1fr);
+        font-size: 0.8rem;
+    }
+    .weekly-day-name { font-size: 0.6rem; }
+    .weekly-day-number { font-size: 0.9rem; }
+    .weekly-cell { min-height: 36px; }
+    .weekly-task { font-size: 0.6rem; }
+    .weekly-title { font-size: 1rem; min-width: 150px; }
+}
+
+@media (max-width: 480px) {
+    .weekly-grid {
+        grid-template-columns: 35px repeat(7, 1fr);
+    }
+    .weekly-time-label { font-size: 0.55rem; padding: 0.15rem; }
+    .weekly-cell { min-height: 28px; }
+    .weekly-task { font-size: 0.55rem; padding: 0.15rem 0.2rem; }
+}
+
 /* Agenda styles are in agenda-professional.css */
 
 /* ========================================

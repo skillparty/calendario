@@ -10,6 +10,7 @@ import { state, setCurrentDate, setTasks, getTasks, setUserSession, setUserGistI
 import { API_BASE_URL, isLoggedInWithBackend, loadTasksIntoState, pushLocalTasksToBackend } from './api.js';
 import { renderCalendar, initCalendar, showTaskInputModal } from './calendar.js';
 import { renderAgenda } from './agenda.js';
+import { renderWeekly } from './weekly.js';
 import { showPdfExportModal } from './pdf.js';
 import { showAuthToast, showSyncToast, showToast } from './utils/UIFeedback.js';
 
@@ -32,6 +33,8 @@ const OAUTH_PROXY_URL = API_BASE_URL + '/api/auth/github';
 /** @type {HTMLElement | null} */ let userName;
 /** @type {HTMLElement | null} */ let calendarView;
 /** @type {HTMLElement | null} */ let agendaView;
+/** @type {HTMLButtonElement | null} */ let weeklyBtn;
+/** @type {HTMLElement | null} */ let weeklyView;
 
 /** @param {string} message @param {boolean} [isError=false] */
 function showAuthStatus(message, isError = false) {
@@ -48,8 +51,10 @@ function showCalendar() {
   document.body.setAttribute('data-current-view', 'calendar');
   if (calendarView) calendarView.classList.remove('hidden');
   if (agendaView) agendaView.classList.add('hidden');
+  if (weeklyView) weeklyView.classList.add('hidden');
   if (calendarBtn) { calendarBtn.classList.add('active'); calendarBtn.setAttribute('aria-pressed', 'true'); }
   if (agendaBtn) { agendaBtn.classList.remove('active'); agendaBtn.setAttribute('aria-pressed', 'false'); }
+  if (weeklyBtn) { weeklyBtn.classList.remove('active'); weeklyBtn.setAttribute('aria-pressed', 'false'); }
   renderCalendar();
 }
 
@@ -58,12 +63,26 @@ function showAgenda() {
   document.body.setAttribute('data-current-view', 'agenda');
   if (agendaView) agendaView.classList.remove('hidden');
   if (calendarView) calendarView.classList.add('hidden');
+  if (weeklyView) weeklyView.classList.add('hidden');
   if (agendaBtn) { agendaBtn.classList.add('active'); agendaBtn.setAttribute('aria-pressed', 'true'); }
   if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
+  if (weeklyBtn) { weeklyBtn.classList.remove('active'); weeklyBtn.setAttribute('aria-pressed', 'false'); }
   const monthFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
   const statusFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
   const priorityFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
   renderAgenda(monthFilterEl?.value || 'all', statusFilterEl?.value || 'all', priorityFilterEl?.value || 'all');
+}
+
+/** @returns {void} */
+function showWeekly() {
+  document.body.setAttribute('data-current-view', 'weekly');
+  if (weeklyView) weeklyView.classList.remove('hidden');
+  if (calendarView) calendarView.classList.add('hidden');
+  if (agendaView) agendaView.classList.add('hidden');
+  if (weeklyBtn) { weeklyBtn.classList.add('active'); weeklyBtn.setAttribute('aria-pressed', 'true'); }
+  if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
+  if (agendaBtn) { agendaBtn.classList.remove('active'); agendaBtn.setAttribute('aria-pressed', 'false'); }
+  renderWeekly();
 }
 
 /** @returns {void} */
@@ -382,8 +401,11 @@ document.addEventListener('DOMContentLoaded', () => {
   userName = document.getElementById('user-name');
   calendarView = document.getElementById('calendar-view');
   agendaView = document.getElementById('agenda-view');
+  weeklyBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('weekly-btn'));
+  weeklyView = document.getElementById('weekly-view');
   if (calendarBtn) calendarBtn.addEventListener('click', showCalendar);
   if (agendaBtn) agendaBtn.addEventListener('click', showAgenda);
+  if (weeklyBtn) weeklyBtn.addEventListener('click', showWeekly);
   if (loginBtn) loginBtn.addEventListener('click', handleLogin);
 
   window.addEventListener('online', () => {
@@ -425,6 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Re-render views when tasks change
   document.addEventListener('tasksUpdated', () => {
     if (calendarView && !calendarView.classList.contains('hidden')) renderCalendar();
+    if (weeklyView && !weeklyView.classList.contains('hidden')) renderWeekly();
     if (agendaView && !agendaView.classList.contains('hidden')) {
       const monthFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
       const statusFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
