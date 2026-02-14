@@ -8,6 +8,7 @@ import { state, getTasks, setFilters, updateTasks } from './state.js';
 import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLocalTasksToBackend } from './api.js';
 import { showTaskInputModal } from './calendar.js';
 import { openModal, closeModal } from './utils/modal.js';
+import { getIcon, icons } from './icons.js';
 
 let agendaSearchTerm = '';
 
@@ -159,11 +160,11 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
         <header class="agenda-header">
             <div class="header-content">
                 <h2 class="agenda-title">
-                    <span class="agenda-icon">📋</span>
+                    ${getIcon('clipboard', 'agenda-icon')}
                     <span class="title-text">Agenda de Tareas</span>
                 </h2>
                 <button type="button" data-action="open-task-modal" class="btn-add-task-header">
-                    <span class="btn-icon">➕</span>
+                    ${getIcon('plus', 'btn-icon')}
                     <span class="btn-text">Nueva Tarea</span>
                 </button>
             </div>
@@ -175,7 +176,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                 <div class="filters-row">
                     <div class="filter-group">
                         <label for="month-filter" class="filter-label">
-                            <span class="filter-icon">📅</span>
+                            ${getIcon('calendar', 'filter-icon')}
                             <span>Mes</span>
                         </label>
                         <select id="month-filter" class="filter-select">
@@ -197,7 +198,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                     
                     <div class="filter-group">
                         <label for="status-filter" class="filter-label">
-                            <span class="filter-icon">📊</span>
+                            ${getIcon('barChart', 'filter-icon')}
                             <span>Estado</span>
                         </label>
                         <select id="status-filter" class="filter-select">
@@ -209,7 +210,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                     
                     <div class="filter-search">
                         <input type="text" id="search-filter" placeholder="Buscar tareas..." class="search-input">
-                        <span class="search-icon">🔍</span>
+                        ${getIcon('search', 'search-icon')}
                     </div>
                 </div>
                 
@@ -236,7 +237,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                 <section class="tasks-section">
                     <div class="section-header">
                         <h3 class="section-title">
-                            <span class="section-icon">📝</span>
+                            ${getIcon('clipboard', 'section-icon')}
                             <span>Lista de Tareas</span>
                         </h3>
                     </div>
@@ -296,7 +297,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     html += `
       <div class="empty-state">
         <div class="empty-state-animation">
-          <div class="empty-state-icon">📝</div>
+          <div class="empty-state-icon">${icons.inbox}</div>
           <div class="empty-state-circles">
             <span class="circle circle-1"></span>
             <span class="circle circle-2"></span>
@@ -310,7 +311,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
             : '¡Comienza agregando tu primera tarea del día!'}
         </p>
         <button type="button" data-action="open-task-modal" class="btn-primary empty-state-btn">
-          <span class="btn-icon">➕</span>
+          ${getIcon('plus', 'btn-icon')}
           <span>Agregar Primera Tarea</span>
         </button>
       </div>
@@ -338,7 +339,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
       html += `
         <li class="task-date-group">
           <div class="date-group-header">
-            <span class="date-group-icon">📌</span>
+            ${getIcon('pin', 'date-group-icon')}
             <h3 class="date-group-title">Tareas sin fecha</h3>
             <span class="date-group-count">${undatedTasks.length}</span>
           </div>
@@ -375,7 +376,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
       html += `
         <li class="task-date-group"${todayId}>
           <div class="date-group-header" style="border-left: 4px solid ${dayColors.border};">
-            <span class="date-group-icon">${isToday ? '📍' : '📅'}</span>
+            ${isToday ? getIcon('pin', 'date-group-icon') : getIcon('calendar', 'date-group-icon')}
             <h3 class="date-group-title">${dateLabel}</h3>
             <span class="date-group-count">${tasksForDate.length}</span>
           </div>
@@ -397,8 +398,8 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     const description = task.description && task.description.trim() ? task.description.trim() : '';
     const priorityClass = task.priority === 1 ? 'high' : task.priority === 2 ? 'medium' : 'low';
     const priorityLabel = task.priority === 1 ? 'Alta' : task.priority === 2 ? 'Media' : 'Baja';
-    const priorityIcon = task.priority === 1 ? '🔴' : task.priority === 2 ? '🟡' : '🟢';
-    const reminderIcon = task.isReminder ? '🔔' : '';
+    const priorityIcon = task.priority === 1 ? icons.priorityHigh : task.priority === 2 ? icons.priorityMedium : icons.priorityLow;
+    const reminderIcon = task.isReminder ? icons.bell : '';
     
     const dayColors = getColorByDay(task.date);
     
@@ -412,7 +413,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                       title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}"
                       aria-label="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}"
                       aria-pressed="${task.completed}">
-                <span class="check-icon">${task.completed ? '✓' : ''}</span>
+                <span class="check-icon">${task.completed ? icons.check : ''}</span>
               </button>
             </div>
             <div class="task-card-body">
@@ -429,13 +430,13 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
               <div class="task-card-meta">
                 ${timeDisplay ? `
                   <span class="meta-item time">
-                    <span class="meta-icon">⏰</span>
+                    ${getIcon('clock', 'meta-icon')}
                     <span>${timeDisplay}</span>
                   </span>
                 ` : ''}
                 ${task.date ? `
                   <span class="meta-item date" style="color: ${dayColors.text};">
-                    <span class="meta-icon">📅</span>
+                    ${getIcon('date', 'meta-icon')}
                     <span>${formatDateShort(task.date)}</span>
                   </span>
                 ` : ''}
@@ -447,13 +448,13 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                     class="task-action-btn edit"
                     title="Editar"
                     aria-label="Editar tarea">
-              <span class="action-icon">✏️</span>
+              <span class="action-icon">${icons.edit}</span>
             </button>
             <button type="button" data-action="delete-task" data-task-id="${task.id}" data-task-title="${escapeHtml(task.title)}"
                     class="task-action-btn delete"
                     title="Eliminar"
                     aria-label="Eliminar tarea">
-              <span class="action-icon">🗑️</span>
+              <span class="action-icon">${icons.trash}</span>
             </button>
           </div>
         </div>
@@ -478,20 +479,20 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                     <div class="sidebar-content">
                         <div class="sidebar-block quick-actions-block">
                             <h3 class="sidebar-title">
-                                <span class="sidebar-icon">🚀</span>
+                                ${getIcon('zap', 'sidebar-icon')}
                                 <span>Acciones Rápidas</span>
                             </h3>
                             <div class="quick-actions">
                                 <button type="button" data-action="open-task-modal" class="btn-action primary">
-                                    <span class="btn-icon">➕</span>
+                                    ${getIcon('plus', 'btn-icon')}
                                     <span>Nueva Tarea</span>
                                 </button>
                                 <button type="button" data-action="open-pdf-modal" class="btn-action secondary">
-                                    <span class="btn-icon">📄</span>
+                                    ${getIcon('fileText', 'btn-icon')}
                                     <span>Exportar PDF</span>
                                 </button>
                                 <button type="button" data-action="test-notification" class="btn-action secondary">
-                                    <span class="btn-icon">🔔</span>
+                                    ${getIcon('bell', 'btn-icon')}
                                     <span>Test Notificaciones</span>
                                 </button>
                             </div>
@@ -499,7 +500,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                         
                         <div class="sidebar-block stats-block">
                             <h3 class="sidebar-title">
-                                <span class="sidebar-icon">📊</span>
+                                ${getIcon('barChart', 'sidebar-icon')}
                                 <span>Resumen</span>
                             </h3>
                             <div class="stats-overview">
@@ -529,7 +530,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                         
                         <div class="sidebar-block upcoming-block">
                             <h3 class="sidebar-title">
-                                <span class="sidebar-icon">⏰</span>
+                                ${getIcon('clock', 'sidebar-icon')}
                                 <span>Próximas</span>
                             </h3>
                             <div class="upcoming-tasks">
@@ -646,7 +647,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'empty-search';
         emptyDiv.innerHTML = `
-          <div class="empty-search-icon">🔍</div>
+          <div class="empty-search-icon">${icons.search}</div>
           <h3>No se encontraron tareas</h3>
           <p>No hay tareas que coincidan con "${escapeHtml(searchTerm)}"</p>
         `;
@@ -767,7 +768,7 @@ function confirmDeleteTask(id, title, filterMonth, filterStatus) {
   modal.setAttribute('aria-hidden', 'true');
   modal.innerHTML = `
     <div class="delete-confirm-content" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
-      <h3>⚠️ Confirmar eliminación</h3>
+      <h3>${getIcon('alertTriangle', 'confirm-icon')} Confirmar eliminaci\u00f3n</h3>
       <p>¿Estás seguro de que deseas eliminar la tarea?</p>
       <p class="task-title-preview">"${escapeHtml(title)}"</p>
       <div class="delete-confirm-actions">

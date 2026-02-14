@@ -8,6 +8,7 @@ import { state, setCurrentDate, getTasks, updateTasks, formatDateLocal, notifyTa
 import { isLoggedInWithBackend, createTaskOnBackend, updateTaskOnBackend, pushLocalTasksToBackend } from './api.js';
 import { showSyncToast, showToast } from './utils/UIFeedback.js';
 import { openModal, closeModal } from './utils/modal.js';
+import { icons } from './icons.js';
 
 // Utilities
 /** @param {number} month @returns {string} */
@@ -317,12 +318,12 @@ export function showDayTasks(date) {
       div.innerHTML = `
                 <div class="task-content">
                     <strong>${escapeHtml(task.title)}</strong>
-                    ${task.time ? `<small class="modal-task-time">⏰ ${escapeHtml(task.time)}</small>` : ''}
+                    ${task.time ? `<small class="modal-task-time"><span class="icon" aria-hidden="true">${icons.clock}</span> ${escapeHtml(task.time)}</small>` : ''}
                     <div class="task-actions">
                         <button type="button" data-action="toggle-task" data-task-id="${task.id}" data-date="${date}">
                             ${task.completed ? 'Desmarcar' : 'Marcar como hecho'}
                         </button>
-                        ${!isPastDate ? `<button type="button" data-action="delete-task" data-task-id="${task.id}" class="delete-btn">🗑️ Eliminar</button>` : ''}
+                        ${!isPastDate ? `<button type="button" data-action="delete-task" data-task-id="${task.id}" class="delete-btn"><span class="icon" aria-hidden="true">${icons.trash}</span> Eliminar</button>` : ''}
                     </div>
                 </div>
             `;
@@ -447,7 +448,7 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
           date: (taskDate && taskDate !== 'undated' && taskDate !== '') ? taskDate : null,
           time: (time && time.trim && time.trim() !== '') ? time.trim() : null,
           is_reminder: isReminder
-        }).then(() => showSyncStatus('Actualizado ✅'))
+        }).then(() => showSyncStatus('Actualizado correctamente'))
           .catch(() => showSyncStatus('Actualizado localmente (sin conexión)', true));
       } else {
         pushLocalTasksToBackend();
@@ -498,7 +499,7 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
           });
           notifyTasksUpdated();
         }
-        showSyncStatus('Guardado ✅');
+        showSyncStatus('Guardado correctamente');
       })
       .catch(async (err) => {
         console.error('Create task failed:', err);

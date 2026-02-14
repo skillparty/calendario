@@ -132,7 +132,16 @@
 }
 
 .header-minimal .nav-icon {
-    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.header-minimal .nav-icon svg {
+    width: 20px;
+    height: 20px;
 }
 
 .header-minimal .nav-text {
@@ -173,7 +182,16 @@
 }
 
 .header-minimal .user-icon {
-    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.header-minimal .user-icon svg {
+    width: 20px;
+    height: 20px;
 }
 
 .header-minimal .user-text {

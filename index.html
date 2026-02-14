@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Calendar10">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23edae49'/><text y='70' font-size='70' text-anchor='middle' x='50'>📅</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23edae49'/><rect x='15' y='25' width='70' height='60' rx='8' fill='white' opacity='0.95'/><rect x='15' y='25' width='70' height='18' rx='8' fill='%23545f66'/><circle cx='35' cy='20' r='4' fill='%23545f66'/><circle cx='65' cy='20' r='4' fill='%23545f66'/><rect x='25' y='52' width='12' height='10' rx='2' fill='%23edae49'/><rect x='44' y='52' width='12' height='10' rx='2' fill='%23d0f4ea'/><rect x='63' y='52' width='12' height='10' rx='2' fill='%23d0f4ea'/><rect x='25' y='68' width='12' height='10' rx='2' fill='%23d0f4ea'/><rect x='44' y='68' width='12' height='10' rx='2' fill='%23d0f4ea'/></svg>">
     <title>Calendar10 - Gestiona tus tareas y eventos</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
     <link rel="stylesheet" href="styles.css">
@@ -40,11 +40,11 @@
             
             <nav class="header-nav">
                 <button id="calendar-btn" class="nav-item">
-                    <span class="nav-icon">📅</span>
+                    <span class="nav-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
                     <span class="nav-text">Calendario</span>
                 </button>
                 <button id="agenda-btn" class="nav-item">
-                    <span class="nav-icon">📋</span>
+                    <span class="nav-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
                     <span class="nav-text">Agenda</span>
                 </button>
             </nav>
@@ -55,7 +55,7 @@
                 </button>
                 <div id="user-status" class="user-section">
                     <button id="login-btn" class="user-btn">
-                        <span id="login-icon" class="user-icon">👤</span>
+                        <span id="login-icon" class="user-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
                         <span id="login-text" class="user-text">Iniciar Sesión</span>
                     </button>
                     <div id="user-info" class="user-info hidden">
@@ -91,7 +91,7 @@
     <div id="pdf-export-modal" class="modal hidden" aria-hidden="true">
         <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="pdf-export-title">
             <button type="button" class="close-btn" title="Cerrar" aria-label="Cerrar">&times;</button>
-            <h3 id="pdf-export-title">📄 Exportar Tareas a PDF</h3>
+            <h3 id="pdf-export-title"><span class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span> Exportar Tareas a PDF</h3>
             <div style="margin: 20px 0;">
                 <h4>Selecciona el tipo de exportación:</h4>
                 <div style="margin: 15px 0;">
@@ -159,7 +159,7 @@
                 
                 <div style="margin: 20px 0; text-align: center;">
                     <button id="generate-pdf-btn" class="pdf-modal-btn pdf-modal-btn-primary">
-                        📄 Generar PDF
+                        <span class="icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> Generar PDF
                     </button>
                     <button id="cancel-pdf-btn" class="pdf-modal-btn pdf-modal-btn-secondary">
                         Cancelar

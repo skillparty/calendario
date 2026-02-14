@@ -340,7 +340,7 @@ function checkNotifications() {
         if (!notificationLog[key]) {
           const timeUntil = Math.ceil((taskTime - currentTime) / (60 * 60 * 1000));
           const label = timeUntil > 0 ? `en ${timeUntil} hora${timeUntil !== 1 ? 's' : ''}` : 'ahora';
-          new Notification('🔔 Recordatorio de Tarea', { body: `${task.title}\n📅 ${date}${task.time ? ` ⏰ ${task.time}` : ''}\n⏳ Programada ${label}`, icon: '/favicon.ico', tag: `reminder_${task.id}`, requireInteraction: true });
+          new Notification('Recordatorio de Tarea', { body: `${task.title}\nFecha: ${date}${task.time ? ` - ${task.time}` : ''}\nProgramada ${label}`, icon: '/favicon.ico', tag: `reminder_${task.id}`, requireInteraction: true });
           notificationLog[key] = { taskId: task.id, sentAt: currentTime, interval: intervals, taskTitle: task.title };
           hasNew = true;
         }
@@ -363,7 +363,7 @@ function testNotification() {
     Notification.requestPermission();
     return;
   }
-  new Notification('🧪 Prueba de Notificación', { body: 'El sistema de recordatorios está funcionando correctamente.\n📅 Fecha: ' + new Date().toLocaleString(), icon: '/favicon.ico', requireInteraction: true });
+  new Notification('Prueba de Notificaci\u00f3n', { body: 'El sistema de recordatorios est\u00e1 funcionando correctamente.\nFecha: ' + new Date().toLocaleString(), icon: '/favicon.ico', requireInteraction: true });
   showToast('Notificación de prueba enviada.', { type: 'success' });
 }
 

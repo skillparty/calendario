@@ -34,6 +34,21 @@
     box-sizing: border-box;
 }
 
+/* ========== BASE SVG ICON SYSTEM ========== */
+.icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
 body {
     font-family: 'JetBrains Mono', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
