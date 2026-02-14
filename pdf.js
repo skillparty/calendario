@@ -13,10 +13,21 @@ export function showPdfExportModal() {
   const modal = document.getElementById('pdf-export-modal');
   if (!modal) return;
   const now = new Date();
+  const currentYear = now.getFullYear();
   const monthSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-month-select'));
   const yearSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-year-select'));
   if (monthSel) monthSel.value = String(now.getMonth());
-  if (yearSel) yearSel.value = String(now.getFullYear());
+  // Populate year selector dynamically
+  if (yearSel) {
+    yearSel.innerHTML = '';
+    for (let y = currentYear - 2; y <= currentYear + 3; y++) {
+      const opt = document.createElement('option');
+      opt.value = String(y);
+      opt.textContent = String(y);
+      if (y === currentYear) opt.selected = true;
+      yearSel.appendChild(opt);
+    }
+  }
   toggleExportOptions();
 
   const closeBtn = /** @type {HTMLElement | null} */ (modal.querySelector('.close-btn'));

@@ -9,8 +9,48 @@ import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLo
 import { showTaskInputModal } from './calendar.js';
 import { openModal, closeModal } from './utils/modal.js';
 import { getIcon, icons } from './icons.js';
+import { escapeHtml } from './utils/helpers.js';
 
 let agendaSearchTerm = '';
+
+/** Apply search filter on currently rendered task cards (module-level for delegation) */
+function applySearchFilterDOM() {
+  const searchTerm = agendaSearchTerm.trim().toLowerCase();
+  const taskCards = document.querySelectorAll('.task-card');
+  const dateGroups = document.querySelectorAll('.task-date-group');
+
+  taskCards.forEach(card => {
+    const title = card.querySelector('.task-card-title')?.textContent?.toLowerCase() || '';
+    const description = card.querySelector('.task-card-description')?.textContent?.toLowerCase() || '';
+    const shouldShow = title.includes(searchTerm) || description.includes(searchTerm);
+    card.classList.toggle('hidden-by-search', !shouldShow);
+  });
+
+  dateGroups.forEach(group => {
+    const visibleTasks = group.querySelectorAll('.task-card:not(.hidden-by-search)');
+    group.classList.toggle('hidden-by-search', visibleTasks.length === 0);
+  });
+
+  const visibleCards = document.querySelectorAll('.task-card:not(.hidden-by-search)');
+  const emptySearch = document.querySelector('.empty-search');
+
+  if (visibleCards.length === 0 && searchTerm) {
+    if (!emptySearch) {
+      const container = document.querySelector('.task-list-container');
+      if (!container) return;
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'empty-search';
+      emptyDiv.innerHTML = `
+        <div class="empty-search-icon">${icons.search}</div>
+        <h3>No se encontraron tareas</h3>
+        <p>No hay tareas que coincidan con "${escapeHtml(searchTerm)}"</p>
+      `;
+      container.appendChild(emptyDiv);
+    }
+  } else if (emptySearch) {
+    emptySearch.remove();
+  }
+}
 
 /**
  * @param {() => void} fn
@@ -26,16 +66,6 @@ function debounce(fn, delay = 180) {
       fn();
     }, delay);
   };
-}
-
-/**
- * @param {string} text
- * @returns {string}
- */
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 /**
@@ -104,12 +134,14 @@ function handleAgendaActionClick(event) {
 
   const filterMonth = state.filters.month || 'all';
   const filterStatus = state.filters.status || 'all';
+  const prioritySel = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
+  const filterPriority = prioritySel?.value || 'all';
 
   if (action === 'toggle-task') {
     event.preventDefault();
     event.stopPropagation();
     const taskId = target.dataset.taskId;
-    if (taskId) toggleTaskWithAnimation(taskId, filterMonth, filterStatus);
+    if (taskId) toggleTaskWithAnimation(taskId, filterMonth, filterStatus, filterPriority);
     return;
   }
 
@@ -126,7 +158,7 @@ function handleAgendaActionClick(event) {
     event.stopPropagation();
     const taskId = target.dataset.taskId;
     const taskTitle = target.dataset.taskTitle || '';
-    if (taskId) confirmDeleteTask(taskId, taskTitle, filterMonth, filterStatus);
+    if (taskId) confirmDeleteTask(taskId, taskTitle, filterMonth, filterStatus, filterPriority);
   }
 }
 
@@ -148,7 +180,7 @@ function handleAgendaActionKeydown(event) {
  * @param {string} [filterStatus='all']
  * @returns {void}
  */
-export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
+export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPriority = 'all') {
   const agendaView = document.getElementById('agenda-view');
   if (!agendaView) return;
 
@@ -208,6 +240,19 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
                         </select>
                     </div>
                     
+                    <div class="filter-group">
+                        <label for="priority-filter" class="filter-label">
+                            ${getIcon('filter', 'filter-icon')}
+                            <span>Prioridad</span>
+                        </label>
+                        <select id="priority-filter" class="filter-select">
+                            <option value="all">Todas</option>
+                            <option value="1">Alta</option>
+                            <option value="2">Media</option>
+                            <option value="3">Baja</option>
+                        </select>
+                    </div>
+                    
                     <div class="filter-search">
                         <input type="text" id="search-filter" placeholder="Buscar tareas..." class="search-input">
                         ${getIcon('search', 'search-icon')}
@@ -264,6 +309,10 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
   }
   if (filterStatus !== 'all') {
     allTasks = allTasks.filter(task => task.completed === (filterStatus === 'completed'));
+  }
+  if (filterPriority !== 'all') {
+    const targetPriority = parseInt(filterPriority);
+    allTasks = allTasks.filter(task => task.priority === targetPriority);
   }
 
   // Función para obtener color por día de la semana
@@ -548,6 +597,33 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
   if (!agendaView.dataset.actionsBound) {
     agendaView.addEventListener('click', (event) => handleAgendaActionClick(/** @type {MouseEvent} */ (event)));
     agendaView.addEventListener('keydown', (event) => handleAgendaActionKeydown(/** @type {KeyboardEvent} */ (event)));
+
+    // Delegated change handler for filters (prevents accumulating listeners)
+    agendaView.addEventListener('change', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLSelectElement)) return;
+      const monthSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
+      const statusSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
+      const prioritySel = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
+      if (target.id === 'month-filter' || target.id === 'status-filter' || target.id === 'priority-filter') {
+        renderAgenda(monthSel?.value || 'all', statusSel?.value || 'all', prioritySel?.value || 'all');
+      }
+    });
+
+    // Delegated input handler for search (prevents accumulating listeners)
+    const debouncedApplySearch = debounce(() => {
+      const searchInput = /** @type {HTMLInputElement | null} */ (document.getElementById('search-filter'));
+      if (searchInput) agendaSearchTerm = searchInput.value;
+      applySearchFilterDOM();
+    }, 180);
+    agendaView.addEventListener('input', (event) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement && target.id === 'search-filter') {
+        agendaSearchTerm = target.value;
+        debouncedApplySearch();
+      }
+    });
+
     agendaView.dataset.actionsBound = 'true';
   }
 
@@ -596,81 +672,19 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all') {
     }
   });
 
+  // Restore filter/search values after re-render
   const monthSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
   const statusSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
+  const prioritySel = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
   const searchInput = /** @type {HTMLInputElement | null} */ (document.getElementById('search-filter'));
   
   if (monthSel) monthSel.value = filterMonth;
   if (statusSel) statusSel.value = filterStatus;
-  
-  if (monthSel) {
-    monthSel.addEventListener('change', (e) => {
-      const target = e.target;
-      if (target instanceof HTMLSelectElement) {
-        renderAgenda(target.value, statusSel?.value || 'all');
-      }
-    });
-  }
-  if (statusSel) {
-    statusSel.addEventListener('change', (e) => {
-      const target = e.target;
-      if (target instanceof HTMLSelectElement) {
-        renderAgenda(monthSel?.value || 'all', target.value);
-      }
-    });
-  }
+  if (prioritySel) prioritySel.value = filterPriority;
+  if (searchInput) searchInput.value = agendaSearchTerm;
 
-  const applySearchFilter = () => {
-    const searchTerm = agendaSearchTerm.trim().toLowerCase();
-    const taskCards = document.querySelectorAll('.task-card');
-    const dateGroups = document.querySelectorAll('.task-date-group');
-
-    taskCards.forEach(card => {
-      const title = card.querySelector('.task-card-title')?.textContent?.toLowerCase() || '';
-      const description = card.querySelector('.task-card-description')?.textContent?.toLowerCase() || '';
-      const shouldShow = title.includes(searchTerm) || description.includes(searchTerm);
-      card.classList.toggle('hidden-by-search', !shouldShow);
-    });
-
-    dateGroups.forEach(group => {
-      const visibleTasks = group.querySelectorAll('.task-card:not(.hidden-by-search)');
-      group.classList.toggle('hidden-by-search', visibleTasks.length === 0);
-    });
-
-    const visibleCards = document.querySelectorAll('.task-card:not(.hidden-by-search)');
-    const emptySearch = document.querySelector('.empty-search');
-
-    if (visibleCards.length === 0 && searchTerm) {
-      if (!emptySearch) {
-        const container = document.querySelector('.task-list-container');
-        if (!container) return;
-        const emptyDiv = document.createElement('div');
-        emptyDiv.className = 'empty-search';
-        emptyDiv.innerHTML = `
-          <div class="empty-search-icon">${icons.search}</div>
-          <h3>No se encontraron tareas</h3>
-          <p>No hay tareas que coincidan con "${escapeHtml(searchTerm)}"</p>
-        `;
-        container.appendChild(emptyDiv);
-      }
-    } else if (emptySearch) {
-      emptySearch.remove();
-    }
-  };
-  
-  if (searchInput) {
-    searchInput.value = agendaSearchTerm;
-    const debouncedSearch = debounce(applySearchFilter, 180);
-    searchInput.addEventListener('input', (e) => {
-      const target = e.target;
-      if (target instanceof HTMLInputElement) {
-        agendaSearchTerm = target.value;
-        debouncedSearch();
-      }
-    });
-  }
-
-  applySearchFilter();
+  // Apply existing search filter after re-render
+  applySearchFilterDOM();
 }
 
 /** @param {Task[]} allTasks @returns {Task[]} */
@@ -736,15 +750,15 @@ function toggleTask(id) {
 }
 
 // Toggle task without animation, preserving scroll position
-/** @param {string} id @param {string} filterMonth @param {string} filterStatus */
-function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
+/** @param {string} id @param {string} filterMonth @param {string} filterStatus @param {string} [filterPriority='all'] */
+function toggleTaskWithAnimation(id, filterMonth, filterStatus, filterPriority = 'all') {
   // Save current scroll position
   const taskListContainer = document.querySelector('.task-list-container');
   const scrollPosition = taskListContainer ? taskListContainer.scrollTop : 0;
   
   // Toggle task immediately
   toggleTask(id);
-  renderAgenda(filterMonth, filterStatus);
+  renderAgenda(filterMonth, filterStatus, filterPriority);
   
   // Restore scroll position after render
   requestAnimationFrame(() => {
@@ -756,8 +770,8 @@ function toggleTaskWithAnimation(id, filterMonth, filterStatus) {
 }
 
 // Improved delete confirmation
-/** @param {string} id @param {string} title @param {string} filterMonth @param {string} filterStatus */
-function confirmDeleteTask(id, title, filterMonth, filterStatus) {
+/** @param {string} id @param {string} title @param {string} filterMonth @param {string} filterStatus @param {string} [filterPriority='all'] */
+function confirmDeleteTask(id, title, filterMonth, filterStatus, filterPriority = 'all') {
   const existing = document.querySelector('.delete-confirm-modal');
   if (existing instanceof HTMLElement) {
     closeModal(existing, { removeFromDom: true });
@@ -788,7 +802,7 @@ function confirmDeleteTask(id, title, filterMonth, filterStatus) {
   if (confirmBtn) {
     confirmBtn.addEventListener('click', () => {
       closeModal(modal, { removeFromDom: true });
-      deleteTaskConfirmed(id, filterMonth, filterStatus);
+      deleteTaskConfirmed(id, filterMonth, filterStatus, filterPriority);
     });
   }
 
@@ -799,8 +813,8 @@ function confirmDeleteTask(id, title, filterMonth, filterStatus) {
   });
 }
 
-/** @param {string} id @param {string} filterMonth @param {string} filterStatus */
-function deleteTaskConfirmed(id, filterMonth, filterStatus) {
+/** @param {string} id @param {string} filterMonth @param {string} filterStatus @param {string} [filterPriority='all'] */
+function deleteTaskConfirmed(id, filterMonth, filterStatus, filterPriority = 'all') {
   const taskCard = /** @type {HTMLElement | null} */ (document.querySelector(`[data-task-id="${id}"]`));
   if (taskCard) {
     taskCard.style.transition = 'all 0.3s ease';
@@ -808,11 +822,11 @@ function deleteTaskConfirmed(id, filterMonth, filterStatus) {
     taskCard.style.opacity = '0';
     setTimeout(() => {
       deleteTask(id);
-      renderAgenda(filterMonth, filterStatus);
+      renderAgenda(filterMonth, filterStatus, filterPriority);
     }, 300);
   } else {
     deleteTask(id);
-    renderAgenda(filterMonth, filterStatus);
+    renderAgenda(filterMonth, filterStatus, filterPriority);
   }
 }
 

@@ -9,6 +9,7 @@ import { isLoggedInWithBackend, createTaskOnBackend, updateTaskOnBackend, pushLo
 import { showSyncToast, showToast } from './utils/UIFeedback.js';
 import { openModal, closeModal } from './utils/modal.js';
 import { icons } from './icons.js';
+import { escapeHtml } from './utils/helpers.js';
 
 // Utilities
 /** @param {number} month @returns {string} */
@@ -26,19 +27,6 @@ function isToday(date) {
 /** @returns {string} */
 function createLocalTaskId() {
   return `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/**
- * @param {string} unsafe
- * @returns {string}
- */
-function escapeHtml(unsafe) {
-  return String(unsafe)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 /**

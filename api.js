@@ -8,6 +8,8 @@
 
 import { state, setTasks, getTasks, updateTasks } from './state.js';
 
+const DEBUG = window.location.hostname === 'localhost';
+
 /** @type {string} */
 // Backend URL - actualizado con el nuevo despliegue de Vercel
 export const API_BASE_URL = window.location.hostname === 'localhost'
@@ -57,24 +59,15 @@ export async function apiFetch(path, options = {}, retries = 3) {
   }
   const init = Object.assign({}, options, { headers });
 
-  console.log('API Request:', {
-    url: API_BASE_URL + path,
-    method: init.method || 'GET',
-    headers: headers,
-    body: init.body
-  });
+  if (DEBUG) console.log('API Request:', { url: API_BASE_URL + path, method: init.method || 'GET' });
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(API_BASE_URL + path, init);
 
-      console.log('API Response:', {
-        status: res.status,
-        statusText: res.statusText,
-        url: res.url
-      });
+      if (DEBUG) console.log('API Response:', res.status, res.statusText);
 
-      if (!res.ok) {
+      if (!res.ok && DEBUG) {
         const errorText = await res.clone().text();
         console.error('API Error Response:', errorText);
       }

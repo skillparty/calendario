@@ -62,7 +62,8 @@ function showAgenda() {
   if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
   const monthFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
   const statusFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
-  renderAgenda(monthFilterEl?.value || 'all', statusFilterEl?.value || 'all');
+  const priorityFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
+  renderAgenda(monthFilterEl?.value || 'all', statusFilterEl?.value || 'all', priorityFilterEl?.value || 'all');
 }
 
 /** @returns {void} */
@@ -414,11 +415,11 @@ document.addEventListener('DOMContentLoaded', () => {
     import('./utils/PerformanceMonitor.js'),
     import('./state-enhanced.js')
   ]).then(([eventBusModule, stateModule, perfModule, enhancedStateModule]) => {
-    console.log('Enhanced modules loaded successfully');
+    // Enhanced modules loaded
     
     // Setup event listeners
     eventBusModule.eventBus.on('task:created', (/** @type {any} */ event) => {
-      console.log('Task created:', event.payload);
+      // Task created event received
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Tarea creada', {
           body: event.payload.title,
@@ -429,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Setup performance monitoring
     perfModule.performanceMonitor.measure('app-enhanced-init', () => {
-      console.log('Enhanced features initialized');
+      // Enhanced features initialized
     });
     
     // Setup keyboard shortcuts
@@ -456,9 +457,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (agendaView && !agendaView.classList.contains('hidden')) {
       const monthFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
       const statusFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
-      const m = monthFilter?.value || 'all';
-      const s = statusFilter?.value || 'all';
-      renderAgenda(m, s);
+      const priorityFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
+      renderAgenda(monthFilter?.value || 'all', statusFilter?.value || 'all', priorityFilter?.value || 'all');
     }
   });
 
