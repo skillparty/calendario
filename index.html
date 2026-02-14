@@ -190,7 +190,7 @@
                 </div>
                 
                 <div class="footer-copyright">
-                    <span>&copy; 2025 Calendar10. Todos los derechos reservados.</span>
+                    <span>&copy; 2026 Calendar10. Todos los derechos reservados.</span>
                 </div>
             </div>
         </div>
@@ -205,7 +205,7 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
                     .then(registration => {
-                        console.log('ServiceWorker registrado:', registration.scope);
+                        // SW registered
                         
                         // Check for updates periodically
                         setInterval(() => {
@@ -226,7 +226,7 @@
                         });
                     })
                     .catch(err => {
-                        console.log('ServiceWorker registro falló:', err);
+                        console.error('SW registration failed:', err);
                     });
                     
                 // Reload when new service worker takes control
@@ -238,16 +238,15 @@
         
         // Check online/offline status
         window.addEventListener('online', () => {
-            console.log('Conexión restaurada');
+            // Connection restored
             document.body.classList.remove('offline');
         });
         
         window.addEventListener('offline', () => {
-            console.log('Sin conexión - Modo offline');
+            // Offline mode
             document.body.classList.add('offline');
         });
         
-        console.log('Aplicación Calendar10 cargada correctamente');
     </script>
     
     <!-- Dark Mode -->

@@ -7,7 +7,7 @@
 
 const sw = /** @type {any} */ (self);
 
-const CACHE_VERSION = 'v1.1.0';
+const CACHE_VERSION = 'v2026.02.14';
 const CACHE_NAME = `calendar10-${CACHE_VERSION}`;
 const API_CACHE = `calendar10-api-${CACHE_VERSION}`;
 const DB_NAME = 'Calendar10DB';
@@ -36,13 +36,9 @@ const STATIC_ASSETS = [
   './manifest.json',
   './favicon.ico',
   './types.d.ts',
-  './utils/EventBus.js',
-  './utils/StateManager.js',
-  './utils/PerformanceMonitor.js',
-  './utils/IndexedDBManager.js',
   './utils/UIFeedback.js',
   './utils/modal.js',
-  './state-enhanced.js',
+  './utils/helpers.js',
   './public/app.png',
   './public/loquito.png'
 ];
@@ -58,12 +54,12 @@ const API_ROUTES = [
  */
 sw.addEventListener('install', (/** @type {any} */ event) => {
   const installEvent = /** @type {any} */ (event);
-  console.log('[SW] Installing Service Worker');
+  // Installing
   
   installEvent.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('[SW] Caching static assets');
+        // Caching static assets
         return cache.addAll(STATIC_ASSETS);
       })
       .then(() => sw.skipWaiting())
@@ -78,7 +74,7 @@ sw.addEventListener('install', (/** @type {any} */ event) => {
  */
 sw.addEventListener('activate', (/** @type {any} */ event) => {
   const activateEvent = /** @type {any} */ (event);
-  console.log('[SW] Activating Service Worker');
+  // Activating
   
   activateEvent.waitUntil(
     caches.keys()
@@ -87,7 +83,7 @@ sw.addEventListener('activate', (/** @type {any} */ event) => {
           cacheNames
             .filter(name => name.startsWith('calendar10-') && name !== CACHE_NAME && name !== API_CACHE)
             .map(name => {
-              console.log('[SW] Deleting old cache:', name);
+              // Deleting old cache
               return caches.delete(name);
             })
         );
@@ -183,7 +179,7 @@ async function networkFirstStrategy(request) {
     
     return response;
   } catch (error) {
-    console.log('[SW] Network failed, trying cache:', request.url);
+    // Network failed, trying cache
     
     const cached = await cache.match(request);
     if (cached) {
@@ -224,7 +220,7 @@ function isStaticAsset(pathname) {
  */
 sw.addEventListener('sync', (/** @type {any} */ event) => {
   const syncEvent = /** @type {any} */ (event);
-  console.log('[SW] Background sync triggered');
+  // Background sync triggered
   
   if (syncEvent.tag === 'sync-tasks') {
     syncEvent.waitUntil(syncTasks());
@@ -363,7 +359,7 @@ sw.addEventListener('push', (/** @type {any} */ event) => {
  */
 sw.addEventListener('notificationclick', (/** @type {any} */ event) => {
   const notificationEvent = /** @type {any} */ (event);
-  console.log('[SW] Notification click:', notificationEvent.action);
+  // Notification click
   
   notificationEvent.notification.close();
 
@@ -379,7 +375,7 @@ sw.addEventListener('notificationclick', (/** @type {any} */ event) => {
  */
 sw.addEventListener('message', (/** @type {any} */ event) => {
   const messageEvent = /** @type {any} */ (event);
-  console.log('[SW] Message from client:', messageEvent.data);
+  // Message from client
   
   if (messageEvent.data.type === 'skip-waiting') {
     sw.skipWaiting();

@@ -14,11 +14,38 @@ function safeRemoveItem(key) {
   try { if (typeof localStorage !== 'undefined') localStorage.removeItem(key); } catch {}
 }
 
+/** Validate tasks object structure from localStorage
+ * @param {any} raw
+ * @returns {import('./types').TasksByDate}
+ */
+function validateTasks(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return /** @type {import('./types').TasksByDate} */ ({});
+  /** @type {import('./types').TasksByDate} */
+  const clean = {};
+  for (const [date, list] of Object.entries(raw)) {
+    if (Array.isArray(list)) {
+      const validTasks = list.filter(t => t && typeof t === 'object' && typeof t.title === 'string');
+      if (validTasks.length > 0) clean[date] = validTasks;
+    }
+  }
+  return clean;
+}
+
+/** Validate user session structure from localStorage
+ * @param {any} raw
+ * @returns {import('./types').UserSession | null}
+ */
+function validateSession(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (typeof raw.jwt !== 'string' || !raw.jwt) return null;
+  return raw;
+}
+
 /** @type {import('./types').AppState} */
 export const state = {
   currentDate: new Date(),
-  tasks: (() => { const s = safeGetItem('calendarTasks'); return s ? JSON.parse(s) : {}; })(),
-  userSession: (() => { const s = safeGetItem('userSession'); return s ? JSON.parse(s) : null; })(),
+  tasks: (() => { try { const s = safeGetItem('calendarTasks'); return s ? validateTasks(JSON.parse(s)) : {}; } catch { return {}; } })(),
+  userSession: (() => { try { const s = safeGetItem('userSession'); return s ? validateSession(JSON.parse(s)) : null; } catch { return null; } })(),
   userGistId: safeGetItem('userGistId') || null,
   lastGistUpdatedAt: safeGetItem('lastGistUpdatedAt') || null,
   backgroundSyncTimer: null,
