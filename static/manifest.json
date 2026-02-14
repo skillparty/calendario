@@ -9,33 +9,33 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "./public/app.png",
+      "src": "./app.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./public/app.png",
+      "src": "./app.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./public/app.png",
+      "src": "./app.png",
       "sizes": "144x144",
       "type": "image/png"
     },
     {
-      "src": "./public/app.png",
+      "src": "./app.png",
       "sizes": "96x96",
       "type": "image/png"
     },
     {
-      "src": "./public/app.png",
+      "src": "./app.png",
       "sizes": "72x72",
       "type": "image/png"
     },
     {
-      "src": "./public/app.png",
+      "src": "./app.png",
       "sizes": "48x48",
       "type": "image/png"
     }
@@ -51,14 +51,14 @@
       "short_name": "Nueva",
       "description": "Crear una nueva tarea",
       "url": "./?action=new-task",
-      "icons": [{ "src": "./public/app.png", "sizes": "96x96" }]
+      "icons": [{ "src": "./app.png", "sizes": "96x96" }]
     },
     {
       "name": "Agenda",
       "short_name": "Agenda",
       "description": "Ver agenda de tareas",
       "url": "./?view=agenda",
-      "icons": [{ "src": "./public/app.png", "sizes": "96x96" }]
+      "icons": [{ "src": "./app.png", "sizes": "96x96" }]
     }
   ]
 }

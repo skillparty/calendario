@@ -1,28 +1,9 @@
 {
   "version": 2,
   "name": "calendario-frontend",
-  "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.{js,css,png,jpg,svg,ico,json}",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "utils/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "components/**",
-      "use": "@vercel/static"
-    }
-  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
   "routes": [
     {
       "src": "/(.*)",

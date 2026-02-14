@@ -14,34 +14,12 @@ const DB_NAME = 'Calendar10DB';
 const DB_VERSION = 1;
 const PENDING_OPS_STORE = 'pendingOps';
 
-// Assets to cache immediately
-const STATIC_ASSETS = [
+// Minimal app shell to pre-cache (Vite bundles the rest; runtime caching handles it)
+const APP_SHELL = [
   './',
   './index.html',
-  './styles.css',
-  './agenda-professional.css',
-  './calendar-navigation.css',
-  './header-footer-minimal.css',
-  './dark-mode.css',
-  './mobile-improvements.css',
-  './app.js',
-  './state.js',
-  './api.js',
-  './calendar.js',
-  './agenda.js',
-  './pdf.js',
-  './dark-mode.js',
-  './init-icons.js',
-  './icons.js',
   './manifest.json',
-  './favicon.ico',
-  './types.d.ts',
-  './utils/UIFeedback.js',
-  './utils/modal.js',
-  './utils/helpers.js',
-  './weekly.js',
-  './public/app.png',
-  './public/loquito.png'
+  './favicon.ico'
 ];
 
 // API endpoints to cache
@@ -61,7 +39,7 @@ sw.addEventListener('install', (/** @type {any} */ event) => {
     caches.open(CACHE_NAME)
       .then(cache => {
         // Caching static assets
-        return cache.addAll(STATIC_ASSETS);
+        return cache.addAll(APP_SHELL);
       })
       .then(() => sw.skipWaiting())
       .catch(error => {
@@ -331,8 +309,8 @@ sw.addEventListener('push', (/** @type {any} */ event) => {
   const pushEvent = /** @type {any} */ (event);
   const options = {
     body: pushEvent.data ? pushEvent.data.text() : 'Nueva notificación',
-    icon: '/public/loquito.png',
-    badge: '/public/loquito.png',
+    icon: '/loquito.png',
+    badge: '/loquito.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
