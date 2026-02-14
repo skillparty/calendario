@@ -228,27 +228,30 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
 // Get tasks - REQUIRES AUTHENTICATION
 app.get('/api/tasks', authenticate, async (req, res) => {
   try {
-    const { group_id } = req.query;
+    const rawLimit = parseInt(req.query.limit, 10);
+    const rawOffset = parseInt(req.query.offset, 10);
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 100;
+    const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     
     let query = supabase
       .from('tasks')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', req.user.id);
     
-    if (group_id !== undefined) {
-      if (group_id === 'null' || group_id === '') {
-        query = query.is('group_id', null);
-      } else {
-        query = query.eq('group_id', parseInt(group_id));
-      }
-    }
+    query = query
+      .order('date', { ascending: true, nullsFirst: false })
+      .range(offset, offset + limit - 1);
     
-    query = query.order('date', { ascending: true, nullsFirst: false });
-    
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) throw error;
-    res.json({ success: true, data: data || [], count: (data || []).length });
+    res.json({
+      success: true,
+      data: data || [],
+      count: count ?? (data || []).length,
+      limit,
+      offset
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -257,7 +260,7 @@ app.get('/api/tasks', authenticate, async (req, res) => {
 // Create task - REQUIRES AUTHENTICATION
 app.post('/api/tasks', authenticate, async (req, res) => {
   try {
-    const { title, description, date, time, priority, group_id, is_reminder, tags } = req.body;
+    const { title, description, date, time, priority, is_reminder, tags } = req.body;
     
     const taskData = { 
       title, 
@@ -266,7 +269,6 @@ app.post('/api/tasks', authenticate, async (req, res) => {
       time: time || null, 
       priority: priority || 'media',
       user_id: req.user.id,
-      group_id: group_id || null,
       is_reminder: is_reminder !== undefined ? is_reminder : true,
       tags: tags || [],
       completed: false

@@ -100,14 +100,14 @@ class EmailService {
               </div>
               
               <p style="margin-top: 30px;">
-                <a href="${process.env.FRONTEND_URL || 'https://calendario-frontend-ashy.vercel.app'}" 
+                <a href="${process.env.FRONTEND_URL || 'https://your-frontend.vercel.app'}" 
                    style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                   Ver en Calendario
                 </a>
               </p>
               
               <div class="footer">
-                <p>Has recibido este email porque activaste los recordatorios en tu Calendario Digital.</p>
+                <p>Has recibido este email porque activaste los recordatorios en tu Calendar10.</p>
                 <p>Para desactivar los recordatorios, edita la tarea en tu calendario.</p>
               </div>
             </div>
@@ -144,8 +144,8 @@ class EmailService {
       const result = await this.resend.emails.send({
         from: this.fromEmail,
         to: [to],
-        subject: 'Test - Calendario Digital',
-        html: '<h1>✅ Email service is working!</h1><p>Your Calendario app is ready to send reminders.</p>'
+        subject: 'Test - Calendar10',
+        html: '<h1>✅ Email service is working!</h1><p>Your Calendar10 app is ready to send reminders.</p>'
       });
 
       logger.info(`Test email sent to ${to}`);

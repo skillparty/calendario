@@ -73,14 +73,37 @@ export async function apiFetch(path, options = {}, retries = 3) {
 /** @param {number} [limit=100] @returns {Promise<APITask[]>} */
 export async function fetchAllTasksFromBackend(limit = 100) {
   const aggregate = [];
+  const seenIds = new Set();
   let offset = 0;
+  let guard = 0;
+
   while (true) {
     const res = await apiFetch(`/api/tasks?limit=${limit}&offset=${offset}`);
     if (!res.ok) throw new Error('Tasks list HTTP ' + res.status);
     const data = await res.json();
     const chunk = data.data || [];
-    aggregate.push(...chunk);
+
+    if (!Array.isArray(chunk) || chunk.length === 0) break;
+
+    let newItems = 0;
+    for (const task of chunk) {
+      const key = String(task.id);
+      if (!seenIds.has(key)) {
+        seenIds.add(key);
+        aggregate.push(task);
+        newItems += 1;
+      }
+    }
+
+    // Normal paginated backend: last page is shorter than limit
     if (chunk.length < limit) break;
+
+    // Non-paginated backend fallback: same chunk repeats forever
+    if (newItems === 0) break;
+
+    guard += 1;
+    if (guard > 1000) break;
+
     offset += limit;
   }
   return aggregate;

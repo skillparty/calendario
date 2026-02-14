@@ -14,7 +14,9 @@ import { showPdfExportModal } from './pdf.js';
 
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liO2tcNCvR8xrHov';
-const GITHUB_REDIRECT_URI = 'https://calendario-frontend-ashy.vercel.app';
+const GITHUB_REDIRECT_URI = (typeof window !== 'undefined' && window.location && window.location.origin)
+  ? window.location.origin
+  : 'https://your-frontend.vercel.app';
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const GITHUB_DEVICE_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -188,8 +190,9 @@ async function handleOAuthCallback() {
         if (!res.ok) throw new Error('Auth HTTP ' + res.status);
         return res.json();
       }).then(async (data) => {
-        if (!data || !data.success || !data.token || !data.user) throw new Error('Auth payload inválido');
-        setUserSession({ jwt: data.token, user: data.user, loginTime: Date.now() });
+        const jwtToken = data?.token || data?.jwt;
+        if (!data || !data.success || !jwtToken || !data.user) throw new Error('Auth payload inválido');
+        setUserSession({ jwt: jwtToken, user: data.user, loginTime: Date.now() });
         const cleanUrl = window.location.origin + window.location.pathname; window.history.replaceState({}, document.title, cleanUrl);
         updateLoginButton();
         await loadTasksIntoState();
@@ -241,7 +244,7 @@ async function syncTasksToGist() {
   if (!state.userSession || !state.userSession.token) return;
   try {
     const gistData = {
-      description: 'Calendario Digital - Tasks Data', public: false,
+      description: 'Calendar10 - Tasks Data', public: false,
       files: { 'calendar-tasks.json': { content: JSON.stringify(getTasks(), null, 2) } }
     };
     let response;

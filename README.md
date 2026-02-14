@@ -1,113 +1,74 @@
-# Calendario Digital
+# Calendar10
 
-Una aplicación web simple de calendario digital con recordatorios y agenda, construida con HTML, CSS y JavaScript.
+Aplicación web de calendario y agenda con frontend en JavaScript modular y backend en Node.js + Supabase.
 
-## Características
+## Stack actual
 
-- Vista de calendario mensual con navegación
-- Agregar recordatorios a fechas específicas
-- Lista de agenda con tareas pendientes
-- Marcar tareas como completadas
-- Notificaciones de navegador para recordatorios
-- Autenticación con GitHub para gestión de usuarios (Device Flow)
-- Almacenamiento local de datos + sincronización opcional con GitHub Gist
+- Frontend: HTML, CSS, JavaScript (ES modules)
+- Backend: Express serverless en Vercel (`backend/api/index.js`)
+- Base de datos: Supabase PostgreSQL
+- Auth: GitHub OAuth + JWT
 
-## Instalación y Uso
+## Ejecución local
 
-1. Clona o descarga los archivos del proyecto
-2. Abre `index.html` en un navegador web moderno
-3. Para ejecutar localmente: `python3 -m http.server 8000` y visita `http://localhost:8000`
+### 1) Frontend
 
-## Despliegue en GitHub Pages
+```bash
+python3 -m http.server 8000
+```
 
-1. Sube los archivos a un repositorio de GitHub
-2. Ve a Settings > Pages
-3. Selecciona la rama principal y carpeta raíz
-4. La aplicación estará disponible en `https://tu-usuario.github.io/tu-repositorio`
+Abrir: `http://localhost:8000`
+
+### 2) Backend
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+Backend local: `http://localhost:3000`
+
+## Variables de entorno del backend
+
+Configura `backend/.env` con:
+
+```env
+NODE_ENV=development
+PORT=3000
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_ANON_KEY=tu-anon-key
+SUPABASE_SERVICE_KEY=tu-service-role-key
+GITHUB_CLIENT_ID=tu-client-id
+GITHUB_CLIENT_SECRET=tu-client-secret
+JWT_SECRET=tu-jwt-secret
+FRONTEND_URL=http://localhost:8000
+```
 
 ## Configuración de GitHub OAuth
 
-Para habilitar la autenticación con GitHub:
-
 1. Ve a GitHub Settings > Developer settings > OAuth Apps
-2. Crea una nueva OAuth App
-3. Establece la Authorization callback URL como tu URL de GitHub Pages
-4. Copia el Client ID
-5. En `script.js`, asegúrate de que `GITHUB_CLIENT_ID` tenga tu Client ID real
+2. Crea/edita tu OAuth App
+3. Configura el callback URL con tu frontend en producción (por ejemplo Vercel)
+4. Guarda `GITHUB_CLIENT_ID` y `GITHUB_CLIENT_SECRET` en variables del backend
 
-### Cómo funciona el inicio de sesión (Device Flow)
+## Deployment (Vercel)
 
-- Al hacer clic en "Iniciar Sesión", se inicia el Device Flow de GitHub.
-- Se muestra un código de usuario y un botón "Abrir GitHub". Abre GitHub, pega el código y autoriza.
-- La app hace polling hasta recibir el `access_token` de GitHub.
-- Una vez autenticado, se obtiene tu perfil (`/user`) y se busca un Gist existente con `calendar-tasks.json`.
-- Si no existe, al guardar tareas se crea/actualiza un Gist privado con tus datos para sincronización entre dispositivos.
+### Frontend
 
-Notas:
-- Este flujo funciona 100% en cliente (GitHub Pages), sin backend.
-- Si GitHub cambia el comportamiento del flujo implícito, hay un fallback que redirige a la página clásica de autorización.
+- Deploy del repositorio raíz en Vercel
 
-### Opción alternativa: Authorization Code Flow (con proxy)
+### Backend
 
-Si deseas usar el flujo estándar (Authorization Code) para obtener el token directamente:
+- Crear proyecto separado en Vercel con **Root Directory** `backend`
+- El backend ya usa configuración serverless en `backend/vercel.json`
+- Configurar todas las variables de entorno en Vercel (ver sección anterior)
 
-1. Despliega un endpoint (Cloudflare Worker / Vercel / Netlify Function) que reciba `{ code, redirect_uri }` y llame a `https://github.com/login/oauth/access_token` con `client_id` y `client_secret`.
-2. Responde JSON: `{ access_token: "..." }`.
-3. Configura `OAUTH_PROXY_URL` en `script.js` con la URL de ese endpoint.
-4. Entonces, cuando GitHub redirija con `?code=...`, la app hará el intercambio automáticamente.
+## Notas
 
-Ejemplo (pseudo Worker):
-```js
-export default async (req) => {
-	const { code, redirect_uri } = await req.json();
-	const r = await fetch('https://github.com/login/oauth/access_token', {
-		method: 'POST',
-		headers: { 'Accept': 'application/json' },
-		body: new URLSearchParams({
-			client_id: GITHUB_CLIENT_ID,
-			client_secret: GITHUB_CLIENT_SECRET,
-			code,
-			redirect_uri
-		})
-	});
-	return new Response(r.body, { headers: { 'Content-Type': 'application/json' } });
-}
-```
-
-Importante: Nunca expongas el `client_secret` en el frontend. Por eso se usa un proxy.
-
-### Solución de problemas de login
-
-- Veo un código `?code=` pero nunca se completa el login: Configura `OAUTH_PROXY_URL` o usa el Device Flow (botón inicial) y sigue los pasos.
-- El modal de Device Flow se queda en “Esperando autorización…”: Asegúrate de abrir la URL y pegar el código exacto; revisa consola por errores de red.
-- 404 en sourcemaps o CSP warnings: Son de GitHub; ignóralos si el flujo continúa.
-- Token invalido luego de obtenerlo: Revoca la App en GitHub Settings > Applications y vuelve a autorizar.
-
-### Almacenamiento de datos
-
-- Localmente: `localStorage` bajo la clave `calendarTasks`.
-- En la nube (opcional): Gist privado llamado `calendar-tasks.json` en tu cuenta de GitHub.
-- La app intenta detectar un Gist existente al iniciar sesión, para que tus datos viajen contigo.
-
-### Sobre errores 404 de *.scss.map
-
-Si ves en la consola 404 como `light_high_contrast.scss.map`, `index.scss.map` o `dark_dimmed.scss.map` al abrir la ventana de autorización de GitHub: son archivos de sourcemap del propio sitio de GitHub. No afectan a tu aplicación ni a la autenticación; son inofensivos y puedes ignorarlos.
-
-## Tecnologías Utilizadas
-
-- HTML5
-- CSS3
-- JavaScript (ES6+)
-- Local Storage API
-- Notification API
-- GitHub OAuth API
-
-## Navegador Soportado
-
-- Chrome/Edge: Funcionalidad completa
-- Firefox: Funcionalidad completa
-- Safari: Funcionalidad limitada (sin notificaciones)
+- `api.js` contiene la URL base del backend en producción.
+- Nunca expongas `GITHUB_CLIENT_SECRET` ni `SUPABASE_SERVICE_KEY` en frontend.
 
 ## Licencia
 
-Este proyecto es de código abierto y gratuito para uso personal y educativo.
+Proyecto de uso personal/educativo.

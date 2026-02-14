@@ -197,6 +197,7 @@ router.post('/github', async (req, res) => {
         avatar_url: user.avatar_url,
         github_id: user.github_id
       },
+      token: jwt,
       jwt: jwt,
       github_access_token: accessToken
     });

@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="calendar-navigation.css">
     <link rel="stylesheet" href="agenda-professional.css">
+    <link rel="stylesheet" href="header-footer-minimal.css">
     <link rel="stylesheet" href="dark-mode.css">
     <link rel="stylesheet" href="mobile-improvements.css">
     
@@ -49,11 +50,6 @@
             </nav>
             
             <div class="header-right">
-                <!-- Calendar Selector (for logged-in users with groups) -->
-                <div id="calendar-selector" class="calendar-selector-container" style="display: none;">
-                    <!-- Rendered by groups-ui.js -->
-                </div>
-                
                 <button id="theme-toggle-btn" class="theme-toggle-btn" title="Cambiar tema" aria-label="Alternar modo oscuro">
                     <span id="theme-icon" class="icon"></span>
                 </button>
@@ -171,7 +167,11 @@
                         Cancelar
                     </button>
                 </div>
-            </div>inimal">
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer-minimal">
         <div class="footer-container">
             <div class="footer-content">
                 <div class="footer-brand">
@@ -198,11 +198,7 @@
                 </div>
                 
                 <div class="footer-copyright">
-                    <span>&copy; 2025 Calendar10</span
-            
-            <div class="footer-bottom">
-                <div class="footer-copyright">
-                    <p>&copy; 2025 Calendar10. Todos los derechos reservados.</p>
+                    <span>&copy; 2025 Calendar10. Todos los derechos reservados.</span>
                 </div>
             </div>
         </div>
@@ -264,10 +260,7 @@
     
     <!-- Dark Mode -->
     <script type="module" src="./dark-mode.js"></script>
-    
-    <!-- Groups CSS -->
-    <link rel="stylesheet" href="groups.css">
-    
+
     <!-- Initialize icons -->
     <script type="module" src="./init-icons.js"></script>
     

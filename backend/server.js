@@ -7,7 +7,6 @@ const { errorHandler } = require('./middleware/errorHandler.js');
 const taskRoutes = require('./routes/tasks-supabase.js');
 const authRoutes = require('./routes/auth-supabase.js');
 const cronRoutes = require('./routes/cron.js');
-const groupRoutes = require('./routes/groups.js');
 
 // Load environment variables
 dotenv.config();
@@ -74,7 +73,6 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth/github',
       tasks: '/api/tasks',
-      groups: '/api/groups',
       cron: '/api/cron'
     }
   });
@@ -97,8 +95,6 @@ console.log('[SERVER] Mounting task routes...');
 app.use('/api/tasks', taskRoutes);
 console.log('[SERVER] Mounting cron routes...');
 app.use('/api/cron', cronRoutes);
-console.log('[SERVER] Mounting group routes...');
-app.use('/api/groups', groupRoutes);
 console.log('[SERVER] All routes mounted');
 
 // 404 handler

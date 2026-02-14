@@ -56,7 +56,7 @@ EMAIL_FROM=noreply@tudominio.com
 EMAIL_FROM=onboarding@resend.dev
 
 # URL del frontend (para enlaces en emails)
-FRONTEND_URL=https://calendario-frontend-ashy.vercel.app
+FRONTEND_URL=https://your-frontend.vercel.app
 
 # Secret para proteger el cron endpoint (OPCIONAL pero recomendado)
 CRON_SECRET=tu_secreto_aleatorio_aqui_123456

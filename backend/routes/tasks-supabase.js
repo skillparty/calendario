@@ -10,14 +10,21 @@ const router = express.Router();
 router.use(authenticate);
 
 // Validación
-const taskValidation = [
+const createTaskValidation = [
   body('title').trim().isLength({ min: 1, max: 500 }).withMessage('Title required'),
-  body('date').isISO8601().withMessage('Valid date required'),
+  body('date').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Valid date required if provided'),
   body('time').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid time format HH:MM'),
   body('description').optional().isLength({ max: 2000 }),
-  body('completed').optional().isBoolean(),
   body('completed').optional().isBoolean()
   // body('priority').optional().isIn(['baja', 'media', 'alta']) // Removed to allow normalizePriority in handler
+];
+
+const updateTaskValidation = [
+  body('title').optional().trim().isLength({ min: 1, max: 500 }).withMessage('Title required'),
+  body('date').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Valid date required if provided'),
+  body('time').optional({ nullable: true, checkFalsy: true }).matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid time format HH:MM'),
+  body('description').optional({ nullable: true }).isLength({ max: 2000 }),
+  body('completed').optional().isBoolean()
 ];
 
 function handleValidationErrors(req, res, next) {
@@ -93,14 +100,14 @@ function normalizePriority(p) {
 }
 
 // POST /api/tasks - Crear una nueva tarea
-router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req, res) => {
+router.post('/', createTaskValidation, handleValidationErrors, asyncHandler(async (req, res) => {
   const { title, description, date, time, completed, priority, is_reminder, tags } = req.body;
 
   const newTask = {
     user_id: req.user.id,
     title,
     description: description || null,
-    date,
+    date: date || null,
     time: time || null,
     completed: completed || false,
     priority: normalizePriority(priority),
@@ -128,7 +135,7 @@ router.post('/', taskValidation, handleValidationErrors, asyncHandler(async (req
 }));
 
 // PUT /api/tasks/:id - Actualizar una tarea
-router.put('/:id', taskValidation, handleValidationErrors, asyncHandler(async (req, res) => {
+router.put('/:id', updateTaskValidation, handleValidationErrors, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { title, description, date, time, completed, priority, is_reminder, tags } = req.body;
 

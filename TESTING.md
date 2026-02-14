@@ -2,9 +2,9 @@
 
 ## Estado Actual
 ✅ Backend corriendo en `http://localhost:3000`
-✅ Frontend corriendo en `http://localhost:8079`
+✅ Frontend corriendo en `http://localhost:8000`
 ✅ Supabase configurado con tablas creadas
-⏳ Pendiente: Crear usuario de prueba
+✅ Listo para pruebas de autenticación y CRUD
 
 ---
 
@@ -67,7 +67,7 @@ curl -X DELETE http://localhost:3000/api/tasks/{task-id}
 
 ## 3. Probar desde el Frontend
 
-1. Abre `http://localhost:8079`
+1. Abre `http://localhost:8000`
 2. Intenta crear una tarea en el calendario
 3. Verifica que se guarde en Supabase (ve a Table Editor → tasks)
 4. Marca como completada
@@ -99,7 +99,7 @@ cd backend && node server.js
 → Asegúrate de haber creado el usuario de prueba en Supabase
 
 ### Error de CORS
-→ Verifica que `FRONTEND_URL=http://localhost:8079` en `backend/.env`
+→ Verifica que `FRONTEND_URL=http://localhost:8000` en `backend/.env`
 
 ### Las tareas no se guardan
 → Revisa los logs del backend y verifica las políticas RLS en Supabase
@@ -109,8 +109,8 @@ cd backend && node server.js
 ## 📊 Siguiente Paso: Deployment
 
 Una vez que todo funcione localmente:
-1. Sube el backend a Vercel/Railway/Render
+1. Sube el backend a Vercel
 2. Actualiza `api.js` con la URL del backend en producción
-3. Despliega el frontend en Vercel/GitHub Pages
+3. Despliega el frontend en Vercel
 
 Ver [`SUPABASE_DEPLOYMENT.md`](SUPABASE_DEPLOYMENT.md) para instrucciones completas.
