@@ -738,6 +738,366 @@
     box-shadow: var(--shadow-xl);
 }
 
+/* ========== CONTENT GRID (Sidebar Layout) ========== */
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+}
+
+@media (min-width: 1024px) {
+    .content-grid {
+        grid-template-columns: 1fr 320px;
+    }
+}
+
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.sidebar-content {
+    position: sticky;
+    top: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.sidebar-block {
+    background: var(--bg-primary);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-4) 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.sidebar-title .icon {
+    color: var(--primary);
+}
+
+.quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: inherit;
+}
+
+.btn-action:hover {
+    background: var(--bg-hover);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-action.primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border-color: var(--primary-dark);
+}
+
+.btn-action.primary:hover {
+    box-shadow: 0 4px 14px rgba(237, 174, 73, 0.4);
+}
+
+.btn-action .icon {
+    color: inherit;
+}
+
+/* Stats Overview */
+.stats-overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.stat-item .stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-progress {
+    height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: var(--space-1);
+}
+
+.stat-progress .progress-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+}
+
+.stat-item.total .progress-bar {
+    background: var(--info);
+}
+
+.stat-item.completed .progress-bar {
+    background: var(--success);
+}
+
+.stat-item.pending .progress-bar {
+    background: var(--warning);
+}
+
+/* Upcoming Tasks */
+.upcoming-task {
+    padding: var(--space-3);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-bottom: var(--space-2);
+}
+
+.upcoming-task:last-child {
+    margin-bottom: 0;
+}
+
+.upcoming-task:hover {
+    background: var(--bg-hover);
+    border-color: var(--primary);
+}
+
+.upcoming-task-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upcoming-task-date {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.no-upcoming {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: var(--space-4) 0;
+}
+
+/* ========== TASK ACTION BUTTONS ========== */
+.task-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-primary);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.task-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.task-action-btn.edit:hover {
+    background: var(--info);
+    border-color: var(--info);
+    color: white;
+}
+
+.task-action-btn.delete:hover {
+    background: var(--error);
+    border-color: var(--error);
+    color: white;
+}
+
+.task-action-btn .action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.task-action-btn .action-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ========== SEARCH ICON SVG FIX ========== */
+.search-icon.icon {
+    position: absolute;
+    left: var(--space-3);
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+
+/* ========== EMPTY SEARCH ========== */
+.empty-search {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-8);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.empty-search-icon {
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+}
+
+.empty-search-icon svg {
+    width: 48px;
+    height: 48px;
+}
+
+.empty-search h3 {
+    margin: 0 0 var(--space-2) 0;
+    color: var(--text-secondary);
+}
+
+.empty-search p {
+    margin: 0;
+    color: var(--text-tertiary);
+}
+
+/* ========== HIDDEN BY SEARCH ========== */
+.hidden-by-search {
+    display: none !important;
+}
+
+/* ========== DELETE CONFIRM MODAL ========== */
+.delete-confirm-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.delete-confirm-content {
+    background: var(--bg-primary);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-xl);
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+}
+
+.delete-confirm-content h3 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-4) 0;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+}
+
+.delete-confirm-content .confirm-icon {
+    color: var(--warning);
+}
+
+.task-title-preview {
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: var(--space-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    margin: var(--space-3) 0;
+}
+
+.delete-confirm-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    margin-top: var(--space-6);
+}
+
+.btn-cancel {
+    padding: var(--space-3) var(--space-6);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: inherit;
+}
+
+.btn-cancel:hover {
+    background: var(--bg-hover);
+}
+
+.btn-delete-confirm {
+    padding: var(--space-3) var(--space-6);
+    background: var(--error);
+    border: none;
+    border-radius: var(--radius);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: inherit;
+}
+
+.btn-delete-confirm:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .agenda-container {

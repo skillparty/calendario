@@ -215,34 +215,57 @@ export function showTaskInputModal(date = null, existingTask = null) {
   modal.className = 'modal';
   modal.setAttribute('data-modal-type', 'task-input');
   modal.setAttribute('aria-hidden', 'true');
+  const existingPriority = existingTask && existingTask.priority != null ? existingTask.priority : 3;
   modal.innerHTML = `
         <div class="modal-content task-input-modal-content" role="dialog" aria-modal="true" aria-labelledby="task-input-modal-title">
             <button type="button" class="close-btn" data-action="close-task-modal" aria-label="Cerrar modal">&times;</button>
             <h3 id="task-input-modal-title">${existingTask ? 'Editar Tarea' : (date ? 'Nueva Tarea' : 'Nueva Tarea Rápida')}</h3>
             <div class="task-input-form-group">
                 <label for="task-title-input">Título</label>
-                <input type="text" id="task-title-input" placeholder="Ingrese el título de la tarea" 
-                       value="${existingTask ? existingTask.title : ''}" 
-                       class="task-input-control">
-            </div>
-            ${!date ? `
-            <div class="task-input-form-group">
-                <label for="task-date-input">Fecha (opcional)</label>
-                <input type="date" id="task-date-input" 
-                       value="${existingTask && existingTask.date ? existingTask.date : ''}"
-                       class="task-input-control">
-            </div>
-            ` : ''}
-            <div class="task-input-form-group">
-                <label for="task-time-input">Hora (opcional)</label>
-                <input type="time" id="task-time-input" 
-                       value="${existingTask && existingTask.time ? existingTask.time : ''}"
+                <input type="text" id="task-title-input" placeholder="Nombre de la tarea" 
+                       value="${existingTask ? escapeHtml(existingTask.title) : ''}" 
                        class="task-input-control">
             </div>
             <div class="task-input-form-group">
+                <label for="task-description-input">Descripción (opcional)</label>
+                <textarea id="task-description-input" placeholder="Agrega detalles..." 
+                       rows="2" class="task-input-control">${existingTask && existingTask.description ? escapeHtml(existingTask.description) : ''}</textarea>
+            </div>
+            <div class="task-input-row">
+                ${!date ? `
+                <div class="task-input-form-group">
+                    <label for="task-date-input">Fecha</label>
+                    <input type="date" id="task-date-input" 
+                           value="${existingTask && existingTask.date ? existingTask.date : ''}"
+                           class="task-input-control">
+                </div>
+                ` : ''}
+                <div class="task-input-form-group">
+                    <label for="task-time-input">Hora</label>
+                    <input type="time" id="task-time-input" 
+                           value="${existingTask && existingTask.time ? existingTask.time : ''}"
+                           class="task-input-control">
+                </div>
+            </div>
+            <div class="task-input-form-group">
+                <label>Prioridad</label>
+                <div class="priority-selector" role="radiogroup" aria-label="Prioridad de la tarea">
+                    <button type="button" class="priority-option${existingPriority === 1 ? ' selected' : ''}" data-priority="1" aria-pressed="${existingPriority === 1}">
+                        <span class="priority-dot high"></span> Alta
+                    </button>
+                    <button type="button" class="priority-option${existingPriority === 2 ? ' selected' : ''}" data-priority="2" aria-pressed="${existingPriority === 2}">
+                        <span class="priority-dot medium"></span> Media
+                    </button>
+                    <button type="button" class="priority-option${existingPriority === 3 ? ' selected' : ''}" data-priority="3" aria-pressed="${existingPriority === 3}">
+                        <span class="priority-dot low"></span> Baja
+                    </button>
+                </div>
+            </div>
+            <div class="task-input-form-group task-input-checkbox">
                 <label>
                     <input type="checkbox" id="task-reminder-input" ${existingTask ? (existingTask.isReminder ? 'checked' : '') : 'checked'}>
-                    Es un recordatorio
+                    <span>${icons.bell}</span>
+                    <span>Recordatorio</span>
                 </label>
             </div>
             <div class="task-input-actions">
@@ -259,6 +282,18 @@ export function showTaskInputModal(date = null, existingTask = null) {
 
   modal.querySelectorAll('[data-action="close-task-modal"]').forEach((button) => {
     button.addEventListener('click', () => closeModal(modal, { removeFromDom: true }));
+  });
+
+  // Priority selector interaction
+  modal.querySelectorAll('.priority-option').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.priority-option').forEach(b => {
+        b.classList.remove('selected');
+        b.setAttribute('aria-pressed', 'false');
+      });
+      btn.classList.add('selected');
+      btn.setAttribute('aria-pressed', 'true');
+    });
   });
 
   const saveButton = modal.querySelector('[data-action="save-task-modal"]');
@@ -376,10 +411,14 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   const timeInput = document.getElementById('task-time-input');
   const reminderInput = document.getElementById('task-reminder-input');
 
+  const descriptionInput = document.getElementById('task-description-input');
+  const prioritySelected = document.querySelector('.priority-option.selected');
+
   const titleEl = /** @type {HTMLInputElement | null} */ (titleInput);
   const dateEl = /** @type {HTMLInputElement | null} */ (dateInput);
   const timeEl = /** @type {HTMLInputElement | null} */ (timeInput);
   const reminderEl = /** @type {HTMLInputElement | null} */ (reminderInput);
+  const descEl = /** @type {HTMLTextAreaElement | null} */ (descriptionInput);
   if (!titleEl || !titleEl.value || !titleEl.value.trim()) {
     showToast('Por favor ingrese un título para la tarea.', {
       type: 'warning',
@@ -399,6 +438,8 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
 
   const time = timeEl ? timeEl.value || null : null;
   const isReminder = !!(reminderEl && reminderEl.checked);
+  const description = descEl ? descEl.value.trim() || '' : '';
+  const priority = prioritySelected instanceof HTMLElement ? parseInt(prioritySelected.dataset.priority || '3', 10) : 3;
 
   if (!existingTaskId && taskDate) {
     const selectedDate = new Date(taskDate + 'T00:00:00');
@@ -421,6 +462,7 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
         if (idx !== -1) {
           const task = draft[date][idx];
           task.title = title; task.time = time; task.isReminder = isReminder;
+                    task.description = description; task.priority = priority;
           if (taskDate !== date) {
             draft[date].splice(idx, 1);
             if (draft[date].length === 0 && date !== 'undated') delete draft[date];
@@ -445,9 +487,11 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
       if (serverId) {
         updateTaskOnBackend(serverId, {
           title,
+          description: description || null,
           date: (taskDate && taskDate !== 'undated' && taskDate !== '') ? taskDate : null,
           time: (time && time.trim && time.trim() !== '') ? time.trim() : null,
-          is_reminder: isReminder
+          is_reminder: isReminder,
+          priority
         }).then(() => showSyncStatus('Actualizado correctamente'))
           .catch(() => showSyncStatus('Actualizado localmente (sin conexión)', true));
       } else {
@@ -463,10 +507,12 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   const task = {
     id: localTaskId,
     title,
+    description: description || undefined,
     date: taskDate && taskDate.trim() !== '' ? taskDate : null,
     time: taskDate && time && time.trim() !== '' ? time : null,
     completed: false,
-    isReminder
+    isReminder,
+    priority
   };
 
   updateTasks(draft => {
