@@ -83,3 +83,61 @@ export function showAuthToast(message, isError = false) {
     position: 'top-center'
   });
 }
+
+/**
+ * Show a toast with an Undo action button.
+ * @param {string} message
+ * @param {{ onUndo: () => void; onExpire: () => void; duration?: number; position?: ToastPosition }} opts
+ * @returns {HTMLElement}
+ */
+export function showUndoToast(message, opts) {
+  const { onUndo, onExpire, duration = 5000, position = 'bottom-left' } = opts;
+
+  const container = getToastContainer(position);
+  const toast = document.createElement('div');
+  toast.className = 'toast toast--warning toast--undo';
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+
+  const msgSpan = document.createElement('span');
+  msgSpan.className = 'toast-message';
+  msgSpan.textContent = message;
+
+  const undoBtn = document.createElement('button');
+  undoBtn.className = 'toast-undo-btn';
+  undoBtn.textContent = 'Deshacer';
+  undoBtn.type = 'button';
+
+  toast.appendChild(msgSpan);
+  toast.appendChild(undoBtn);
+  container.appendChild(toast);
+
+  let settled = false;
+
+  requestAnimationFrame(() => toast.classList.add('toast--visible'));
+
+  const dismiss = () => {
+    toast.classList.remove('toast--visible');
+    setTimeout(() => toast.remove(), 220);
+  };
+
+  const hideTimer = setTimeout(() => {
+    if (!settled) {
+      settled = true;
+      dismiss();
+      onExpire();
+    }
+  }, Math.max(2000, duration));
+
+  undoBtn.addEventListener('click', () => {
+    if (!settled) {
+      settled = true;
+      clearTimeout(hideTimer);
+      dismiss();
+      onUndo();
+    }
+  });
+
+  toast.dataset.hideTimer = String(hideTimer);
+  return toast;
+}

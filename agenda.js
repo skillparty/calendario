@@ -10,6 +10,7 @@ import { showTaskInputModal } from './calendar.js';
 import { openModal, closeModal } from './utils/modal.js';
 import { getIcon, icons } from './icons.js';
 import { escapeHtml } from './utils/helpers.js';
+import { showUndoToast, showToast } from './utils/UIFeedback.js';
 
 let agendaSearchTerm = '';
 
@@ -809,65 +810,49 @@ function updateStatBadges() {
   if (completedBadge) { const n = completedBadge.querySelector('.stat-number'); if (n) n.textContent = String(completed); }
 }
 
-// Improved delete confirmation
+// Delete with undo toast (replaces confirmation modal)
 /** @param {string} id @param {string} title @param {string} filterMonth @param {string} filterStatus @param {string} [filterPriority='all'] */
 function confirmDeleteTask(id, title, filterMonth, filterStatus, filterPriority = 'all') {
-  const existing = document.querySelector('.delete-confirm-modal');
-  if (existing instanceof HTMLElement) {
-    closeModal(existing, { removeFromDom: true });
-  }
+  const taskCard = /** @type {HTMLElement | null} */ (document.querySelector(`.task-card[data-task-id="${id}"]`));
 
-  const modal = document.createElement('div');
-  modal.className = 'delete-confirm-modal';
-  modal.setAttribute('aria-hidden', 'true');
-  modal.innerHTML = `
-    <div class="delete-confirm-content" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
-      <h3>${getIcon('alertTriangle', 'confirm-icon')} Confirmar eliminaci\u00f3n</h3>
-      <p>¿Estás seguro de que deseas eliminar la tarea?</p>
-      <p class="task-title-preview">"${escapeHtml(title)}"</p>
-      <div class="delete-confirm-actions">
-        <button type="button" data-action="cancel-delete" class="btn-cancel">Cancelar</button>
-        <button type="button" data-action="confirm-delete" class="btn-delete-confirm">Eliminar</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const cancelBtn = modal.querySelector('[data-action="cancel-delete"]');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', () => closeModal(modal, { removeFromDom: true }));
-  }
-
-  const confirmBtn = modal.querySelector('[data-action="confirm-delete"]');
-  if (confirmBtn) {
-    confirmBtn.addEventListener('click', () => {
-      closeModal(modal, { removeFromDom: true });
-      deleteTaskConfirmed(id, filterMonth, filterStatus, filterPriority);
-    });
-  }
-
-  openModal(modal, {
-    dialogSelector: '.delete-confirm-content',
-    initialFocusSelector: '[data-action="confirm-delete"]',
-    removeOnClose: true
-  });
-}
-
-/** @param {string} id @param {string} filterMonth @param {string} filterStatus @param {string} [filterPriority='all'] */
-function deleteTaskConfirmed(id, filterMonth, filterStatus, filterPriority = 'all') {
-  const taskCard = /** @type {HTMLElement | null} */ (document.querySelector(`[data-task-id="${id}"]`));
+  // Slide card out immediately
   if (taskCard) {
     taskCard.style.transition = 'all 0.3s ease';
     taskCard.style.transform = 'translateX(-100%)';
     taskCard.style.opacity = '0';
+    taskCard.style.maxHeight = taskCard.scrollHeight + 'px';
     setTimeout(() => {
+      if (taskCard.parentNode) {
+        taskCard.style.maxHeight = '0';
+        taskCard.style.padding = '0';
+        taskCard.style.margin = '0';
+        taskCard.style.overflow = 'hidden';
+      }
+    }, 300);
+  }
+
+  // Show undo toast — deletion is deferred until toast expires
+  showUndoToast(`"${title}" eliminada`, {
+    duration: 5000,
+    onUndo: () => {
+      // Restore card visually
+      if (taskCard) {
+        taskCard.style.transition = 'all 0.3s ease';
+        taskCard.style.transform = '';
+        taskCard.style.opacity = '';
+        taskCard.style.maxHeight = '';
+        taskCard.style.padding = '';
+        taskCard.style.margin = '';
+        taskCard.style.overflow = '';
+      }
+      showToast('Tarea restaurada', { type: 'success', duration: 2000 });
+    },
+    onExpire: () => {
+      // Permanently delete
       deleteTask(id);
       renderAgenda(filterMonth, filterStatus, filterPriority);
-    }, 300);
-  } else {
-    deleteTask(id);
-    renderAgenda(filterMonth, filterStatus, filterPriority);
-  }
+    }
+  });
 }
 
 /** @param {string} id */
@@ -893,7 +878,6 @@ if (typeof window !== 'undefined') {
   window.toggleTask = toggleTask;
   window.toggleTaskWithAnimation = toggleTaskWithAnimation;
   window.confirmDeleteTask = confirmDeleteTask;
-  window.deleteTaskConfirmed = deleteTaskConfirmed;
   window.deleteTask = deleteTask;
   window.showTaskInputModal = showTaskInputModal;
 }
