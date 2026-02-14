@@ -514,6 +514,26 @@ main {
     box-shadow: var(--shadow-medium);
 }
 
+/* Drag & Drop */
+.task-preview-item[draggable="true"] {
+    cursor: grab;
+}
+
+.task-preview-item.dragging {
+    opacity: 0.4;
+}
+
+.day.drag-over {
+    background: rgba(237, 174, 73, 0.12);
+    outline: 2px dashed var(--hunyadi-yellow, #edae49);
+    outline-offset: -2px;
+    border-radius: var(--radius-md);
+}
+
+.day.past-date {
+    cursor: not-allowed;
+}
+
 /* Calendar Responsive */
 @media (max-width: 1024px) {
     .day {

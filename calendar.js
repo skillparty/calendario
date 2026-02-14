@@ -124,7 +124,7 @@ export function renderCalendar() {
         .slice(0, 2);
       const previewItems = sortedTasks.map(task => {
         const title = task.title.length > 15 ? task.title.substring(0, 15) + '...' : task.title;
-        return `<div class="task-preview-item"><span class="task-time">${task.time || ''}</span><span class="task-title">${escapeHtml(title)}</span></div>`;
+        return `<div class="task-preview-item" draggable="true" data-task-id="${task.id}" data-source-date="${dateKey}"><span class="task-time">${task.time || ''}</span><span class="task-title">${escapeHtml(title)}</span></div>`;
       }).join('');
       taskPreview = `<div class="task-preview-list">${previewItems}</div>`;
     }
@@ -179,6 +179,81 @@ export function initCalendar() {
       if (day && day.dataset.date && calendarView && !calendarView.classList.contains('hidden')) {
         e.stopPropagation();
         showDayTasks(day.dataset.date);
+      }
+    }
+  });
+
+  // Drag & drop: move tasks between calendar dates
+  document.addEventListener('dragstart', (e) => {
+    const item = /** @type {HTMLElement} */ (e.target);
+    if (!item.classList?.contains('task-preview-item')) return;
+    const taskId = item.dataset.taskId;
+    const sourceDate = item.dataset.sourceDate;
+    if (!taskId || !sourceDate) return;
+    e.dataTransfer?.setData('text/plain', JSON.stringify({ taskId, sourceDate }));
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+    item.classList.add('dragging');
+  });
+
+  document.addEventListener('dragend', (e) => {
+    const item = /** @type {HTMLElement} */ (e.target);
+    if (item.classList?.contains('task-preview-item')) item.classList.remove('dragging');
+    document.querySelectorAll('.day.drag-over').forEach(el => el.classList.remove('drag-over'));
+  });
+
+  document.addEventListener('dragover', (e) => {
+    const dayEl = /** @type {HTMLElement} */ (e.target)?.closest?.('.day[data-date]');
+    if (!dayEl) return;
+    if (dayEl.classList.contains('past-date')) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    dayEl.classList.add('drag-over');
+  });
+
+  document.addEventListener('dragleave', (e) => {
+    const dayEl = /** @type {HTMLElement} */ (e.target)?.closest?.('.day[data-date]');
+    if (dayEl) dayEl.classList.remove('drag-over');
+  });
+
+  document.addEventListener('drop', (e) => {
+    const dayEl = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target)?.closest?.('.day[data-date]'));
+    if (!dayEl) return;
+    e.preventDefault();
+    dayEl.classList.remove('drag-over');
+    const targetDate = dayEl.dataset.date;
+    if (!targetDate || dayEl.classList.contains('past-date')) return;
+
+    let payload;
+    try { payload = JSON.parse(e.dataTransfer?.getData('text/plain') || ''); } catch { return; }
+    const { taskId, sourceDate } = payload || {};
+    if (!taskId || !sourceDate || sourceDate === targetDate) return;
+
+    // Move task in state
+    updateTasks(draft => {
+      const list = draft[sourceDate];
+      if (!list) return;
+      const idx = list.findIndex(t => t.id === taskId);
+      if (idx === -1) return;
+      const [task] = list.splice(idx, 1);
+      task.date = targetDate;
+      if (list.length === 0) delete draft[sourceDate];
+      if (!draft[targetDate]) draft[targetDate] = [];
+      draft[targetDate].push(task);
+    });
+
+    notifyTasksUpdated();
+    renderCalendar();
+    showToast('Tarea movida', { type: 'success', duration: 2000 });
+
+    // Sync to backend if logged in
+    if (isLoggedInWithBackend()) {
+      const task = findTaskById(taskId);
+      const serverId = getServerTaskId(task);
+      if (serverId) {
+        updateTaskOnBackend(serverId, { date: targetDate })
+          .catch(() => {/* soft-fail */});
+      } else {
+        pushLocalTasksToBackend();
       }
     }
   });
