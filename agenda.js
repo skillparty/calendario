@@ -749,24 +749,64 @@ function toggleTask(id) {
   }
 }
 
-// Toggle task without animation, preserving scroll position
+// Toggle task with targeted DOM update (no full re-render)
 /** @param {string} id @param {string} filterMonth @param {string} filterStatus @param {string} [filterPriority='all'] */
 function toggleTaskWithAnimation(id, filterMonth, filterStatus, filterPriority = 'all') {
-  // Save current scroll position
-  const taskListContainer = document.querySelector('.task-list-container');
-  const scrollPosition = taskListContainer ? taskListContainer.scrollTop : 0;
-  
-  // Toggle task immediately
   toggleTask(id);
-  renderAgenda(filterMonth, filterStatus, filterPriority);
-  
-  // Restore scroll position after render
-  requestAnimationFrame(() => {
-    const newTaskListContainer = document.querySelector('.task-list-container');
-    if (newTaskListContainer) {
-      newTaskListContainer.scrollTop = scrollPosition;
+
+  // Find the completed state from the updated store
+  /** @type {boolean | undefined} */
+  let isNowCompleted;
+  Object.values(getTasks()).some(list => {
+    const t = (list || []).find(x => x.id === id);
+    if (t) { isNowCompleted = t.completed; return true; }
+    return false;
+  });
+
+  // Targeted DOM update
+  const card = /** @type {HTMLElement | null} */ (document.querySelector(`.task-card[data-task-id="${id}"]`));
+  if (card && typeof isNowCompleted === 'boolean') {
+    card.classList.toggle('completed', isNowCompleted);
+
+    const checkBtn = /** @type {HTMLElement | null} */ (card.querySelector('.task-check-btn'));
+    if (checkBtn) {
+      checkBtn.classList.toggle('checked', isNowCompleted);
+      checkBtn.title = isNowCompleted ? 'Marcar como pendiente' : 'Marcar como completada';
+      checkBtn.setAttribute('aria-label', checkBtn.title);
+      checkBtn.setAttribute('aria-pressed', String(isNowCompleted));
+      const checkIcon = checkBtn.querySelector('.check-icon');
+      if (checkIcon) checkIcon.innerHTML = isNowCompleted ? icons.check : '';
+    }
+
+    const titleEl = card.querySelector('.task-card-title');
+    if (titleEl) titleEl.classList.toggle('completed', isNowCompleted);
+
+    // Update stat badges in-place
+    updateStatBadges();
+  } else {
+    // Fallback: full re-render if card not found
+    renderAgenda(filterMonth, filterStatus, filterPriority);
+  }
+}
+
+/** Update stat badge numbers from current task data without re-rendering */
+function updateStatBadges() {
+  const allCards = document.querySelectorAll('.task-card');
+  let total = 0, completed = 0;
+  allCards.forEach(c => {
+    if (!c.classList.contains('hidden-by-search')) {
+      total++;
+      if (c.classList.contains('completed')) completed++;
     }
   });
+  const pending = total - completed;
+
+  const totalBadge = document.getElementById('total-tasks-badge');
+  const pendingBadge = document.getElementById('pending-tasks-badge');
+  const completedBadge = document.getElementById('completed-tasks-badge');
+  if (totalBadge) { const n = totalBadge.querySelector('.stat-number'); if (n) n.textContent = String(total); }
+  if (pendingBadge) { const n = pendingBadge.querySelector('.stat-number'); if (n) n.textContent = String(pending); }
+  if (completedBadge) { const n = completedBadge.querySelector('.stat-number'); if (n) n.textContent = String(completed); }
 }
 
 // Improved delete confirmation

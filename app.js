@@ -408,42 +408,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize the application
   initCalendar();
 
-  // Load enhanced modules
-  Promise.all([
-    import('./utils/EventBus.js'),
-    import('./utils/StateManager.js'),
-    import('./utils/PerformanceMonitor.js'),
-    import('./state-enhanced.js')
-  ]).then(([eventBusModule, stateModule, perfModule, enhancedStateModule]) => {
-    // Enhanced modules loaded
-    
-    // Setup event listeners
-    eventBusModule.eventBus.on('task:created', (/** @type {any} */ event) => {
-      // Task created event received
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Tarea creada', {
-          body: event.payload.title,
-          icon: './public/app.png'
-        });
-      }
-    });
-    
-    // Setup performance monitoring
-    perfModule.performanceMonitor.measure('app-enhanced-init', () => {
-      // Enhanced features initialized
-    });
-    
-    // Setup keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-        e.preventDefault();
-        const today = new Date().toISOString().split('T')[0];
-        showTaskInputModal(today);
-      }
-    });
-    
-  }).catch(err => {
-    console.error('Failed to load enhanced modules:', err);
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+      e.preventDefault();
+      const today = new Date().toISOString().split('T')[0];
+      showTaskInputModal(today);
+    }
   });
 
   handleOAuthCallback();
