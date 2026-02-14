@@ -249,6 +249,14 @@ export function showTaskInputModal(date = null, existingTask = null) {
                     </button>
                 </div>
             </div>
+            <div class="task-input-form-group">
+                <label for="task-tags-input">Etiquetas</label>
+                <div class="tags-input-wrapper">
+                    <div id="tags-chips" class="tags-chips">${(existingTask && existingTask.tags ? existingTask.tags : []).map(t => `<span class="tag-chip" data-tag="${escapeHtml(t)}">${escapeHtml(t)} <button type="button" class="tag-remove" aria-label="Quitar">&times;</button></span>`).join('')}</div>
+                    <input type="text" id="task-tags-input" placeholder="Escribe y presiona Enter" class="task-input-control tags-text-input">
+                </div>
+                <small class="tags-hint">Separa etiquetas con Enter o coma</small>
+            </div>
             <div class="task-input-form-group task-input-checkbox">
                 <label>
                     <input type="checkbox" id="task-reminder-input" ${existingTask ? (existingTask.isReminder ? 'checked' : '') : 'checked'}>
@@ -283,6 +291,39 @@ export function showTaskInputModal(date = null, existingTask = null) {
       btn.setAttribute('aria-pressed', 'true');
     });
   });
+
+  // Tags input interaction
+  const tagsInput = /** @type {HTMLInputElement | null} */ (modal.querySelector('#task-tags-input'));
+  const tagsChips = modal.querySelector('#tags-chips');
+  if (tagsInput && tagsChips) {
+    const addTag = (/** @type {string} */ text) => {
+      const tag = text.trim().toLowerCase();
+      if (!tag || tag.length > 30) return;
+      // Avoid duplicates
+      if (tagsChips.querySelector(`[data-tag="${tag}"]`)) return;
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.dataset.tag = tag;
+      chip.innerHTML = `${escapeHtml(tag)} <button type="button" class="tag-remove" aria-label="Quitar">&times;</button>`;
+      chip.querySelector('.tag-remove')?.addEventListener('click', () => chip.remove());
+      tagsChips.appendChild(chip);
+      tagsInput.value = '';
+    };
+    tagsInput.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        addTag(tagsInput.value);
+      }
+      if (e.key === 'Backspace' && tagsInput.value === '') {
+        const last = tagsChips.querySelector('.tag-chip:last-child');
+        if (last) last.remove();
+      }
+    });
+    // Handle remove clicks on pre-existing chips (for edit mode)
+    tagsChips.querySelectorAll('.tag-remove').forEach(btn => {
+      btn.addEventListener('click', () => btn.closest('.tag-chip')?.remove());
+    });
+  }
 
   const saveButton = modal.querySelector('[data-action="save-task-modal"]');
   if (saveButton) {
@@ -429,6 +470,14 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   const description = descEl ? descEl.value.trim() || '' : '';
   const priority = prioritySelected instanceof HTMLElement ? parseInt(prioritySelected.dataset.priority || '3', 10) : 3;
 
+  // Collect tags from chips
+  /** @type {string[]} */
+  const tags = [];
+  document.querySelectorAll('#tags-chips .tag-chip').forEach(chip => {
+    const tag = chip instanceof HTMLElement ? chip.dataset.tag : null;
+    if (tag) tags.push(tag);
+  });
+
   if (!existingTaskId && taskDate) {
     const selectedDate = new Date(taskDate + 'T00:00:00');
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -450,7 +499,7 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
         if (idx !== -1) {
           const task = draft[date][idx];
           task.title = title; task.time = time; task.isReminder = isReminder;
-                    task.description = description; task.priority = priority;
+                    task.description = description; task.priority = priority; task.tags = tags.length > 0 ? tags : undefined;
           if (taskDate !== date) {
             draft[date].splice(idx, 1);
             if (draft[date].length === 0 && date !== 'undated') delete draft[date];
@@ -500,7 +549,8 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
     time: taskDate && time && time.trim() !== '' ? time : null,
     completed: false,
     isReminder,
-    priority
+    priority,
+    tags: tags.length > 0 ? tags : undefined
   };
 
   updateTasks(draft => {

@@ -477,6 +477,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
                 </div>
               </div>
               ${description ? `<p class="task-card-description">${escapeHtml(description)}</p>` : ''}
+              ${task.tags && task.tags.length > 0 ? `<div class="task-card-tags">${task.tags.map(t => `<span class="task-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
               <div class="task-card-meta">
                 ${timeDisplay ? `
                   <span class="meta-item time">
