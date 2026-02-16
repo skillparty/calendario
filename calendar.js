@@ -4,7 +4,7 @@
  * @typedef {import('./types').Task} Task
  */
 
-import { state, setCurrentDate, getTasks, updateTasks, formatDateLocal, notifyTasksUpdated } from './state.js';
+import { state, setCurrentDate, getTasks, setTasks, updateTasks, formatDateLocal, notifyTasksUpdated } from './state.js';
 import { isLoggedInWithBackend, createTaskOnBackend, updateTaskOnBackend, pushLocalTasksToBackend } from './api.js';
 import { showSyncToast, showToast } from './utils/UIFeedback.js';
 import { openModal, closeModal } from './utils/modal.js';
@@ -33,7 +33,7 @@ function createLocalTaskId() {
  * @param {{ id?: string|number; serverId?: number } | null | undefined} task
  * @returns {number | null}
  */
-function getServerTaskId(task) {
+export function getServerTaskId(task) {
   if (!task) return null;
   if (typeof task.serverId === 'number') return task.serverId;
   if (typeof task.id === 'number') return task.id;
@@ -129,12 +129,13 @@ export function renderCalendar() {
       taskPreview = `<div class="task-preview-list">${previewItems}</div>`;
     }
 
-    html += `<div class="${dayClass}${todayClass}${pastClass}" data-date="${dateKey}">
+    const dateLabel = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    html += `<div class="${dayClass}${todayClass}${pastClass}" data-date="${dateKey}" tabindex="0" role="button" aria-label="${dateLabel} - ${pendingTasks} tareas pendientes">
             <div class="day-content">
                 <span class="day-number">${date.getDate()}</span>
                 ${totalTasks > 0 ? `<small class="task-count">${pendingTasks} pendiente(s)</small>` : ''}
                 ${taskPreview}
-                ${!isPastDate ? `<button class="day-add-btn" data-date="${dateKey}" title="Agregar recordatorio">+</button>` : ''}
+                ${!isPastDate ? `<button class="day-add-btn" data-date="${dateKey}" title="Agregar recordatorio" tabindex="-1">+</button>` : ''}
             </div>
         </div>`;
   }
@@ -180,6 +181,39 @@ export function initCalendar() {
         e.stopPropagation();
         showDayTasks(day.dataset.date);
       }
+    }
+  });
+
+  // Calendar keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    const calendarView = document.getElementById('calendar-view');
+    if (!calendarView || calendarView.classList.contains('hidden')) return;
+    
+    // Only handle if focus is on a day cell
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement) || !active.classList.contains('day')) return;
+
+    const days = Array.from(document.querySelectorAll('.calendar-grid .day'));
+    const index = days.indexOf(active);
+    if (index === -1) return;
+
+    let nextIndex = index;
+    if (e.key === 'ArrowRight') nextIndex = index + 1;
+    else if (e.key === 'ArrowLeft') nextIndex = index - 1;
+    else if (e.key === 'ArrowUp') nextIndex = index - 7;
+    else if (e.key === 'ArrowDown') nextIndex = index + 7;
+    else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const date = active.dataset.date;
+      if (date) showDayTasks(date);
+      return;
+    } else {
+      return;
+    }
+
+    if (nextIndex >= 0 && nextIndex < days.length) {
+      e.preventDefault();
+      /** @type {HTMLElement} */ (days[nextIndex]).focus();
     }
   });
 
@@ -332,6 +366,18 @@ export function showTaskInputModal(date = null, existingTask = null) {
                 </div>
                 <small class="tags-hint">Separa etiquetas con Enter o coma</small>
             </div>
+            ${!existingTask ? `
+            <div class="task-input-form-group">
+                <label for="task-recurrence-input">Repetir</label>
+                <select id="task-recurrence-input" class="task-input-control">
+                    <option value="">No repetir</option>
+                    <option value="daily">Diariamente</option>
+                    <option value="weekly">Semanalmente</option>
+                    <option value="monthly">Mensualmente</option>
+                    <option value="yearly">Anualmente</option>
+                </select>
+            </div>
+            ` : ''}
             <div class="task-input-form-group task-input-checkbox">
                 <label>
                     <input type="checkbox" id="task-reminder-input" ${existingTask ? (existingTask.isReminder ? 'checked' : '') : 'checked'}>
@@ -545,6 +591,10 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   const description = descEl ? descEl.value.trim() || '' : '';
   const priority = prioritySelected instanceof HTMLElement ? parseInt(prioritySelected.dataset.priority || '3', 10) : 3;
 
+  const recurrenceSelect = document.getElementById('task-recurrence-input');
+  /** @type {'daily'|'weekly'|'monthly'|'yearly'|null} */
+  const recurrence = recurrenceSelect && /** @type {HTMLSelectElement} */ (recurrenceSelect).value ? /** @type {any} */ (/** @type {HTMLSelectElement} */ (recurrenceSelect).value) : null;
+
   // Collect tags from chips
   /** @type {string[]} */
   const tags = [];
@@ -566,6 +616,8 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
   }
 
   if (existingTaskId) {
+    const previousState = JSON.parse(JSON.stringify(getTasks()));
+    
     // Update existing task in state
     updateTasks(draft => {
       let moved = null;
@@ -574,7 +626,7 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
         if (idx !== -1) {
           const task = draft[date][idx];
           task.title = title; task.time = time; task.isReminder = isReminder;
-                    task.description = description; task.priority = priority; task.tags = tags.length > 0 ? tags : undefined;
+          task.description = description; task.priority = priority; task.tags = tags.length > 0 ? tags : undefined;
           if (taskDate !== date) {
             draft[date].splice(idx, 1);
             if (draft[date].length === 0 && date !== 'undated') delete draft[date];
@@ -603,9 +655,20 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
           date: (taskDate && taskDate !== 'undated' && taskDate !== '') ? taskDate : null,
           time: (time && time.trim && time.trim() !== '') ? time.trim() : null,
           is_reminder: isReminder,
-          priority
+          priority,
+          tags: tags.length > 0 ? tags : [],
+          recurrence: existingTask?.recurrence, // Preserve existing recurrence
+          recurrence_id: existingTask?.recurrenceId
         }).then(() => showSyncStatus('Actualizado correctamente'))
-          .catch(() => showSyncStatus('Actualizado localmente (sin conexión)', true));
+          .catch((err) => {
+            console.error('Update failed:', err);
+            if (navigator.onLine) {
+              setTasks(previousState);
+              showToast('Error al sincronizar. Cambios revertidos.', { type: 'error' });
+            } else {
+              showSyncStatus('Actualizado localmente (sin conexión)', true);
+            }
+          });
       } else {
         pushLocalTasksToBackend();
       }
@@ -615,6 +678,8 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
 
   // Create new task
   const localTaskId = createLocalTaskId();
+  const previousState = JSON.parse(JSON.stringify(getTasks()));
+  
   /** @type {Task} */
   const task = {
     id: localTaskId,
@@ -625,13 +690,42 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
     completed: false,
     isReminder,
     priority,
-    tags: tags.length > 0 ? tags : undefined
+    tags: tags.length > 0 ? tags : undefined,
+    recurrence: recurrence || undefined,
+    recurrenceId: recurrence ? localTaskId : undefined
   };
 
+  const tasksToCreate = [task];
+
+  // Generate recurrence instances if needed
+  if (recurrence && taskDate) {
+    const limit = recurrence === 'daily' ? 60 : recurrence === 'weekly' ? 26 : recurrence === 'monthly' ? 12 : 5;
+    const baseDate = new Date(taskDate + 'T00:00:00');
+    
+    for (let i = 1; i < limit; i++) {
+      const nextDate = new Date(baseDate);
+      if (recurrence === 'daily') nextDate.setDate(baseDate.getDate() + i);
+      else if (recurrence === 'weekly') nextDate.setDate(baseDate.getDate() + i * 7);
+      else if (recurrence === 'monthly') nextDate.setMonth(baseDate.getMonth() + i);
+      else if (recurrence === 'yearly') nextDate.setFullYear(baseDate.getFullYear() + i);
+      
+      const nextDateStr = formatDateLocal(nextDate);
+      tasksToCreate.push({
+        ...task,
+        id: createLocalTaskId() + '_' + i,
+        date: nextDateStr,
+        // Keep time if set
+        time: task.time
+      });
+    }
+  }
+
   updateTasks(draft => {
-    const key = taskDate ? taskDate : 'undated';
-    if (!draft[key]) draft[key] = [];
-    draft[key].push(task);
+    tasksToCreate.forEach(t => {
+      const key = t.date ? t.date : 'undated';
+      if (!draft[key]) draft[key] = [];
+      draft[key].push(t);
+    });
   });
 
   // Close task input modal immediately after local save (before backend sync)
@@ -640,30 +734,34 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
 
   // Backend sync if logged in (async, doesn't block UI)
   if (isLoggedInWithBackend()) {
-    createTaskOnBackend(task)
-      .then((createdTask) => {
-        const serverId = createdTask && createdTask.id !== undefined ? Number(createdTask.id) : null;
-        if (serverId && Number.isFinite(serverId)) {
-          updateTasks((draft) => {
-            Object.keys(draft).forEach((key) => {
-              draft[key] = (draft[key] || []).map((item) => {
-                if (String(item.id) !== localTaskId) return item;
-                return {
-                  ...item,
-                  id: String(serverId),
-                  serverId
-                };
+    // Sequentially create tasks to avoid overwhelming server or hitting rate limits
+    (async () => {
+      for (const t of tasksToCreate) {
+        try {
+          const createdTask = await createTaskOnBackend(t);
+          const serverId = createdTask && createdTask.id !== undefined ? Number(createdTask.id) : null;
+          if (serverId && Number.isFinite(serverId)) {
+             updateTasks((draft) => {
+              Object.keys(draft).forEach((key) => {
+                draft[key] = (draft[key] || []).map((item) => {
+                  if (String(item.id) !== t.id) return item;
+                  return { ...item, id: String(serverId), serverId };
+                });
               });
             });
-          });
-          notifyTasksUpdated();
+          }
+        } catch (err) {
+          console.error('Create task failed for', t.id, err);
+          if (navigator.onLine) {
+             setTasks(previousState);
+             showToast('Error al crear tarea. Revertido.', { type: 'error' });
+             return; // Stop creating subsequent instances if one fails
+          }
         }
-        showSyncStatus('Guardado correctamente');
-      })
-      .catch(async (err) => {
-        console.error('Create task failed:', err);
-        showSyncStatus('Guardado localmente (sin conexión)', true);
-      });
+      }
+      notifyTasksUpdated();
+      showSyncStatus('Guardado correctamente');
+    })();
   }
 
   if (isReminder && 'Notification' in window) {

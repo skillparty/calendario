@@ -73,17 +73,45 @@ export function toggleExportOptions() {
   if (selectedType === 'custom' && customRange) customRange.classList.remove('hidden');
 }
 
-/** @returns {void} */
-export function generatePDF() {
+/** @returns {Promise<any>} */
+async function loadJsPDF() {
+  if (window.jspdf) return window.jspdf;
+  
+  showToast('Cargando librería PDF...', { type: 'info', duration: 2000 });
+  
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    script.onload = () => {
+      if (window.jspdf) resolve(window.jspdf);
+      else reject(new Error('jsPDF loaded but window.jspdf is undefined'));
+    };
+    script.onerror = () => reject(new Error('Failed to load jsPDF'));
+    document.head.appendChild(script);
+  });
+}
+
+/** @returns {Promise<void>} */
+export async function generatePDF() {
   try {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-      showToast('La librería jsPDF no está disponible. Verifica tu conexión e inténtalo de nuevo.', {
-        type: 'error',
-        duration: 4200
-      });
-      return;
+    let jsPDFLib = window.jspdf;
+    if (!jsPDFLib || !jsPDFLib.jsPDF) {
+      try {
+        jsPDFLib = await loadJsPDF();
+      } catch (err) {
+        showToast('La librería jsPDF no está disponible. Verifica tu conexión e inténtalo de nuevo.', {
+          type: 'error',
+          duration: 4200
+        });
+        return;
+      }
     }
-    const { jsPDF } = window.jspdf;
+    
+    if (!jsPDFLib || !jsPDFLib.jsPDF) {
+       throw new Error('jsPDF library invalid');
+    }
+
+    const { jsPDF } = jsPDFLib;
     const doc = new jsPDF();
 
     const exportTypeEl = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="export-type"]:checked'));

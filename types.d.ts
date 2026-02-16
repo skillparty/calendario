@@ -20,6 +20,10 @@ export interface Task {
   isReminder: boolean;
   priority?: number;
   tags?: string[];
+  /** Recurrence pattern: 'daily', 'weekly', 'monthly', 'yearly' or undefined/null for none */
+  recurrence?: 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
+  /** ID linking all instances of a recurrent series. Usually the ID of the original task. */
+  recurrenceId?: string;
   /** Unix timestamp of last modification */
   lastModified?: number;
 }
@@ -48,6 +52,8 @@ export interface APITask {
   is_reminder?: boolean;
   priority?: number;
   tags?: string[];
+  recurrence?: 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
+  recurrence_id?: string | null;
   // Other server fields are ignored for typing purposes
   [key: string]: unknown;
 }

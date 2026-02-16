@@ -532,11 +532,35 @@
     color: var(--text-primary);
     line-height: 1.5;
     word-break: break-word;
+    cursor: pointer;
+}
+
+.task-card-title.editing {
+    display: none;
+}
+
+.inline-title-input {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 2px 4px;
+    width: 100%;
+    margin-right: 0.5rem;
+    outline: none;
+    font-family: inherit;
+}
+
+.inline-title-input:focus {
+    border-color: var(--hunyadi-yellow);
+    background: var(--bg-primary);
 }
 
 .task-card-title.completed {
     text-decoration: line-through;
-    color: var(--text-tertiary);
+    color: var(--text-muted);
 }
 
 .task-card-badges {

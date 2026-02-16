@@ -285,7 +285,9 @@ export async function createTaskOnBackend(payload) {
       if (p === 2) return 'media';
       return 'baja'; // Default (3)
     })(),
-    tags: Array.isArray(payload.tags) ? payload.tags : []
+    tags: Array.isArray(payload.tags) ? payload.tags : [],
+    recurrence: payload.recurrence || null,
+    recurrence_id: payload.recurrenceId || payload.recurrence_id || null
   };
 
   // Only add description if it's not empty
@@ -326,7 +328,7 @@ export async function createTaskOnBackend(payload) {
   return res.json();
 }
 
-/** @param {number|string} serverId @param {Partial<{title:string;description:string|null;date:string|null;time:string|null;completed:boolean;is_reminder:boolean;priority:number;tags:string[]}>} payload */
+/** @param {number|string} serverId @param {Partial<{title:string;description:string|null;date:string|null;time:string|null;completed:boolean;is_reminder:boolean;priority:number;tags:string[];recurrence:string|null;recurrence_id:string|null}>} payload */
 export async function updateTaskOnBackend(serverId, payload) {
   const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('HTTP ' + res.status);

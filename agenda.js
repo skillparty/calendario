@@ -4,9 +4,9 @@
  * @typedef {import('./types').Task} Task
  */
 
-import { state, getTasks, setFilters, updateTasks } from './state.js';
+import { state, getTasks, setTasks, setFilters, updateTasks, notifyTasksUpdated } from './state.js';
 import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLocalTasksToBackend } from './api.js';
-import { showTaskInputModal } from './calendar.js';
+import { showTaskInputModal, getServerTaskId } from './calendar.js';
 import { openModal, closeModal } from './utils/modal.js';
 import { getIcon, icons } from './icons.js';
 import { escapeHtml } from './utils/helpers.js';
@@ -54,6 +54,130 @@ function applySearchFilterDOM() {
 }
 
 /**
+ * Handle inline editing of task title
+ * @param {HTMLElement} titleEl
+ * @param {string} taskId
+ */
+function handleInlineTitleEdit(titleEl, taskId) {
+  const currentTitle = titleEl.textContent || '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'inline-title-input';
+  input.value = currentTitle;
+  
+  const save = () => {
+    const newTitle = input.value.trim();
+    if (newTitle && newTitle !== currentTitle) {
+      const previousState = JSON.parse(JSON.stringify(getTasks()));
+      updateTasks(draft => {
+        // Find task across all dates
+        for (const date in draft) {
+          const task = draft[date].find(t => t.id === taskId);
+          if (task) {
+            task.title = newTitle;
+            break;
+          }
+        }
+      });
+      notifyTasksUpdated();
+      
+      // Backend sync
+      if (isLoggedInWithBackend()) {
+        const task = document.querySelector(`[data-task-id="${taskId}"]`);
+        const serverId = getServerTaskId(/** @type {Task} */ ({ id: taskId, serverId: task ? Number(/** @type {HTMLElement} */ (task).dataset.serverId) : undefined }));
+        if (serverId) {
+          updateTaskOnBackend(serverId, { title: newTitle }).catch(err => {
+            console.error('Title update failed:', err);
+            setTasks(previousState);
+            showToast('Error al actualizar. Cambios revertidos.', { type: 'error' });
+          });
+        } else {
+          pushLocalTasksToBackend().catch(() => {/* offline/retry handled internally usually, but could revert here too if critical */});
+        }
+      }
+    }
+    if (input.parentNode) {
+      titleEl.textContent = newTitle || currentTitle;
+      input.replaceWith(titleEl);
+      titleEl.classList.remove('editing');
+    }
+  };
+
+  const cancel = () => {
+    if (input.parentNode) {
+      input.replaceWith(titleEl);
+      titleEl.classList.remove('editing');
+    }
+  };
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); 
+      input.blur();
+    } else if (e.key === 'Escape') {
+      cancel();
+    }
+  });
+
+  titleEl.classList.add('editing');
+  titleEl.replaceWith(input);
+  input.focus();
+}
+
+/**
+ * Handle inline priority cycling
+ * @param {HTMLElement} badgeEl
+ * @param {string} taskId
+ * @param {number} currentPriority
+ */
+function handleInlinePriorityCycle(badgeEl, taskId, currentPriority) {
+  // Cycle: 1(High) -> 2(Medium) -> 3(Low) -> 1(High)
+  const newPriority = currentPriority >= 3 ? 1 : currentPriority + 1;
+  const previousState = JSON.parse(JSON.stringify(getTasks()));
+  
+  updateTasks(draft => {
+    for (const date in draft) {
+      const task = draft[date].find(t => t.id === taskId);
+      if (task) {
+        task.priority = newPriority;
+        break;
+      }
+    }
+  });
+  notifyTasksUpdated();
+
+  // Backend sync
+  if (isLoggedInWithBackend()) {
+    const task = document.querySelector(`[data-task-id="${taskId}"]`);
+    const serverId = getServerTaskId(/** @type {Task} */ ({ id: taskId }));
+    
+    // Note: We might need to find the real serverId if not in DOM, but typically loadTasksIntoState populates it.
+    // For now rely on robust sync or DOM data if added.
+    // Actually, let's look up the task properly
+    const allTasks = getTasks();
+    let realTask = null;
+    for (const date in allTasks) {
+      realTask = allTasks[date].find(t => t.id === taskId);
+      if (realTask) break;
+    }
+    
+    if (realTask) {
+        const sid = getServerTaskId(realTask);
+        if (sid) {
+          updateTaskOnBackend(sid, { priority: newPriority }).catch(err => {
+            console.error('Priority update failed:', err);
+            setTasks(previousState);
+            showToast('Error al actualizar. Cambios revertidos.', { type: 'error' });
+          });
+        } else {
+          pushLocalTasksToBackend();
+        }
+    }
+  }
+}
+
+/**
  * @param {() => void} fn
  * @param {number} [delay=180]
  * @returns {() => void}
@@ -88,17 +212,6 @@ function parseTask(encoded) {
   } catch {
     return null;
   }
-}
-
-/**
- * @param {Task | null} task
- * @returns {number | null}
- */
-function getServerTaskId(task) {
-  if (!task) return null;
-  if (typeof task.serverId === 'number') return task.serverId;
-  if (/^\d+$/.test(String(task.id))) return parseInt(String(task.id), 10);
-  return null;
 }
 
 /**
@@ -597,7 +710,27 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
   agendaView.innerHTML = html;
 
   if (!agendaView.dataset.actionsBound) {
-    agendaView.addEventListener('click', (event) => handleAgendaActionClick(/** @type {MouseEvent} */ (event)));
+    agendaView.addEventListener('click', (event) => {
+      handleAgendaActionClick(/** @type {MouseEvent} */ (event));
+
+      // Inline edit title
+      const target = /** @type {HTMLElement} */ (event.target);
+      const titleEl = target.closest('.task-card-title');
+      if (titleEl && !titleEl.classList.contains('editing') && !titleEl.classList.contains('completed')) {
+        const card = titleEl.closest('.task-card');
+        const taskId = card instanceof HTMLElement ? card.dataset.taskId : null;
+        if (taskId) handleInlineTitleEdit(/** @type {HTMLElement} */ (titleEl), taskId);
+      }
+
+      // Inline priority cycle
+      const badgeEl = target.closest('.badge.priority');
+      if (badgeEl) {
+        const card = badgeEl.closest('.task-card');
+        const taskId = card instanceof HTMLElement ? card.dataset.taskId : null;
+        const currentPriority = parseInt(card instanceof HTMLElement ? (card.dataset.priority || '3') : '3', 10);
+        if (taskId) handleInlinePriorityCycle(/** @type {HTMLElement} */ (badgeEl), taskId, currentPriority);
+      }
+    });
     agendaView.addEventListener('keydown', (event) => handleAgendaActionKeydown(/** @type {KeyboardEvent} */ (event)));
 
     // Delegated change handler for filters (prevents accumulating listeners)
@@ -727,6 +860,8 @@ function formatDateForDisplay(dateString) {
 
 /** @param {string} id */
 function toggleTask(id) {
+  const previousState = JSON.parse(JSON.stringify(getTasks()));
+  
   updateTasks(draft => {
     Object.values(draft).forEach(list => {
       const t = (list || []).find(x => x.id === id);
@@ -746,7 +881,12 @@ function toggleTask(id) {
     if (found) {
       const serverId = getServerTaskId(/** @type {Task} */ (found));
       const promise = serverId ? updateTaskOnBackend(serverId, { completed: /** @type {Task} */ (found).completed }) : pushLocalTasksToBackend();
-      Promise.resolve(promise).catch(() => {/* soft-fail */});
+      Promise.resolve(promise).catch(err => {
+        console.error('Toggle task failed:', err);
+        setTasks(previousState);
+        // Force UI refresh for this specific task if needed, or rely on notifyTasksUpdated (which setTasks does)
+        showToast('Error al actualizar. Estado revertido.', { type: 'error' });
+      });
     }
   }
 }
@@ -858,6 +998,8 @@ function confirmDeleteTask(id, title, filterMonth, filterStatus, filterPriority 
 
 /** @param {string} id */
 function deleteTask(id) {
+  const previousState = JSON.parse(JSON.stringify(getTasks()));
+  
   // remove from local state
   updateTasks(draft => {
     Object.keys(draft).forEach(date => {
@@ -865,11 +1007,16 @@ function deleteTask(id) {
       if ((draft[date] || []).length === 0) delete draft[date];
     });
   });
+  notifyTasksUpdated();
 
   if (isLoggedInWithBackend()) {
     const serverId = /^\d+$/.test(String(id)) ? parseInt(String(id), 10) : null;
     const promise = serverId ? deleteTaskOnBackend(serverId) : pushLocalTasksToBackend();
-    Promise.resolve(promise).catch(() => {/* soft-fail */});
+    Promise.resolve(promise).catch(err => {
+      console.error('Delete failed:', err);
+      setTasks(previousState);
+      showToast('Error al eliminar. Tarea restaurada.', { type: 'error' });
+    });
   }
 }
 
