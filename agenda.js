@@ -11,6 +11,7 @@ import { openModal, closeModal } from './utils/modal.js';
 import { getIcon, icons } from './icons.js';
 import { escapeHtml } from './utils/helpers.js';
 import { showUndoToast, showToast } from './utils/UIFeedback.js';
+import { confirmDeleteTask, toggleTask, deleteTask } from './utils/taskActions.js';
 
 let agendaSearchTerm = '';
 
@@ -72,7 +73,7 @@ function handleInlineTitleEdit(titleEl, taskId) {
       updateTasks(draft => {
         // Find task across all dates
         for (const date in draft) {
-          const task = draft[date].find(t => t.id === taskId);
+          const task = draft[date].find(t => String(t.id) === String(taskId));
           if (task) {
             task.title = newTitle;
             break;
@@ -272,7 +273,7 @@ function handleAgendaActionClick(event) {
     event.stopPropagation();
     const taskId = target.dataset.taskId;
     const taskTitle = target.dataset.taskTitle || '';
-    if (taskId) confirmDeleteTask(taskId, taskTitle, filterMonth, filterStatus, filterPriority);
+    if (taskId) confirmDeleteTask(taskId, taskTitle);
   }
 }
 
@@ -858,39 +859,6 @@ function formatDateForDisplay(dateString) {
   return date.toLocaleDateString('es-ES', options);
 }
 
-/** @param {string} id */
-function toggleTask(id) {
-  const previousState = JSON.parse(JSON.stringify(getTasks()));
-  
-  updateTasks(draft => {
-    Object.values(draft).forEach(list => {
-      const t = (list || []).find(x => x.id === id);
-      if (t) t.completed = !t.completed;
-    });
-  });
-
-  if (isLoggedInWithBackend()) {
-    // find task and try update
-    /** @type {Task|null} */
-    let found = null;
-    Object.values(getTasks()).some(list => {
-      const t = (list || []).find(x => x.id === id);
-      if (t) { found = t; return true; }
-      return false;
-    });
-    if (found) {
-      const serverId = getServerTaskId(/** @type {Task} */ (found));
-      const promise = serverId ? updateTaskOnBackend(serverId, { completed: /** @type {Task} */ (found).completed }) : pushLocalTasksToBackend();
-      Promise.resolve(promise).catch(err => {
-        console.error('Toggle task failed:', err);
-        setTasks(previousState);
-        // Force UI refresh for this specific task if needed, or rely on notifyTasksUpdated (which setTasks does)
-        showToast('Error al actualizar. Estado revertido.', { type: 'error' });
-      });
-    }
-  }
-}
-
 // Toggle task with targeted DOM update (no full re-render)
 /** @param {string} id @param {string} filterMonth @param {string} filterStatus @param {string} [filterPriority='all'] */
 function toggleTaskWithAnimation(id, filterMonth, filterStatus, filterPriority = 'all') {
@@ -900,7 +868,7 @@ function toggleTaskWithAnimation(id, filterMonth, filterStatus, filterPriority =
   /** @type {boolean | undefined} */
   let isNowCompleted;
   Object.values(getTasks()).some(list => {
-    const t = (list || []).find(x => x.id === id);
+    const t = (list || []).find(x => String(x.id) === String(id));
     if (t) { isNowCompleted = t.completed; return true; }
     return false;
   });
@@ -951,80 +919,12 @@ function updateStatBadges() {
   if (completedBadge) { const n = completedBadge.querySelector('.stat-number'); if (n) n.textContent = String(completed); }
 }
 
-// Delete with undo toast (replaces confirmation modal)
-/** @param {string} id @param {string} title @param {string} filterMonth @param {string} filterStatus @param {string} [filterPriority='all'] */
-function confirmDeleteTask(id, title, filterMonth, filterStatus, filterPriority = 'all') {
-  const taskCard = /** @type {HTMLElement | null} */ (document.querySelector(`.task-card[data-task-id="${id}"]`));
-
-  // Slide card out immediately
-  if (taskCard) {
-    taskCard.style.transition = 'all 0.3s ease';
-    taskCard.style.transform = 'translateX(-100%)';
-    taskCard.style.opacity = '0';
-    taskCard.style.maxHeight = taskCard.scrollHeight + 'px';
-    setTimeout(() => {
-      if (taskCard.parentNode) {
-        taskCard.style.maxHeight = '0';
-        taskCard.style.padding = '0';
-        taskCard.style.margin = '0';
-        taskCard.style.overflow = 'hidden';
-      }
-    }, 300);
-  }
-
-  // Show undo toast — deletion is deferred until toast expires
-  showUndoToast(`"${title}" eliminada`, {
-    duration: 5000,
-    onUndo: () => {
-      // Restore card visually
-      if (taskCard) {
-        taskCard.style.transition = 'all 0.3s ease';
-        taskCard.style.transform = '';
-        taskCard.style.opacity = '';
-        taskCard.style.maxHeight = '';
-        taskCard.style.padding = '';
-        taskCard.style.margin = '';
-        taskCard.style.overflow = '';
-      }
-      showToast('Tarea restaurada', { type: 'success', duration: 2000 });
-    },
-    onExpire: () => {
-      // Permanently delete
-      deleteTask(id);
-      renderAgenda(filterMonth, filterStatus, filterPriority);
-    }
-  });
-}
-
-/** @param {string} id */
-function deleteTask(id) {
-  const previousState = JSON.parse(JSON.stringify(getTasks()));
-  
-  // remove from local state
-  updateTasks(draft => {
-    Object.keys(draft).forEach(date => {
-      draft[date] = (draft[date] || []).filter(t => t.id !== id);
-      if ((draft[date] || []).length === 0) delete draft[date];
-    });
-  });
-  notifyTasksUpdated();
-
-  if (isLoggedInWithBackend()) {
-    const serverId = /^\d+$/.test(String(id)) ? parseInt(String(id), 10) : null;
-    const promise = serverId ? deleteTaskOnBackend(serverId) : pushLocalTasksToBackend();
-    Promise.resolve(promise).catch(err => {
-      console.error('Delete failed:', err);
-      setTasks(previousState);
-      showToast('Error al eliminar. Tarea restaurada.', { type: 'error' });
-    });
-  }
-}
-
 // Expose for inline handlers (browser only)
 if (typeof window !== 'undefined') {
   window.renderAgenda = renderAgenda;
-  window.toggleTask = toggleTask;
   window.toggleTaskWithAnimation = toggleTaskWithAnimation;
+  const { toggleTask, confirmDeleteTask, deleteTask } = await import('./utils/taskActions.js');
+  window.toggleTask = toggleTask;
   window.confirmDeleteTask = confirmDeleteTask;
   window.deleteTask = deleteTask;
   window.showTaskInputModal = showTaskInputModal;

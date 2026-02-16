@@ -36,6 +36,10 @@ async function createTask(page, title) {
 
 test.describe('Calendar10 Critical Flows', () => {
   test.beforeEach(async ({ page }) => {
+    // Listen for console logs
+    page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
+    page.on('pageerror', err => console.log(`BROWSER ERROR: ${err.message}`));
+
     // Clear localStorage (use evaluate instead of addInitScript to avoid clearing on reload)
     await page.goto('/');
     await page.evaluate(() => localStorage.clear());
@@ -71,6 +75,36 @@ test.describe('Calendar10 Critical Flows', () => {
 
     // Verify change
     await expect(page.locator('.task-card-title', { hasText: 'Edited Title E2E' })).toBeVisible();
+  });
+
+  test('should persist task completion status', async ({ page }) => {
+    await createTask(page, 'Completion Test');
+    await page.waitForTimeout(500);
+    
+    // Go to Agenda
+    await page.locator('#agenda-btn').click();
+    await expect(page.locator('#agenda-view')).toBeVisible();
+    
+    // Find the task card
+    const card = page.locator('.task-card', { hasText: 'Completion Test' }).first();
+    await expect(card).toBeVisible();
+    
+    // Click toggle button
+    const toggleBtn = card.locator('.task-check-btn');
+    await toggleBtn.click();
+    
+    // Verify UI updates immediately
+    await expect(toggleBtn).toHaveClass(/checked/);
+    await expect(card).toHaveClass(/completed/);
+    
+    // Reload page to test persistence
+    await page.reload();
+    await page.locator('#agenda-btn').click();
+    
+    // Verify still completed
+    const cardAfter = page.locator('.task-card', { hasText: 'Completion Test' }).first();
+    await expect(cardAfter).toHaveClass(/completed/);
+    await expect(cardAfter.locator('.task-check-btn')).toHaveClass(/checked/);
   });
 
   test('should delete task from Day Modal', async ({ page }) => {

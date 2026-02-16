@@ -1,9 +1,5 @@
 import { state, getTasks, setTasks, updateTasks, notifyTasksUpdated } from '../state.js';
 import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLocalTasksToBackend, createTaskOnBackend } from '../api.js';
-import { getServerTaskId } from '../calendar.js'; // Circular? getServerTaskId is in calendar.js.
-// We should probably move getServerTaskId to state.js or helpers.js or duplicate/import here.
-// Actually, getServerTaskId is simple. Let's duplicate or better: move to helpers.
-// For now, I'll copy it to avoid touching calendar.js exports too much.
 import { showUndoToast, showToast } from './UIFeedback.js';
 
 /**
@@ -25,7 +21,7 @@ export function deleteTask(id) {
   // remove from local state
   updateTasks(draft => {
     Object.keys(draft).forEach(date => {
-      draft[date] = (draft[date] || []).filter(t => t.id !== id);
+      draft[date] = (draft[date] || []).filter(t => String(t.id) !== String(id));
       if ((draft[date] || []).length === 0) delete draft[date];
     });
   });
@@ -96,7 +92,7 @@ export function toggleTask(id) {
   
   updateTasks(draft => {
     Object.values(draft).forEach(list => {
-      const t = (list || []).find(x => x.id === id);
+      const t = (list || []).find(x => String(x.id) === String(id));
       if (t) t.completed = !t.completed;
     });
   });
@@ -107,7 +103,7 @@ export function toggleTask(id) {
     /** @type {import('../types').Task|null} */
     let found = null;
     Object.values(getTasks()).some(list => {
-      const t = (list || []).find(x => x.id === id);
+      const t = (list || []).find(x => String(x.id) === String(id));
       if (t) { found = t; return true; }
       return false;
     });
