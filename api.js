@@ -53,17 +53,29 @@ function mapPriorityToServer(raw) {
  */
 export async function apiFetch(path, options = {}, retries = 3) {
   /** @type {Record<string, string>} */
-  const headers = /** @type {any} */ (Object.assign({ 'Content-Type': 'application/json' }, options.headers || {}));
+  const headers = /** @type {any} */ (Object.assign({ 
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  }, options.headers || {}));
   if (state.userSession && state.userSession.jwt) {
     headers['Authorization'] = `Bearer ${state.userSession.jwt}`;
   }
   const init = Object.assign({}, options, { headers });
 
-  if (DEBUG) console.log('API Request:', { url: API_BASE_URL + path, method: init.method || 'GET' });
+  // Add cache busting for GET requests to prevent stale data
+  let fetchPath = path;
+  if (!init.method || init.method === 'GET') {
+    const separator = fetchPath.includes('?') ? '&' : '?';
+    fetchPath = `${fetchPath}${separator}_t=${Date.now()}`;
+  }
+
+  if (DEBUG) console.log('API Request:', { url: API_BASE_URL + fetchPath, method: init.method || 'GET' });
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(API_BASE_URL + path, init);
+      const res = await fetch(API_BASE_URL + fetchPath, init);
 
       if (DEBUG) console.log('API Response:', res.status, res.statusText);
 
@@ -134,52 +146,81 @@ export async function loadTasksIntoState() {
   if (!isLoggedInWithBackend()) return false;
   const list = await fetchAllTasksFromBackend(100);
   
-  // Preserve unsynced local tasks
+  // Get current local state
   const currentAll = getTasks();
+  
+  // 1. Identify unsynced local tasks (local_*)
   const unsynced = Object.values(currentAll).flat().filter(t => 
     !t.serverId && String(t.id).startsWith('local_')
   );
 
+  // 2. Identify dirty tasks (modified but not confirmed synced)
+  const dirtyTasks = Object.values(currentAll).flat().filter(t => t.dirty);
+  const dirtyMap = new Map(dirtyTasks.map(t => [String(t.id), t]));
+
   /** @type {TasksByDate} */
   const byDate = {};
   
-  // Add backend tasks
+  // Add backend tasks, but prefer dirty local version if exists
   list.forEach(t => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
-    /** @type {Task} */
-    const mapped = {
-      id: String(t.id),
-      serverId: Number(t.id),
-      title: t.title,
-      description: t.description || '',
-      date: dateKey === 'undated' ? null : dateKey,
-      time: t.time || null,
-      completed: !!t.completed,
-      isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
-      priority: (function() {
-        if (typeof t.priority === 'number') return t.priority;
-        if (t.priority === 'alta') return 1;
-        if (t.priority === 'media') return 2;
-        return 3; // baja or default
-      })(),
-      tags: t.tags || []
-    };
-    byDate[dateKey].push(mapped);
+    
+    // Check if we have a dirty local version of this task
+    // We check both ID formats to be safe
+    const dirtyLocal = dirtyMap.get(String(t.id)) || dirtyMap.get(String(t.serverId)); // serverId check might be redundant if id matches
+
+    if (dirtyLocal) {
+      // Use the local dirty version
+      // Ensure serverId is set if missing (it should match)
+      if (!dirtyLocal.serverId) dirtyLocal.serverId = Number(t.id);
+      byDate[dateKey].push(dirtyLocal);
+    } else {
+      // Map server task to local format
+      /** @type {Task} */
+      const mapped = {
+        id: String(t.id),
+        serverId: Number(t.id),
+        title: t.title,
+        description: t.description || '',
+        date: dateKey === 'undated' ? null : dateKey,
+        time: t.time || null,
+        completed: !!t.completed,
+        isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
+        priority: (function() {
+          if (typeof t.priority === 'number') return t.priority;
+          if (t.priority === 'alta') return 1;
+          if (t.priority === 'media') return 2;
+          return 3; // baja or default
+        })(),
+        tags: t.tags || []
+      };
+      byDate[dateKey].push(mapped);
+    }
   });
 
   // Merge unsynced tasks back in
   unsynced.forEach(t => {
     const dateKey = t.date || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
-    // Only add if ID doesn't conflict (unlikely for local_)
+    // Only add if ID doesn't conflict
     if (!byDate[dateKey].find(existing => String(existing.id) === String(t.id))) {
       byDate[dateKey].push(t);
     }
   });
 
-  console.log('Loaded tasks into state:', Object.keys(byDate).length, 'dates', 'Preserved unsynced:', unsynced.length);
+  console.log('Loaded tasks into state:', Object.keys(byDate).length, 'dates', 
+    'Preserved unsynced:', unsynced.length, 
+    'Preserved dirty:', dirtyTasks.length
+  );
+  
   setTasks(byDate);
+
+  // If we have dirty tasks, trigger a push to ensure they sync
+  if (dirtyTasks.length > 0) {
+    pushLocalTasksToBackend().catch(err => console.error('Background push failed:', err));
+  }
+
   return true;
 }
 

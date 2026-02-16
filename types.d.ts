@@ -26,6 +26,8 @@ export interface Task {
   recurrenceId?: string;
   /** Unix timestamp of last modification */
   lastModified?: number;
+  /** Locally modified but not yet confirmed synced */
+  dirty?: boolean;
 }
 
 /** A task that is assigned to a specific calendar date (YYYY-MM-DD). */
