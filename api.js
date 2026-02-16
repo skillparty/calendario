@@ -133,8 +133,17 @@ export async function fetchAllTasksFromBackend(limit = 100) {
 export async function loadTasksIntoState() {
   if (!isLoggedInWithBackend()) return false;
   const list = await fetchAllTasksFromBackend(100);
+  
+  // Preserve unsynced local tasks
+  const currentAll = getTasks();
+  const unsynced = Object.values(currentAll).flat().filter(t => 
+    !t.serverId && String(t.id).startsWith('local_')
+  );
+
   /** @type {TasksByDate} */
   const byDate = {};
+  
+  // Add backend tasks
   list.forEach(t => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
@@ -148,11 +157,28 @@ export async function loadTasksIntoState() {
       time: t.time || null,
       completed: !!t.completed,
       isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
-      priority: t.priority || 1,
+      priority: (function() {
+        if (typeof t.priority === 'number') return t.priority;
+        if (t.priority === 'alta') return 1;
+        if (t.priority === 'media') return 2;
+        return 3; // baja or default
+      })(),
       tags: t.tags || []
     };
     byDate[dateKey].push(mapped);
   });
+
+  // Merge unsynced tasks back in
+  unsynced.forEach(t => {
+    const dateKey = t.date || 'undated';
+    if (!byDate[dateKey]) byDate[dateKey] = [];
+    // Only add if ID doesn't conflict (unlikely for local_)
+    if (!byDate[dateKey].find(existing => String(existing.id) === String(t.id))) {
+      byDate[dateKey].push(t);
+    }
+  });
+
+  console.log('Loaded tasks into state:', Object.keys(byDate).length, 'dates', 'Preserved unsynced:', unsynced.length);
   setTasks(byDate);
   return true;
 }
@@ -198,7 +224,7 @@ export async function pushLocalTasksToBackend() {
         const dateStr = t.date.trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
           payload.date = dateStr;
-
+          
           // Only add time if date is present and time is valid
           if (t.time && t.time.trim() !== '') {
             payload.time = t.time.trim();
@@ -239,7 +265,7 @@ export async function pushLocalTasksToBackend() {
       const loTags = JSON.stringify(t.tags || []);
       if (exTags !== loTags) diff.tags = t.tags || [];
       if (Object.keys(diff).length > 0) {
-        await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff) });
+        await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff), keepalive: true });
       }
     }
   }
@@ -330,14 +356,14 @@ export async function createTaskOnBackend(payload) {
 
 /** @param {number|string} serverId @param {Partial<{title:string;description:string|null;date:string|null;time:string|null;completed:boolean;is_reminder:boolean;priority:number;tags:string[];recurrence:string|null;recurrence_id:string|null}>} payload */
 export async function updateTaskOnBackend(serverId, payload) {
-  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload) });
+  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload), keepalive: true });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
 
 /** @param {number|string} serverId */
 export async function deleteTaskOnBackend(serverId) {
-  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'DELETE', keepalive: true });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return true;
 }

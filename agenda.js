@@ -922,9 +922,8 @@ function updateStatBadges() {
 // Expose for inline handlers (browser only)
 if (typeof window !== 'undefined') {
   window.renderAgenda = renderAgenda;
-  window.toggleTaskWithAnimation = toggleTaskWithAnimation;
-  const { toggleTask, confirmDeleteTask, deleteTask } = await import('./utils/taskActions.js');
   window.toggleTask = toggleTask;
+  window.toggleTaskWithAnimation = toggleTaskWithAnimation;
   window.confirmDeleteTask = confirmDeleteTask;
   window.deleteTask = deleteTask;
   window.showTaskInputModal = showTaskInputModal;

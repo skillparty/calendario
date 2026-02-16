@@ -3,14 +3,16 @@ import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLo
 import { showUndoToast, showToast } from './UIFeedback.js';
 
 /**
- * @param {{ id?: string|number; serverId?: number } | null | undefined} task
- * @returns {number | null}
+ * @param {{ id?: string|number; serverId?: number|string } | null | undefined} task
+ * @returns {number | string | null}
  */
 function getServerTaskIdLocal(task) {
   if (!task) return null;
-  if (typeof task.serverId === 'number') return task.serverId;
+  if (task.serverId !== undefined && task.serverId !== null) return task.serverId;
+  // If id is number, return it
   if (typeof task.id === 'number') return task.id;
-  if (typeof task.id === 'string' && /^\d+$/.test(task.id)) return parseInt(task.id, 10);
+  // If id is numeric string, return it as string (safer than parseInt for large IDs)
+  if (typeof task.id === 'string' && /^\d+$/.test(task.id)) return task.id;
   return null;
 }
 

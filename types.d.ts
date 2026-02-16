@@ -116,8 +116,8 @@ declare global {
 
     renderAgenda?: (...args: any[]) => void;
     toggleTask?: (id: string) => void;
-    toggleTaskWithAnimation?: (id: string, filterMonth: string, filterStatus: string) => void;
-    confirmDeleteTask?: (id: string, title: string, filterMonth: string, filterStatus: string) => void;
+    toggleTaskWithAnimation?: (id: string, filterMonth: string, filterStatus: string, filterPriority?: string) => void;
+    confirmDeleteTask?: (id: string, title: string) => void;
     deleteTaskConfirmed?: (id: string, filterMonth: string, filterStatus: string) => void;
     deleteTask?: (id: string) => void;
 
