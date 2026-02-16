@@ -10,6 +10,7 @@ import { showSyncToast, showToast } from './utils/UIFeedback.js';
 import { openModal, closeModal } from './utils/modal.js';
 import { icons } from './icons.js';
 import { escapeHtml } from './utils/helpers.js';
+import { confirmDeleteTask, toggleTask } from './utils/taskActions.js';
 
 // Utilities
 /** @param {number} month @returns {string} */
@@ -524,16 +525,15 @@ export function showDayTasks(date) {
     if (!taskId) return;
 
     if (target.dataset.action === 'toggle-task') {
-      if (typeof window.toggleTask === 'function') {
-        window.toggleTask(taskId);
-        setTimeout(() => showDayTasks(date), 100);
-      }
+      toggleTask(taskId);
+      setTimeout(() => showDayTasks(date), 100);
     }
 
     if (target.dataset.action === 'delete-task') {
-      if (typeof window.deleteTask === 'function') {
-        window.deleteTask(taskId);
-        showDayTasks(date);
+      const task = findTaskById(taskId);
+      if (task) {
+        closeModal(modal);
+        confirmDeleteTask(taskId, task.title);
       }
     }
   };
