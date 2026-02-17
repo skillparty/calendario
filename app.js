@@ -230,7 +230,15 @@ async function handleOAuthCallback() {
         updateLoginButton();
         if (sess && sess.user) {
           if (sess.jwt) {
-            await loadTasksIntoState();
+            try {
+              await loadTasksIntoState();
+            } catch (e) {
+              // JWT expired or malformed — clear stale session and prompt re-login
+              console.warn('Stored JWT invalid, clearing session:', e);
+              setUserSession(null);
+              updateLoginButton();
+              showAuthStatus('Sesión expirada. Por favor inicia sesión nuevamente.', true);
+            }
           } else {
             await findExistingGist();
             await loadTasksFromGist();
