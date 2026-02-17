@@ -7,7 +7,7 @@
 
 const sw = /** @type {any} */ (self);
 
-const CACHE_VERSION = 'v2026.02.16-fix4';
+const CACHE_VERSION = 'v2026.02.16-fix5';
 const CACHE_NAME = `calendar10-${CACHE_VERSION}`;
 const API_CACHE = `calendar10-api-${CACHE_VERSION}`;
 const DB_NAME = 'Calendar10DB';

@@ -40,53 +40,76 @@ export function deleteTask(id) {
   }
 }
 
-/** 
- * Delete with undo toast
+/**
+ * Delete with undo toast.
+ * Implements "Immediate Delete" pattern: deletes data immediately (after UI animation)
+ * and offers restoration via the Undo button.
+ * 
  * @param {string} id 
  * @param {string} title 
  */
 export function confirmDeleteTask(id, title) {
   const taskCard = /** @type {HTMLElement | null} */ (document.querySelector(`.task-card[data-task-id="${id}"]`));
+  
+  // 1. Capture task data for potential restoration
+  const allTasks = getTasks();
+  let taskToRestore = null;
+  for (const dateKey in allTasks) {
+    const found = allTasks[dateKey].find(t => String(t.id) === String(id));
+    if (found) {
+      taskToRestore = JSON.parse(JSON.stringify(found));
+      break;
+    }
+  }
 
-  // Slide card out immediately if visible (Agenda view)
+  // 2. Animate UI out
   if (taskCard) {
     taskCard.style.transition = 'all 0.3s ease';
     taskCard.style.transform = 'translateX(-100%)';
     taskCard.style.opacity = '0';
     taskCard.style.maxHeight = taskCard.scrollHeight + 'px';
-    setTimeout(() => {
-      if (taskCard.parentNode) {
-        taskCard.style.maxHeight = '0';
-        taskCard.style.padding = '0';
-        taskCard.style.margin = '0';
-        taskCard.style.overflow = 'hidden';
-      }
-    }, 300);
   }
 
-  // Show undo toast — deletion is deferred until toast expires
+  // 3. Delete data after animation
+  setTimeout(() => {
+    deleteTask(id);
+  }, 300);
+
+  // 4. Show Undo Toast
   showUndoToast(`"${title}" eliminada`, {
     duration: 5000,
     onUndo: () => {
-      // Restore card visually
-      if (taskCard) {
-        taskCard.style.transition = 'all 0.3s ease';
-        taskCard.style.transform = '';
-        taskCard.style.opacity = '';
-        taskCard.style.maxHeight = '';
-        taskCard.style.padding = '';
-        taskCard.style.margin = '';
-        taskCard.style.overflow = '';
+      if (taskToRestore) {
+        restoreTask(taskToRestore);
+        showToast('Tarea restaurada', { type: 'success', duration: 2000 });
       }
-      showToast('Tarea restaurada', { type: 'success', duration: 2000 });
-    },
-    onExpire: () => {
-      // Permanently delete
-      deleteTask(id);
-      // No need to call renderAgenda explicitly; notifyTasksUpdated in deleteTask will trigger it via app.js listener
     }
   });
 }
+
+/**
+ * Restore a deleted task to state and sync
+ * @param {import('../types').Task} task 
+ */
+function restoreTask(task) {
+  // Mark as dirty to ensure sync
+  task.dirty = true;
+  // We keep the same ID to prevent duplicates if it was a local-only task,
+  // but if it was synced, we might want to handle it carefully.
+  // For simplicity, we restore it as-is. backend sync will handle upsert or re-create.
+  
+  updateTasks(draft => {
+    const dateKey = task.date || 'undated';
+    if (!draft[dateKey]) draft[dateKey] = [];
+    draft[dateKey].push(task);
+  });
+  notifyTasksUpdated();
+  
+  if (isLoggedInWithBackend()) {
+     pushLocalTasksToBackend().catch(err => console.error('Restore sync failed:', err));
+  }
+}
+
 
 /** @param {string} id */
 export function toggleTask(id) {
