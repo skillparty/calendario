@@ -308,7 +308,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
   // Animation class - only for initial entry
   const animationClass = hasPreviousContent ? '' : ' animate-entry';
 
-  setFilters(filterMonth, filterStatus);
+  setFilters(filterMonth, filterStatus, filterPriority);
 
   let html = `
     <div class="agenda-container${animationClass}">

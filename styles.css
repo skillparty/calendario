@@ -751,6 +751,21 @@ main {
     background: rgba(237, 174, 73, 0.04);
 }
 
+.weekly-cell.drag-over {
+    background: rgba(237, 174, 73, 0.12);
+    outline: 2px dashed var(--hunyadi-yellow, #edae49);
+    outline-offset: -2px;
+}
+
+.weekly-task.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+.weekly-task[draggable="true"] {
+    cursor: grab;
+}
+
 .weekly-cell-past {
     background: var(--bg-secondary);
     opacity: 0.6;

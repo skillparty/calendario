@@ -63,13 +63,7 @@ export async function apiFetch(path, options = {}, retries = 3) {
     headers['Authorization'] = `Bearer ${state.userSession.jwt}`;
   }
   const init = Object.assign({}, options, { headers });
-
-  // Add cache busting for GET requests to prevent stale data
-  let fetchPath = path;
-  if (!init.method || init.method === 'GET') {
-    const separator = fetchPath.includes('?') ? '&' : '?';
-    fetchPath = `${fetchPath}${separator}_t=${Date.now()}`;
-  }
+  const fetchPath = path;
 
   if (DEBUG) console.log('API Request:', { url: API_BASE_URL + fetchPath, method: init.method || 'GET' });
 
@@ -255,8 +249,9 @@ export async function pushLocalTasksToBackend() {
 
   const tasksToClearDirty = new Set();
 
-  // Create or update
-  for (const t of localList) {
+  // Build parallel create/update promises
+  /** @type {Promise<void>[]} */
+  const syncPromises = localList.map(async (t) => {
     const resolvedServerId = getServerId(t);
     const existing = resolvedServerId ? serverById.get(String(resolvedServerId)) : null;
     if (!existing) {
@@ -279,7 +274,7 @@ export async function pushLocalTasksToBackend() {
         const dateStr = t.date.trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
           payload.date = dateStr;
-          
+
           // Only add time if date is present and time is valid
           if (t.time && t.time.trim() !== '') {
             payload.time = t.time.trim();
@@ -301,7 +296,6 @@ export async function pushLocalTasksToBackend() {
           if (String(t.id) !== String(createdId) || t.serverId !== createdId) {
             idReplacements.push({ oldId: String(t.id), newId: String(createdId), serverId: createdId });
           }
-          // Mark as synced/clean
           tasksToClearDirty.add(String(t.id));
         }
       }
@@ -323,20 +317,19 @@ export async function pushLocalTasksToBackend() {
       if (exTags !== loTags) diff.tags = t.tags || [];
       if (Object.keys(diff).length > 0) {
         await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff), keepalive: true });
-        tasksToClearDirty.add(String(t.id));
-      } else {
-        // No changes needed, already in sync
-        tasksToClearDirty.add(String(t.id));
       }
+      // Mark as synced regardless of whether diff was needed
+      tasksToClearDirty.add(String(t.id));
     }
-  }
+  });
 
-  // Delete removed on server
-  for (const s of server) {
-    if (!localServerIds.has(String(s.id))) {
-      await apiFetch(`/api/tasks/${s.id}`, { method: 'DELETE' });
-    }
-  }
+  await Promise.allSettled(syncPromises);
+
+  // Delete tasks removed locally — run in parallel
+  const deletePromises = server
+    .filter(s => !localServerIds.has(String(s.id)))
+    .map(s => apiFetch(`/api/tasks/${s.id}`, { method: 'DELETE' }));
+  await Promise.allSettled(deletePromises);
 
   if (idReplacements.length > 0 || tasksToClearDirty.size > 0) {
     updateTasks((draft) => {

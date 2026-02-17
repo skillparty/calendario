@@ -85,6 +85,7 @@ export interface UserSession {
 export interface FiltersState {
   month: string; // 'all' or '0'..'11'
   status: string; // 'all' | 'pending' | 'completed'
+  priority: string; // 'all' | '1' | '2' | '3'
 }
 
 export interface AppState {

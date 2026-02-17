@@ -3,8 +3,10 @@
  * @typedef {import('./types').Task} Task
  */
 
-import { state, getTasks, formatDateLocal } from './state.js';
+import { state, getTasks, updateTasks, formatDateLocal } from './state.js';
 import { showTaskInputModal } from './calendar.js';
+import { isLoggedInWithBackend, updateTaskOnBackend, pushLocalTasksToBackend } from './api.js';
+import { showToast } from './utils/UIFeedback.js';
 import { escapeHtml } from './utils/helpers.js';
 import { icons } from './icons.js';
 
@@ -111,7 +113,7 @@ export function renderWeekly() {
         const completedClass = task.completed ? ' weekly-task-completed' : '';
         const priorityClass = task.priority === 1 ? 'high' : task.priority === 2 ? 'medium' : 'low';
         html += `
-          <div class="weekly-task${completedClass} weekly-task-${priorityClass}" data-task-id="${task.id}" title="${escapeHtml(task.title)}">
+          <div class="weekly-task${completedClass} weekly-task-${priorityClass}" data-task-id="${task.id}" data-source-date="${dateKey}" draggable="true" title="${escapeHtml(task.title)}">
             <span class="weekly-task-time">${task.time}</span>
             ${task.dirty ? `<span class="weekly-dirty-indicator" title="Sin sincronizar">${icons.cloudOff}</span>` : ''}
             <span class="weekly-task-title">${escapeHtml(task.title.length > 18 ? task.title.substring(0, 18) + '…' : task.title)}</span>
@@ -136,7 +138,7 @@ export function renderWeekly() {
       const completedClass = task.completed ? ' weekly-task-completed' : '';
       const priorityClass = task.priority === 1 ? 'high' : task.priority === 2 ? 'medium' : 'low';
       html += `
-        <div class="weekly-task${completedClass} weekly-task-${priorityClass}" data-task-id="${task.id}" title="${escapeHtml(task.title)}">
+        <div class="weekly-task${completedClass} weekly-task-${priorityClass}" data-task-id="${task.id}" data-source-date="${dateKey}" draggable="true" title="${escapeHtml(task.title)}">
           ${task.dirty ? `<span class="weekly-dirty-indicator" title="Sin sincronizar">${icons.cloudOff}</span>` : ''}
           <span class="weekly-task-title">${escapeHtml(task.title.length > 18 ? task.title.substring(0, 18) + '…' : task.title)}</span>
         </div>
@@ -197,6 +199,94 @@ export function renderWeekly() {
         if (task) {
           showTaskInputModal(task.date, task);
           return;
+        }
+      }
+    });
+  });
+
+  // Drag & drop: move tasks between weekly cells
+  container.querySelectorAll('.weekly-task').forEach(taskEl => {
+    taskEl.addEventListener('dragstart', (e) => {
+      const el = /** @type {HTMLElement} */ (taskEl);
+      const taskId = el.dataset.taskId;
+      const sourceDate = el.dataset.sourceDate;
+      if (!taskId || !sourceDate) return;
+      /** @type {DragEvent} */ (e).dataTransfer?.setData('text/plain', JSON.stringify({ taskId, sourceDate }));
+      if (/** @type {DragEvent} */ (e).dataTransfer) /** @type {DragEvent} */ (e).dataTransfer.effectAllowed = 'move';
+      el.classList.add('dragging');
+    });
+
+    taskEl.addEventListener('dragend', () => {
+      taskEl.classList.remove('dragging');
+      container.querySelectorAll('.weekly-cell.drag-over').forEach(c => c.classList.remove('drag-over'));
+    });
+  });
+
+  container.querySelectorAll('.weekly-cell').forEach(cell => {
+    cell.addEventListener('dragover', (e) => {
+      const el = /** @type {HTMLElement} */ (cell);
+      if (el.classList.contains('weekly-cell-past')) return;
+      e.preventDefault();
+      if (/** @type {DragEvent} */ (e).dataTransfer) /** @type {DragEvent} */ (e).dataTransfer.dropEffect = 'move';
+      el.classList.add('drag-over');
+    });
+
+    cell.addEventListener('dragleave', () => {
+      cell.classList.remove('drag-over');
+    });
+
+    cell.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const cellEl = /** @type {HTMLElement} */ (cell);
+      cellEl.classList.remove('drag-over');
+      if (cellEl.classList.contains('weekly-cell-past')) return;
+
+      const targetDate = cellEl.dataset.date;
+      const targetHour = cellEl.dataset.hour; // 'HH' or 'allday'
+      if (!targetDate) return;
+
+      let payload;
+      try { payload = JSON.parse(/** @type {DragEvent} */ (e).dataTransfer?.getData('text/plain') || ''); } catch { return; }
+      const { taskId, sourceDate } = payload || {};
+      if (!taskId || !sourceDate) return;
+
+      // Determine new time: keep existing time if dropping on allday, set hour:00 otherwise
+      /** @type {string | null} */
+      let newTime = null;
+      if (targetHour && targetHour !== 'allday') {
+        newTime = `${targetHour}:00`;
+      }
+
+      updateTasks(draft => {
+        const list = draft[sourceDate];
+        if (!list) return;
+        const idx = list.findIndex(t => t.id === taskId);
+        if (idx === -1) return;
+        const [task] = list.splice(idx, 1);
+        if (list.length === 0) delete draft[sourceDate];
+        task.date = targetDate;
+        task.time = newTime;
+        task.dirty = true;
+        task.lastModified = Date.now();
+        if (!draft[targetDate]) draft[targetDate] = [];
+        draft[targetDate].push(task);
+      });
+
+      renderWeekly();
+      showToast('Tarea movida', { type: 'success', duration: 2000 });
+
+      if (isLoggedInWithBackend()) {
+        const allTasks = getTasks();
+        let movedTask = null;
+        for (const list of Object.values(allTasks)) {
+          movedTask = list.find(t => t.id === taskId) || null;
+          if (movedTask) break;
+        }
+        const serverId = movedTask?.serverId || (movedTask && /^\d+$/.test(String(movedTask.id)) ? Number(movedTask.id) : null);
+        if (serverId) {
+          updateTaskOnBackend(serverId, { date: targetDate, time: newTime }).catch(() => {/* soft-fail */});
+        } else {
+          pushLocalTasksToBackend().catch(() => {/* soft-fail */});
         }
       }
     });

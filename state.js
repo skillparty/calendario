@@ -55,6 +55,7 @@ export const state = {
   filters: {
     month: 'all',
     status: 'all',
+    priority: 'all',
   },
 };
 
@@ -115,10 +116,11 @@ export function setLastGistUpdatedAt(ts) {
   else safeRemoveItem('lastGistUpdatedAt');
 }
 
-/** @param {string} month @param {string} status */
-export function setFilters(month, status) {
+/** @param {string} month @param {string} status @param {string} [priority='all'] */
+export function setFilters(month, status, priority = 'all') {
   state.filters.month = month;
   state.filters.status = status;
+  state.filters.priority = priority;
 }
 
 /** @returns {void} */

@@ -15,7 +15,7 @@ import { showPdfExportModal } from './pdf.js';
 import { showAuthToast, showSyncToast, showToast } from './utils/UIFeedback.js';
 
 // GitHub OAuth constants
-const GITHUB_CLIENT_ID = 'Ov23liO2tcNCvR8xrHov';
+const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
 const GITHUB_REDIRECT_URI = (typeof window !== 'undefined' && window.location && window.location.origin)
   ? window.location.origin
   : 'https://your-frontend.vercel.app';
@@ -35,6 +35,12 @@ const OAUTH_PROXY_URL = API_BASE_URL + '/api/auth/github';
 /** @type {HTMLElement | null} */ let agendaView;
 /** @type {HTMLButtonElement | null} */ let weeklyBtn;
 /** @type {HTMLElement | null} */ let weeklyView;
+
+/** Hide the initial loading overlay */
+function hideAppLoading() {
+  const overlay = document.getElementById('app-loading');
+  if (overlay) overlay.classList.add('hidden');
+}
 
 /** @param {string} message @param {boolean} [isError=false] */
 function showAuthStatus(message, isError = false) {
@@ -452,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  handleOAuthCallback();
+  handleOAuthCallback().finally(hideAppLoading);
   updateLoginButton();
   showCalendar();
   setInterval(checkNotifications, 60000);
@@ -465,7 +471,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const monthFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
       const statusFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
       const priorityFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
-      renderAgenda(monthFilter?.value || 'all', statusFilter?.value || 'all', priorityFilter?.value || 'all');
+      renderAgenda(
+        monthFilter?.value || state.filters.month || 'all',
+        statusFilter?.value || state.filters.status || 'all',
+        priorityFilter?.value || state.filters.priority || 'all'
+      );
     }
   });
 
