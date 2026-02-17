@@ -234,6 +234,16 @@ export async function loadTasksIntoState() {
 /** @returns {Promise<void>} */
 export async function pushLocalTasksToBackend() {
   if (!isLoggedInWithBackend()) return;
+
+  // Validate JWT before firing bulk requests — abort on 401
+  const authCheck = await apiFetch('/api/auth/me', {}, 1).catch(() => null);
+  if (authCheck && authCheck.status === 401) {
+    console.warn('[sync] JWT invalid/expired — clearing session');
+    const { setUserSession } = await import('./state.js');
+    setUserSession(null);
+    return;
+  }
+
   const server = await fetchAllTasksFromBackend(100);
   const serverById = new Map(server.map(t => [String(t.id), t]));
 
@@ -248,10 +258,12 @@ export async function pushLocalTasksToBackend() {
   const idReplacements = [];
 
   const tasksToClearDirty = new Set();
+  let authFailed = false;
 
   // Build parallel create/update promises
   /** @type {Promise<void>[]} */
   const syncPromises = localList.map(async (t) => {
+    if (authFailed) return;
     const resolvedServerId = getServerId(t);
     const existing = resolvedServerId ? serverById.get(String(resolvedServerId)) : null;
     if (!existing) {
@@ -287,6 +299,7 @@ export async function pushLocalTasksToBackend() {
         body: JSON.stringify(payload)
       });
 
+      if (createRes.status === 401) { authFailed = true; return; }
       if (createRes.ok) {
         const created = await createRes.clone().json().catch(() => null);
         const createdId = created && created.id !== undefined ? Number(created.id) : null;
@@ -316,7 +329,8 @@ export async function pushLocalTasksToBackend() {
       const loTags = JSON.stringify(t.tags || []);
       if (exTags !== loTags) diff.tags = t.tags || [];
       if (Object.keys(diff).length > 0) {
-        await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff), keepalive: true });
+        const putRes = await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff), keepalive: true });
+        if (putRes.status === 401) { authFailed = true; return; }
       }
       // Mark as synced regardless of whether diff was needed
       tasksToClearDirty.add(String(t.id));
@@ -325,11 +339,13 @@ export async function pushLocalTasksToBackend() {
 
   await Promise.allSettled(syncPromises);
 
-  // Delete tasks removed locally — run in parallel
-  const deletePromises = server
-    .filter(s => !localServerIds.has(String(s.id)))
-    .map(s => apiFetch(`/api/tasks/${s.id}`, { method: 'DELETE' }));
-  await Promise.allSettled(deletePromises);
+  // Delete tasks removed locally — run in parallel (skip if auth failed)
+  if (!authFailed) {
+    const deletePromises = server
+      .filter(s => !localServerIds.has(String(s.id)))
+      .map(s => apiFetch(`/api/tasks/${s.id}`, { method: 'DELETE' }));
+    await Promise.allSettled(deletePromises);
+  }
 
   if (idReplacements.length > 0 || tasksToClearDirty.size > 0) {
     updateTasks((draft) => {
