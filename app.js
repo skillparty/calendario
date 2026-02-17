@@ -188,8 +188,24 @@ async function handleOAuthCallback() {
         setUserSession({ jwt: jwtToken, user: data.user, loginTime: Date.now() });
         const cleanUrl = window.location.origin + window.location.pathname; window.history.replaceState({}, document.title, cleanUrl);
         updateLoginButton();
-        await loadTasksIntoState();
         showAuthStatus('Inicio de sesión exitoso');
+        // Load tasks separately — retry up to 4 times with backoff to handle backend cold starts (503)
+        (async () => {
+          for (let attempt = 1; attempt <= 4; attempt++) {
+            try {
+              await loadTasksIntoState();
+              notifyTasksUpdated();
+              return;
+            } catch (e) {
+              if (attempt < 4) {
+                await new Promise(r => setTimeout(r, 1500 * attempt));
+              } else {
+                console.error('loadTasksIntoState failed after retries:', e);
+                showSyncStatus('No se pudieron cargar las tareas. Recarga la página.', true);
+              }
+            }
+          }
+        })();
       }).catch(err => {
         console.error('Code exchange failed:', err);
         showAuthStatus('Error al intercambiar el código (ver consola)', true);
