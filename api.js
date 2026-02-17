@@ -156,25 +156,30 @@ export async function loadTasksIntoState() {
 
   // 2. Identify dirty tasks (modified but not confirmed synced)
   const dirtyTasks = Object.values(currentAll).flat().filter(t => t.dirty);
-  const dirtyMap = new Map(dirtyTasks.map(t => [String(t.id), t]));
+  const dirtyMap = new Map();
+  dirtyTasks.forEach(t => {
+    dirtyMap.set(String(t.id), t);
+    if (t.serverId) dirtyMap.set(String(t.serverId), t);
+  });
 
   /** @type {TasksByDate} */
   const byDate = {};
+  const processedDirtyIds = new Set(); // Track which dirty tasks were merged with backend items
   
-  // Add backend tasks, but prefer dirty local version if exists
+  // Add backend tasks
   list.forEach(t => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
     
     // Check if we have a dirty local version of this task
-    // We check both ID formats to be safe
-    const dirtyLocal = dirtyMap.get(String(t.id)) || dirtyMap.get(String(t.serverId)); // serverId check might be redundant if id matches
+    const dirtyLocal = dirtyMap.get(String(t.id)) || dirtyMap.get(String(t.serverId)); // serverId check redundant but safe
 
     if (dirtyLocal) {
       // Use the local dirty version
       // Ensure serverId is set if missing (it should match)
       if (!dirtyLocal.serverId) dirtyLocal.serverId = Number(t.id);
       byDate[dateKey].push(dirtyLocal);
+      processedDirtyIds.add(dirtyLocal.id);
     } else {
       // Map server task to local format
       /** @type {Task} */
@@ -199,6 +204,18 @@ export async function loadTasksIntoState() {
     }
   });
 
+  // 3. Add any dirty tasks that weren't matched in the backend list (e.g. not returned by pagination yet)
+  dirtyTasks.forEach(t => {
+    if (!processedDirtyIds.has(t.id)) {
+      const dateKey = t.date || 'undated';
+      if (!byDate[dateKey]) byDate[dateKey] = [];
+      // Avoid duplicates if unsynced array also catches it (though dirty usually implies sync attempted)
+      if (!byDate[dateKey].find(existing => String(existing.id) === String(t.id))) {
+        byDate[dateKey].push(t);
+      }
+    }
+  });
+
   // Merge unsynced tasks back in
   unsynced.forEach(t => {
     const dateKey = t.date || 'undated';
@@ -209,11 +226,6 @@ export async function loadTasksIntoState() {
     }
   });
 
-  console.log('Loaded tasks into state:', Object.keys(byDate).length, 'dates', 
-    'Preserved unsynced:', unsynced.length, 
-    'Preserved dirty:', dirtyTasks.length
-  );
-  
   setTasks(byDate);
 
   // If we have dirty tasks, trigger a push to ensure they sync
@@ -240,6 +252,8 @@ export async function pushLocalTasksToBackend() {
   );
   /** @type {Array<{ oldId: string; newId: string; serverId: number }>} */
   const idReplacements = [];
+
+  const tasksToClearDirty = new Set();
 
   // Create or update
   for (const t of localList) {
@@ -287,6 +301,8 @@ export async function pushLocalTasksToBackend() {
           if (String(t.id) !== String(createdId) || t.serverId !== createdId) {
             idReplacements.push({ oldId: String(t.id), newId: String(createdId), serverId: createdId });
           }
+          // Mark as synced/clean
+          tasksToClearDirty.add(String(t.id));
         }
       }
     } else {
@@ -307,6 +323,10 @@ export async function pushLocalTasksToBackend() {
       if (exTags !== loTags) diff.tags = t.tags || [];
       if (Object.keys(diff).length > 0) {
         await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff), keepalive: true });
+        tasksToClearDirty.add(String(t.id));
+      } else {
+        // No changes needed, already in sync
+        tasksToClearDirty.add(String(t.id));
       }
     }
   }
@@ -318,17 +338,27 @@ export async function pushLocalTasksToBackend() {
     }
   }
 
-  if (idReplacements.length > 0) {
+  if (idReplacements.length > 0 || tasksToClearDirty.size > 0) {
     updateTasks((draft) => {
       Object.keys(draft).forEach((dateKey) => {
         draft[dateKey] = (draft[dateKey] || []).map((task) => {
+          let updatedTask = task;
+          
           const replacement = idReplacements.find((entry) => entry.oldId === String(task.id));
-          if (!replacement) return task;
-          return {
-            ...task,
-            id: replacement.newId,
-            serverId: replacement.serverId
-          };
+          if (replacement) {
+            updatedTask = { ...task, id: replacement.newId, serverId: replacement.serverId };
+          }
+          
+          // Clear dirty flag if it was successfully verified/synced
+          // Check against old ID (t.id) because that's what we tracked in the loop
+          // Note: if replacement occurred, it means we created it, so it is synced.
+          if (tasksToClearDirty.has(String(task.id))) {
+             if (updatedTask.dirty) {
+                 updatedTask.dirty = false;
+             }
+          }
+          
+          return updatedTask;
         });
       });
     });
@@ -337,8 +367,6 @@ export async function pushLocalTasksToBackend() {
 
 /** @param {any} payload */
 export async function createTaskOnBackend(payload) {
-  console.log('Original payload received:', payload);
-
   // Ensure payload matches backend validation exactly
   /** @type {Record<string, any>} */
   const cleanPayload = {
@@ -382,9 +410,6 @@ export async function createTaskOnBackend(payload) {
       console.warn('Invalid date format, skipping date field:', dateStr);
     }
   }
-
-  console.log('Clean payload to send:', cleanPayload);
-  console.log('Payload keys:', Object.keys(cleanPayload));
 
   const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(cleanPayload) });
   if (!res.ok) {

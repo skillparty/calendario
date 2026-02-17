@@ -585,6 +585,12 @@
     color: #1e40af;
 }
 
+.badge.dirty {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
+
 .badge.priority {
     display: inline-flex;
     align-items: center;

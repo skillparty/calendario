@@ -584,6 +584,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
               <div class="task-card-title-row">
                 <h4 class="task-card-title${task.completed ? ' completed' : ''}">${escapeHtml(task.title)}</h4>
                 <div class="task-card-badges">
+                  ${task.dirty ? `<span class="badge dirty" title="Cambios sin sincronizar">${icons.cloudOff || getIcon('cloudOff', 'badge-icon')}</span>` : ''}
                   ${reminderIcon ? `<span class="badge reminder" title="Recordatorio activo">${reminderIcon}</span>` : ''}
                   <span class="badge priority ${priorityClass}" title="Prioridad: ${priorityLabel}">
                     ${priorityIcon}

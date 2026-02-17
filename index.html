@@ -222,10 +222,9 @@
                             const newWorker = registration.installing;
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New service worker available
-                                    if (confirm('Nueva versión disponible. ¿Actualizar ahora?')) {
-                                        newWorker.postMessage({ type: 'skip-waiting' });
-                                    }
+                                    // New service worker available - update immediately
+                                    console.log('New SW available, updating...');
+                                    newWorker.postMessage({ type: 'skip-waiting' });
                                 }
                             });
                         });
