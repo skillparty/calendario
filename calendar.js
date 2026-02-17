@@ -503,7 +503,10 @@ export function showDayTasks(date) {
       div.className = `modal-task ${task.completed ? 'completed' : 'pending'}`;
       div.innerHTML = `
                 <div class="task-content">
-                    <strong>${escapeHtml(task.title)}</strong>
+                    <div class="task-header-row">
+                        <strong>${escapeHtml(task.title)}</strong>
+                        ${task.dirty ? `<span class="icon dirty-icon" title="Sin sincronizar" style="color: #6b7280; margin-left: 6px;">${icons.cloudOff}</span>` : ''}
+                    </div>
                     ${task.time ? `<small class="modal-task-time"><span class="icon" aria-hidden="true">${icons.clock}</span> ${escapeHtml(task.time)}</small>` : ''}
                     <div class="task-actions">
                         <button type="button" data-action="toggle-task" data-task-id="${task.id}" data-date="${date}">
@@ -627,6 +630,11 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
           const task = draft[date][idx];
           task.title = title; task.time = time; task.isReminder = isReminder;
           task.description = description; task.priority = priority; task.tags = tags.length > 0 ? tags : undefined;
+          
+          // Mark as dirty so it persists/syncs
+          task.dirty = true;
+          task.lastModified = Date.now();
+
           if (taskDate !== date) {
             draft[date].splice(idx, 1);
             if (draft[date].length === 0 && date !== 'undated') delete draft[date];
@@ -659,7 +667,17 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
           tags: tags.length > 0 ? tags : [],
           recurrence: existingTask?.recurrence, // Preserve existing recurrence
           recurrence_id: existingTask?.recurrenceId
-        }).then(() => showSyncStatus('Actualizado correctamente'))
+        }).then(() => {
+            // Clear dirty flag on success
+            updateTasks(draft => {
+               Object.keys(draft).forEach(date => {
+                 const t = (draft[date] || []).find(x => String(x.id) === existingTaskId);
+                 if (t) t.dirty = false;
+               });
+            });
+            notifyTasksUpdated();
+            showSyncStatus('Actualizado correctamente');
+        })
           .catch((err) => {
             console.error('Update failed:', err);
             if (navigator.onLine) {
@@ -692,7 +710,9 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
     priority,
     tags: tags.length > 0 ? tags : undefined,
     recurrence: recurrence || undefined,
-    recurrenceId: recurrence ? localTaskId : undefined
+    recurrenceId: recurrence ? localTaskId : undefined,
+    dirty: true,
+    lastModified: Date.now()
   };
 
   const tasksToCreate = [task];
@@ -745,7 +765,7 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
               Object.keys(draft).forEach((key) => {
                 draft[key] = (draft[key] || []).map((item) => {
                   if (String(item.id) !== t.id) return item;
-                  return { ...item, id: String(serverId), serverId };
+                  return { ...item, id: String(serverId), serverId, dirty: false };
                 });
               });
             });

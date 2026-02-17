@@ -116,10 +116,21 @@ export function toggleTask(id) {
     if (found) {
       const serverId = getServerTaskIdLocal(found);
       const promise = serverId ? updateTaskOnBackend(serverId, { completed: /** @type {import('../types').Task} */ (found).completed }) : pushLocalTasksToBackend();
-      // We do NOT clear the dirty flag here immediately.
-      // We rely on pushLocalTasksToBackend (triggered on load/interval) to verify sync and clear dirty flags.
-      // This ensures that if the user reloads immediately, the local 'dirty' state wins over potential stale server data.
-      Promise.resolve(promise).catch(err => {
+      
+      Promise.resolve(promise)
+        .then(() => {
+           // Clear dirty flag on success
+           if (serverId) {
+             updateTasks(draft => {
+               Object.values(draft).forEach(list => {
+                 const t = (list || []).find(x => String(x.id) === String(id));
+                 if (t) t.dirty = false;
+               });
+             });
+             notifyTasksUpdated();
+           }
+        })
+        .catch(err => {
         console.error('Toggle task sync failed:', err);
         showToast('Sincronización pendiente. Se reintentará automáticamente.', { type: 'warning' });
       });
