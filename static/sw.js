@@ -89,6 +89,11 @@ sw.addEventListener('fetch', (/** @type {any} */ event) => {
     return;
   }
 
+  // Skip cross-origin requests (e.g. backend API on a different domain)
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   // API requests - Network first, fallback to cache
   if (url.pathname.startsWith('/api/')) {
     fetchEvent.respondWith(networkFirstStrategy(request));
