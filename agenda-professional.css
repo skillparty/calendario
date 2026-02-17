@@ -57,6 +57,9 @@
     padding: var(--space-8);
     max-width: 1200px;
     margin: 0 auto;
+}
+
+.agenda-container.animate-entry {
     animation: fadeIn 0.4s ease-out;
 }
 
@@ -78,6 +81,9 @@
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border);
+}
+
+.agenda-header.animate-entry {
     animation: slideDown 0.4s ease-out;
 }
 

@@ -299,12 +299,21 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
   const agendaView = document.getElementById('agenda-view');
   if (!agendaView) return;
 
+  // Capture previous scroll position to restore it after render
+  const previousScrollContainer = agendaView.querySelector('.task-list-container');
+  const previousScrollTop = previousScrollContainer ? previousScrollContainer.scrollTop : 0;
+  const previousWindowScroll = window.scrollY;
+  const hasPreviousContent = agendaView.querySelector('.task-card') !== null;
+  
+  // Animation class - only for initial entry
+  const animationClass = hasPreviousContent ? '' : ' animate-entry';
+
   setFilters(filterMonth, filterStatus);
 
   let html = `
-    <div class="agenda-container">
+    <div class="agenda-container${animationClass}">
         <!-- Header Section -->
-        <header class="agenda-header">
+        <header class="agenda-header${animationClass}">
             <div class="header-content">
                 <h2 class="agenda-title">
                     ${getIcon('clipboard', 'agenda-icon')}
@@ -711,6 +720,32 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
 
   agendaView.innerHTML = html;
 
+  // Restore scroll position if it existed (Immediate)
+  const newScrollContainer = agendaView.querySelector('.task-list-container');
+  if (newScrollContainer && previousScrollTop > 0) {
+    newScrollContainer.scrollTo({ top: previousScrollTop, behavior: 'instant' });
+  }
+  if (previousWindowScroll > 0) {
+    window.scrollTo({ top: previousWindowScroll, behavior: 'instant' });
+  }
+
+  // Backup restoration in next frame (handles potential layout shifts)
+  requestAnimationFrame(() => {
+    if (newScrollContainer && previousScrollTop > 0 && Math.abs(newScrollContainer.scrollTop - previousScrollTop) > 5) {
+      newScrollContainer.scrollTo({ top: previousScrollTop, behavior: 'instant' });
+    }
+    if (previousWindowScroll > 0 && Math.abs(window.scrollY - previousWindowScroll) > 5) {
+      window.scrollTo({ top: previousWindowScroll, behavior: 'instant' });
+    }
+  });
+
+  // Final fallback for persistence
+  setTimeout(() => {
+    if (newScrollContainer && previousScrollTop > 0 && Math.abs(newScrollContainer.scrollTop - previousScrollTop) > 5) {
+      newScrollContainer.scrollTop = previousScrollTop;
+    }
+  }, 10);
+
   if (!agendaView.dataset.actionsBound) {
     agendaView.addEventListener('click', (event) => {
       handleAgendaActionClick(/** @type {MouseEvent} */ (event));
@@ -789,7 +824,8 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
     const todayGroup = document.getElementById('today-group');
     const taskListContainer = document.querySelector('.task-list-container');
     
-    if (todayGroup && taskListContainer) {
+    // Solo hacer auto-scroll si es la carga inicial (no hay contenido previo)
+    if (!hasPreviousContent && todayGroup && taskListContainer) {
       // Calcular posición con offset para dejar espacio arriba
       const containerTop = /** @type {HTMLElement} */ (taskListContainer).offsetTop;
       const todayGroupTop = /** @type {HTMLElement} */ (todayGroup).offsetTop;
@@ -863,7 +899,7 @@ function formatDateForDisplay(dateString) {
 // Toggle task with targeted DOM update (no full re-render)
 /** @param {string} id @param {string} filterMonth @param {string} filterStatus @param {string} [filterPriority='all'] */
 function toggleTaskWithAnimation(id, filterMonth, filterStatus, filterPriority = 'all') {
-  toggleTask(id);
+  toggleTask(id, { silent: true });
 
   // Find the completed state from the updated store
   /** @type {boolean | undefined} */

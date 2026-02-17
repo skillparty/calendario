@@ -111,8 +111,12 @@ function restoreTask(task) {
 }
 
 
-/** @param {string} id */
-export function toggleTask(id) {
+/**
+ * @param {string} id
+ * @param {{ silent?: boolean }} [options={}]
+ */
+export function toggleTask(id, options = {}) {
+  const { silent = false } = options;
   const previousState = JSON.parse(JSON.stringify(getTasks()));
   
   updateTasks(draft => {
@@ -124,8 +128,11 @@ export function toggleTask(id) {
         t.lastModified = Date.now();
       }
     });
-  });
-  notifyTasksUpdated(); // This triggers app-wide re-render (calendar & agenda)
+  }, { silent });
+  
+  if (!silent) {
+    notifyTasksUpdated(); // This triggers app-wide re-render (calendar & agenda)
+  }
 
   if (isLoggedInWithBackend()) {
     // find task and try update
@@ -149,8 +156,8 @@ export function toggleTask(id) {
                  const t = (list || []).find(x => String(x.id) === String(id));
                  if (t) t.dirty = false;
                });
-             });
-             notifyTasksUpdated();
+             }, { silent: true });
+             // Silent update to avoid re-rendering list and losing scroll position
            }
         })
         .catch(err => {

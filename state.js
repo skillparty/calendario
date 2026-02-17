@@ -68,18 +68,27 @@ export function getTasks() {
   return state.tasks;
 }
 
-/** @param {import('./types').TasksByDate} newTasks */
-export function setTasks(newTasks) {
+/**
+ * @param {import('./types').TasksByDate} newTasks
+ * @param {{ silent?: boolean }} [options={}]
+ */
+export function setTasks(newTasks, options = {}) {
+  const { silent = false } = options;
   state.tasks = newTasks || {};
   safeSetItem('calendarTasks', JSON.stringify(state.tasks));
-  notifyTasksUpdated();
+  if (!silent) {
+    notifyTasksUpdated();
+  }
 }
 
-/** @param {(draft: import('./types').TasksByDate) => void} mutatorFn */
-export function updateTasks(mutatorFn) {
+/**
+ * @param {(draft: import('./types').TasksByDate) => void} mutatorFn
+ * @param {{ silent?: boolean }} [options={}]
+ */
+export function updateTasks(mutatorFn, options = {}) {
   const draft = JSON.parse(JSON.stringify(state.tasks || {}));
   mutatorFn(draft);
-  setTasks(draft);
+  setTasks(draft, options);
 }
 
 /** @param {import('./types').UserSession | null} session */

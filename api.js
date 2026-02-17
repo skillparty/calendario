@@ -361,7 +361,7 @@ export async function pushLocalTasksToBackend() {
           return updatedTask;
         });
       });
-    });
+    }, { silent: true });
   }
 }
 
