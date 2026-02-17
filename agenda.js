@@ -312,104 +312,68 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
 
   let html = `
     <div class="agenda-container${animationClass}">
-        <!-- Header Section -->
-        <header class="agenda-header${animationClass}">
-            <div class="header-content">
-                <h2 class="agenda-title">
+        <!-- Streamlined Toolbar -->
+        <header class="agenda-toolbar${animationClass}">
+            <div class="toolbar-brand">
+                <h2 class="toolbar-title">
                     ${getIcon('clipboard', 'agenda-icon')}
-                    <span class="title-text">Agenda de Tareas</span>
+                    <span class="title-text">Agenda</span>
                 </h2>
-                <button type="button" data-action="open-task-modal" class="btn-add-task-header">
+            </div>
+            
+            <div class="toolbar-actions">
+                <div class="toolbar-search">
+                    <input type="text" id="search-filter" placeholder="Buscar..." class="search-input" value="${escapeHtml(agendaSearchTerm)}">
+                    ${getIcon('search', 'search-icon')}
+                </div>
+                
+                <div class="toolbar-filters">
+                     <select id="month-filter" class="toolbar-select" title="Filtrar por Mes">
+                        <option value="all"${filterMonth === 'all' ? ' selected' : ''}>Mes: Todos</option>
+                        <option value="0"${filterMonth === '0' ? ' selected' : ''}>Enero</option>
+                        <option value="1"${filterMonth === '1' ? ' selected' : ''}>Febrero</option>
+                        <option value="2"${filterMonth === '2' ? ' selected' : ''}>Marzo</option>
+                        <option value="3"${filterMonth === '3' ? ' selected' : ''}>Abril</option>
+                        <option value="4"${filterMonth === '4' ? ' selected' : ''}>Mayo</option>
+                        <option value="5"${filterMonth === '5' ? ' selected' : ''}>Junio</option>
+                        <option value="6"${filterMonth === '6' ? ' selected' : ''}>Julio</option>
+                        <option value="7"${filterMonth === '7' ? ' selected' : ''}>Agosto</option>
+                        <option value="8"${filterMonth === '8' ? ' selected' : ''}>Septiembre</option>
+                        <option value="9"${filterMonth === '9' ? ' selected' : ''}>Octubre</option>
+                        <option value="10"${filterMonth === '10' ? ' selected' : ''}>Noviembre</option>
+                        <option value="11"${filterMonth === '11' ? ' selected' : ''}>Diciembre</option>
+                     </select>
+                     
+                     <select id="status-filter" class="toolbar-select" title="Filtrar por Estado">
+                        <option value="all"${filterStatus === 'all' ? ' selected' : ''}>Estado: Todos</option>
+                        <option value="pending"${filterStatus === 'pending' ? ' selected' : ''}>Pendientes</option>
+                        <option value="completed"${filterStatus === 'completed' ? ' selected' : ''}>Completadas</option>
+                     </select>
+                     
+                     <select id="priority-filter" class="toolbar-select" title="Filtrar por Prioridad">
+                        <option value="all"${filterPriority === 'all' ? ' selected' : ''}>Prioridad: Todas</option>
+                        <option value="1"${filterPriority === '1' ? ' selected' : ''}>Alta</option>
+                        <option value="2"${filterPriority === '2' ? ' selected' : ''}>Media</option>
+                        <option value="3"${filterPriority === '3' ? ' selected' : ''}>Baja</option>
+                     </select>
+                </div>
+
+                <button type="button" data-action="open-task-modal" class="toolbar-btn-add">
                     ${getIcon('plus', 'btn-icon')}
-                    <span class="btn-text">Nueva Tarea</span>
+                    <span>Nueva Tarea</span>
                 </button>
             </div>
         </header>
-        
-        <!-- Filters Section -->
-        <section class="agenda-filters-section">
-            <div class="filters-wrapper">
-                <div class="filters-row">
-                    <div class="filter-group">
-                        <label for="month-filter" class="filter-label">
-                            ${getIcon('calendar', 'filter-icon')}
-                            <span>Mes</span>
-                        </label>
-                        <select id="month-filter" class="filter-select">
-                            <option value="all">Todos los meses</option>
-                            <option value="0">Enero</option>
-                            <option value="1">Febrero</option>
-                            <option value="2">Marzo</option>
-                            <option value="3">Abril</option>
-                            <option value="4">Mayo</option>
-                            <option value="5">Junio</option>
-                            <option value="6">Julio</option>
-                            <option value="7">Agosto</option>
-                            <option value="8">Septiembre</option>
-                            <option value="9">Octubre</option>
-                            <option value="10">Noviembre</option>
-                            <option value="11">Diciembre</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="status-filter" class="filter-label">
-                            ${getIcon('barChart', 'filter-icon')}
-                            <span>Estado</span>
-                        </label>
-                        <select id="status-filter" class="filter-select">
-                            <option value="all">Todas las tareas</option>
-                            <option value="pending">Pendientes</option>
-                            <option value="completed">Completadas</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="priority-filter" class="filter-label">
-                            ${getIcon('filter', 'filter-icon')}
-                            <span>Prioridad</span>
-                        </label>
-                        <select id="priority-filter" class="filter-select">
-                            <option value="all">Todas</option>
-                            <option value="1">Alta</option>
-                            <option value="2">Media</option>
-                            <option value="3">Baja</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-search">
-                        <input type="text" id="search-filter" placeholder="Buscar tareas..." class="search-input">
-                        ${getIcon('search', 'search-icon')}
-                    </div>
-                </div>
-                
-                <div class="stats-row">
-                    <div class="stat-badge total" id="total-tasks-badge">
-                        <span class="stat-number">0</span>
-                        <span class="stat-label">Total</span>
-                    </div>
-                    <div class="stat-badge pending" id="pending-tasks-badge">
-                        <span class="stat-number">0</span>
-                        <span class="stat-label">Pendientes</span>
-                    </div>
-                    <div class="stat-badge completed" id="completed-tasks-badge">
-                        <span class="stat-number">0</span>
-                        <span class="stat-label">Completadas</span>
-                    </div>
-                </div>
-            </div>
-        </section>
+
+        <!-- Mobile FAB -->
+        <button type="button" data-action="open-task-modal" class="fab-add-task" aria-label="Nueva Tarea">
+            <span class="icon">${icons.plus}</span>
+        </button>
 
         <!-- Main Content Area -->
         <main class="agenda-main-content">
             <div class="content-grid">
                 <section class="tasks-section">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            ${getIcon('clipboard', 'section-icon')}
-                            <span>Lista de Tareas</span>
-                        </h3>
-                    </div>
                     <div class="task-list-container">
                         <ul class="task-list">
     `;
@@ -679,21 +643,21 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
                                 <span>Resumen</span>
                             </h3>
                             <div class="stats-overview">
-                                <div class="stat-item total">
+                                <div class="stat-item total" id="total-tasks-stat">
                                     <div class="stat-value">${totalTasks}</div>
                                     <div class="stat-label">Total</div>
                                     <div class="stat-progress">
                                         <div class="progress-bar" style="width: 100%"></div>
                                     </div>
                                 </div>
-                                <div class="stat-item completed">
+                                <div class="stat-item completed" id="completed-tasks-stat">
                                     <div class="stat-value">${completedTasks}</div>
                                     <div class="stat-label">Completadas</div>
                                     <div class="stat-progress">
                                         <div class="progress-bar" style="width: ${totalTasks > 0 ? (completedTasks / totalTasks * 100) : 0}%"></div>
                                     </div>
                                 </div>
-                                <div class="stat-item pending">
+                                <div class="stat-item pending" id="pending-tasks-stat">
                                     <div class="stat-value">${pendingTasks}</div>
                                     <div class="stat-label">Pendientes</div>
                                     <div class="stat-progress">
@@ -799,24 +763,11 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
     agendaView.dataset.actionsBound = 'true';
   }
 
-  // Actualizar badges de estadísticas
+  // Actualizar badges de estadísticas (Sidebar)
   setTimeout(() => {
-    const totalBadge = document.getElementById('total-tasks-badge');
-    const pendingBadge = document.getElementById('pending-tasks-badge');
-    const completedBadge = document.getElementById('completed-tasks-badge');
-    
-    if (totalBadge) {
-      const numberEl = totalBadge.querySelector('.stat-number');
-      if (numberEl) numberEl.textContent = String(totalTasks);
-    }
-    if (pendingBadge) {
-      const numberEl = pendingBadge.querySelector('.stat-number');
-      if (numberEl) numberEl.textContent = String(pendingTasks);
-    }
-    if (completedBadge) {
-      const numberEl = completedBadge.querySelector('.stat-number');
-      if (numberEl) numberEl.textContent = String(completedTasks);
-    }
+    // Initial sync just in case, though HTML generation should be correct.
+    // This is mostly useful if we add animations or if calculations drift.
+    // We can reuse the update function logic if we export it or just leave as is for now since HTML is fresh.
   }, 0);
 
   // Auto-scroll a la fecha actual si existe
@@ -948,12 +899,28 @@ function updateStatBadges() {
   });
   const pending = total - completed;
 
-  const totalBadge = document.getElementById('total-tasks-badge');
-  const pendingBadge = document.getElementById('pending-tasks-badge');
-  const completedBadge = document.getElementById('completed-tasks-badge');
-  if (totalBadge) { const n = totalBadge.querySelector('.stat-number'); if (n) n.textContent = String(total); }
-  if (pendingBadge) { const n = pendingBadge.querySelector('.stat-number'); if (n) n.textContent = String(pending); }
-  if (completedBadge) { const n = completedBadge.querySelector('.stat-number'); if (n) n.textContent = String(completed); }
+  // Update Sidebar Stats
+  /** 
+   * @param {string} id 
+   * @param {number} value 
+   * @param {number} totalCount 
+   */
+  const updateStatItem = (id, value, totalCount) => {
+      const el = document.getElementById(id);
+      if (el) {
+          const valEl = el.querySelector('.stat-value');
+          if (valEl) valEl.textContent = String(value);
+          const barEl = /** @type {HTMLElement | null} */ (el.querySelector('.progress-bar'));
+          if (barEl) {
+              const pct = totalCount > 0 ? (value / totalCount * 100) : 0;
+              barEl.style.width = `${pct}%`;
+          }
+      }
+  };
+
+  updateStatItem('total-tasks-stat', total, total); // Total progress always 100% or relative? usually 100%
+  updateStatItem('completed-tasks-stat', completed, total);
+  updateStatItem('pending-tasks-stat', pending, total);
 }
 
 // Expose for inline handlers (browser only)

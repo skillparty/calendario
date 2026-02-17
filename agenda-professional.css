@@ -74,7 +74,275 @@
     }
 }
 
-/* ========== HEADER ========== */
+/* ========== AGENDA TOOLBAR (Streamlined) ========== */
+.agenda-toolbar {
+    background: var(--bg-primary);
+    padding: var(--space-4);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+    position: relative;
+    z-index: 20;
+}
+
+.toolbar-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-right: auto;
+}
+
+.toolbar-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.025em;
+    white-space: nowrap;
+}
+
+.toolbar-title .icon {
+    color: var(--primary);
+    display: none; /* Hide icon on small screens or streamlined view */
+}
+
+@media (min-width: 768px) {
+    .toolbar-title .icon { display: inline-flex; }
+}
+
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.toolbar-search {
+    position: relative;
+    min-width: 200px;
+    flex: 1;
+    max-width: 400px;
+}
+
+.toolbar-search .search-input {
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    font-size: 0.875rem;
+    background: var(--bg-secondary);
+    border-color: transparent;
+}
+
+.toolbar-search .search-input:focus {
+    background: var(--bg-primary);
+    border-color: var(--primary);
+}
+
+.toolbar-search .search-icon {
+    left: var(--space-3);
+    width: 14px;
+    height: 14px;
+}
+
+.toolbar-filters {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.toolbar-select {
+    padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a0aec0' stroke-width='2'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3e%3c/path%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1em 1em;
+}
+
+.toolbar-select:hover {
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+.toolbar-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.toolbar-btn-add {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    box-shadow: 0 2px 8px rgba(237, 174, 73, 0.3);
+    white-space: nowrap;
+}
+
+.toolbar-btn-add:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(237, 174, 73, 0.4);
+}
+
+/* ========== STICKY DATE HEADERS ========== */
+.task-date-group {
+    position: relative;
+    /* Ensure no overflow hidden here */
+}
+
+.date-group-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin-bottom: 0; /* Flush with tasks */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    /* Glassmorphism */
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border-light);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    transition: background 0.3s ease, padding 0.3s ease;
+}
+
+/* Optional: Slight style change when stuck could be done via JS intersection observer, 
+   but sticky CSS alone doesn't trigger state changes. 
+   We'll stick to a design that looks good in both states. */
+
+.date-group-tasks {
+    padding-top: var(--space-4); /* Add space back that we removed from header margin */
+}
+
+/* ========== CIRCULAR CHECKBOXES ========== */
+.task-check-btn {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy */
+}
+
+.task-check-btn:hover {
+    border-color: var(--primary);
+    background: rgba(237, 174, 73, 0.1);
+}
+
+.task-check-btn.checked {
+    background: var(--success);
+    border-color: var(--success);
+    transform: scale(1.1);
+}
+
+.task-check-btn .check-icon svg {
+    width: 12px;
+    height: 12px;
+    stroke-width: 3px;
+}
+
+/* ========== MOBILE FAB (Floating Action Button) ========== */
+.fab-add-task {
+    display: none;
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    box-shadow: 0 10px 25px -5px rgba(237, 174, 73, 0.5), 0 8px 10px -6px rgba(237, 174, 73, 0.1);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.fab-add-task:hover {
+    transform: translateY(-4px) rotate(90deg);
+    box-shadow: 0 20px 25px -5px rgba(237, 174, 73, 0.6);
+}
+
+.fab-add-task:active {
+    transform: translateY(0) scale(0.95);
+}
+
+.fab-add-task .icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+/* Responsive Adjustments for New Elements */
+@media (max-width: 768px) {
+    .agenda-toolbar {
+        gap: var(--space-3);
+        padding: var(--space-3);
+    }
+    
+    .toolbar-title {
+        font-size: 1.25rem;
+    }
+    
+    .toolbar-actions {
+        width: 100%;
+        order: 3;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .toolbar-search {
+        max-width: none;
+        width: 100%;
+    }
+    
+    .toolbar-filters {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 4px; /* Scrollbar space */
+    }
+    
+    .toolbar-select {
+        flex: 1;
+        min-width: 100px; /* Ensure touch target size */
+    }
+    
+    .toolbar-btn-add {
+        display: none; /* Hide desktop button, use FAB */
+    }
+    
+    .fab-add-task {
+        display: flex;
+    }
+
+    /* Adjust sticky header for mobile */
+    .date-group-header {
+        top: -1px; /* Ensure overlap */
+        padding: var(--space-3) var(--space-4);
+    }
+}
+
+/* ========== HEADER (Legacy override) ========== */
 .agenda-header {
     background: var(--bg-primary);
     padding: var(--space-8);
@@ -343,8 +611,9 @@
 /* ========== TASK LIST ========== */
 .task-list-container {
     padding: var(--space-6);
-    max-height: calc(100vh - 400px);
+    max-height: calc(100vh - 220px);
     overflow-y: auto;
+    scroll-behavior: smooth; /* Enhances the auto-scroll experience */
 }
 
 .task-list-container::-webkit-scrollbar {
