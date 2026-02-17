@@ -410,6 +410,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('online', () => {
     showSyncToast('Conexión restaurada.');
+    if (isLoggedInWithBackend()) {
+      showSyncToast('Sincronizando cambios...', false);
+      pushLocalTasksToBackend()
+        .then(() => loadTasksIntoState())
+        .then(() => {
+          showSyncToast('Sincronización completada.');
+          notifyTasksUpdated();
+        })
+        .catch(err => {
+          console.error('Auto-sync failed:', err);
+          showSyncToast('Error al sincronizar.', true);
+        });
+    }
   });
 
   window.addEventListener('offline', () => {

@@ -427,6 +427,17 @@
     white-space: nowrap;
 }
 
+.task-preview-dirty {
+    display: inline-flex;
+    color: var(--text-muted);
+    margin: 0 0.15rem;
+}
+
+.task-preview-dirty svg {
+    width: 10px;
+    height: 10px;
+}
+
 .task-title {
     color: var(--text-secondary);
     font-weight: 500;

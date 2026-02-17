@@ -809,6 +809,17 @@ main {
     margin-right: 0.25rem;
 }
 
+.weekly-dirty-indicator {
+    display: inline-flex;
+    color: var(--text-muted);
+    margin-right: 0.25rem;
+}
+
+.weekly-dirty-indicator svg {
+    width: 10px;
+    height: 10px;
+}
+
 .weekly-task-title {
     font-weight: 500;
 }
@@ -1042,6 +1053,13 @@ main {
     border-radius: 0.5rem;
     margin-bottom: 0.5rem;
     transition: border-color 0.2s ease;
+}
+
+.dirty-icon {
+    color: #6b7280;
+    margin-left: 6px;
+    width: 14px;
+    height: 14px;
 }
 
 .modal-task .task-content:hover {

@@ -125,7 +125,7 @@ export function renderCalendar() {
         .slice(0, 2);
       const previewItems = sortedTasks.map(task => {
         const title = task.title.length > 15 ? task.title.substring(0, 15) + '...' : task.title;
-        return `<div class="task-preview-item" draggable="true" data-task-id="${task.id}" data-source-date="${dateKey}"><span class="task-time">${task.time || ''}</span><span class="task-title">${escapeHtml(title)}</span></div>`;
+        return `<div class="task-preview-item" draggable="true" data-task-id="${task.id}" data-source-date="${dateKey}"><span class="task-time">${task.time || ''}</span>${task.dirty ? `<span class="task-preview-dirty" title="Sin sincronizar">${icons.cloudOff}</span>` : ''}<span class="task-title">${escapeHtml(title)}</span></div>`;
       }).join('');
       taskPreview = `<div class="task-preview-list">${previewItems}</div>`;
     }
@@ -505,7 +505,7 @@ export function showDayTasks(date) {
                 <div class="task-content">
                     <div class="task-header-row">
                         <strong>${escapeHtml(task.title)}</strong>
-                        ${task.dirty ? `<span class="icon dirty-icon" title="Sin sincronizar" style="color: #6b7280; margin-left: 6px;">${icons.cloudOff}</span>` : ''}
+                        ${task.dirty ? `<span class="icon dirty-icon" title="Sin sincronizar">${icons.cloudOff}</span>` : ''}
                     </div>
                     ${task.time ? `<small class="modal-task-time"><span class="icon" aria-hidden="true">${icons.clock}</span> ${escapeHtml(task.time)}</small>` : ''}
                     <div class="task-actions">

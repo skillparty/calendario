@@ -113,6 +113,7 @@ export function renderWeekly() {
         html += `
           <div class="weekly-task${completedClass} weekly-task-${priorityClass}" data-task-id="${task.id}" title="${escapeHtml(task.title)}">
             <span class="weekly-task-time">${task.time}</span>
+            ${task.dirty ? `<span class="weekly-dirty-indicator" title="Sin sincronizar">${icons.cloudOff}</span>` : ''}
             <span class="weekly-task-title">${escapeHtml(task.title.length > 18 ? task.title.substring(0, 18) + '…' : task.title)}</span>
           </div>
         `;
@@ -136,6 +137,7 @@ export function renderWeekly() {
       const priorityClass = task.priority === 1 ? 'high' : task.priority === 2 ? 'medium' : 'low';
       html += `
         <div class="weekly-task${completedClass} weekly-task-${priorityClass}" data-task-id="${task.id}" title="${escapeHtml(task.title)}">
+          ${task.dirty ? `<span class="weekly-dirty-indicator" title="Sin sincronizar">${icons.cloudOff}</span>` : ''}
           <span class="weekly-task-title">${escapeHtml(task.title.length > 18 ? task.title.substring(0, 18) + '…' : task.title)}</span>
         </div>
       `;
