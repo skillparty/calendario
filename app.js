@@ -52,12 +52,39 @@ function showSyncStatus(message, isError = false) {
   showSyncToast(message, isError);
 }
 
+/** 
+ * @param {HTMLElement | null} nextView 
+ * @param {string} viewName
+ */
+function switchView(nextView, viewName) {
+  if (!nextView) return;
+  
+  // Find currently active view
+  const currentView = [calendarView, agendaView, weeklyView].find(v => v && !v.classList.contains('hidden'));
+  
+  // If clicking same view, do nothing
+  if (currentView === nextView) return;
+
+  document.body.setAttribute('data-current-view', viewName);
+
+  if (currentView) {
+    currentView.classList.add('animate-out');
+    currentView.addEventListener('animationend', () => {
+      currentView.classList.add('hidden');
+      currentView.classList.remove('animate-out');
+    }, { once: true });
+  }
+
+  nextView.classList.remove('hidden');
+  nextView.classList.add('animate-in');
+  nextView.addEventListener('animationend', () => {
+    nextView.classList.remove('animate-in');
+  }, { once: true });
+}
+
 /** @returns {void} */
 function showCalendar() {
-  document.body.setAttribute('data-current-view', 'calendar');
-  if (calendarView) calendarView.classList.remove('hidden');
-  if (agendaView) agendaView.classList.add('hidden');
-  if (weeklyView) weeklyView.classList.add('hidden');
+  switchView(calendarView, 'calendar');
   if (calendarBtn) { calendarBtn.classList.add('active'); calendarBtn.setAttribute('aria-pressed', 'true'); }
   if (agendaBtn) { agendaBtn.classList.remove('active'); agendaBtn.setAttribute('aria-pressed', 'false'); }
   if (weeklyBtn) { weeklyBtn.classList.remove('active'); weeklyBtn.setAttribute('aria-pressed', 'false'); }
@@ -66,10 +93,7 @@ function showCalendar() {
 
 /** @returns {void} */
 function showAgenda() {
-  document.body.setAttribute('data-current-view', 'agenda');
-  if (agendaView) agendaView.classList.remove('hidden');
-  if (calendarView) calendarView.classList.add('hidden');
-  if (weeklyView) weeklyView.classList.add('hidden');
+  switchView(agendaView, 'agenda');
   if (agendaBtn) { agendaBtn.classList.add('active'); agendaBtn.setAttribute('aria-pressed', 'true'); }
   if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
   if (weeklyBtn) { weeklyBtn.classList.remove('active'); weeklyBtn.setAttribute('aria-pressed', 'false'); }
@@ -81,10 +105,7 @@ function showAgenda() {
 
 /** @returns {void} */
 function showWeekly() {
-  document.body.setAttribute('data-current-view', 'weekly');
-  if (weeklyView) weeklyView.classList.remove('hidden');
-  if (calendarView) calendarView.classList.add('hidden');
-  if (agendaView) agendaView.classList.add('hidden');
+  switchView(weeklyView, 'weekly');
   if (weeklyBtn) { weeklyBtn.classList.add('active'); weeklyBtn.setAttribute('aria-pressed', 'true'); }
   if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
   if (agendaBtn) { agendaBtn.classList.remove('active'); agendaBtn.setAttribute('aria-pressed', 'false'); }

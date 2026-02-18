@@ -44,120 +44,81 @@
     background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 50%);
 }
 
-[data-theme="dark"] .agenda-header {
-    background: var(--bg-primary);
-    border-color: var(--border);
+[data-theme="dark"] .agenda-container {
+    --agenda-accent: #4dabf7;
+    --agenda-accent-hover: #74c0fc;
+    --agenda-accent-text: #1a1a1a;
+
+    /* Day Colors Dark Mode (Solid/Darker Headers) */
+    --day-sun-bg: #e03131; --day-sun-border: #c92a2a; --day-sun-text: #ffc9c9; /* Red 800 / Text: Red 200 */
+    --day-mon-bg: #1971c2; --day-mon-border: #1864ab; --day-mon-text: #a5d8ff; /* Blue 800 / Text: Blue 200 */
+    --day-tue-bg: #2f9e44; --day-tue-border: #2b8a3e; --day-tue-text: #b2f2bb; /* Green 800 / Text: Green 200 */
+    --day-wed-bg: #6741d9; --day-wed-border: #5f3dc4; --day-wed-text: #e5dbff; /* Violet 800 / Text: Violet 200 */
+    --day-thu-bg: #d9480f; --day-thu-border: #d9480f; --day-thu-text: #ffd8a8; /* Orange 800 / Text: Orange 200 */
+    --day-fri-bg: #c2255c; --day-fri-border: #a61e4d; --day-fri-text: #fcc2d7; /* Pink 800 / Text: Pink 200 */
+    --day-sat-bg: #1098ad; --day-sat-border: #0b7285; --day-sat-text: #99e9f2; /* Cyan 800 / Text: Cyan 200 */
+    --day-none-bg: #495057; --day-none-border: #343a40; --day-none-text: #ced4da; /* Gray 700 / Text: Gray 300 */
 }
 
-[data-theme="dark"] .agenda-filters-section {
-    background: var(--bg-primary);
-    border-color: var(--border);
-}
-
-[data-theme="dark"] .filter-select,
-[data-theme="dark"] .search-input {
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .toolbar-select {
     background: var(--bg-secondary);
     color: var(--text-primary);
     border-color: var(--border);
 }
 
-[data-theme="dark"] .filter-select:hover,
-[data-theme="dark"] .search-input:hover {
+[data-theme="dark"] .search-input:focus {
+    background: var(--bg-tertiary);
     border-color: var(--primary);
 }
 
-[data-theme="dark"] .stat-badge {
-    background: var(--bg-secondary);
-    border-color: var(--border);
-}
-
-[data-theme="dark"] .stat-badge.total {
-    background: linear-gradient(135deg, #1e3a5f 0%, #1a2f4d 100%);
-    border-color: #2d5a8c;
-}
-
-[data-theme="dark"] .stat-badge.pending {
-    background: linear-gradient(135deg, #4a3c1a 0%, #3d3215 100%);
-    border-color: #6b5a28;
-}
-
-[data-theme="dark"] .stat-badge.completed {
-    background: linear-gradient(135deg, #1a4d2e 0%, #163d25 100%);
-    border-color: #2d6b4a;
-}
-
-[data-theme="dark"] .tasks-section {
+[data-theme="dark"] .tasks-section,
+[data-theme="dark"] .sidebar-block,
+[data-theme="dark"] .agenda-toolbar {
     background: var(--bg-primary);
-    border-color: var(--border);
-}
-
-[data-theme="dark"] .section-header {
-    background: var(--bg-secondary);
     border-color: var(--border);
 }
 
 [data-theme="dark"] .date-group-header {
-    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    background: var(--bg-primary); /* Fallback */
+    border-bottom-color: rgba(255,255,255,0.1);
+    color: white;
 }
 
 [data-theme="dark"] .date-group-count {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
 }
 
-[data-theme="dark"] .task-card {
-    background: var(--bg-primary);
+[data-theme="dark"] .task-card:hover { background: var(--bg-secondary); }
+
+[data-theme="dark"] .task-card + .task-card,
+[data-theme="dark"] .task-date-group + .task-date-group {
     border-color: var(--border);
-}
-
-[data-theme="dark"] .task-card:hover {
-    border-color: var(--primary);
-    background: var(--bg-secondary);
-}
-
-[data-theme="dark"] .task-card.completed {
-    background: var(--bg-secondary);
-    opacity: 0.6;
 }
 
 [data-theme="dark"] .task-check-btn {
+    border-color: var(--border);
+    background: transparent;
+}
+
+[data-theme="dark"] .badge.reminder { background: #1c3d5a; color: #a5d8ff; } /* Soft Blue Dark */
+[data-theme="dark"] .badge.priority.high   { background: #4c1d1d; color: #ffc9c9; } /* Soft Red Dark */
+[data-theme="dark"] .badge.priority.medium { background: #4d2b0b; color: #ffd8a8; } /* Soft Orange Dark */
+[data-theme="dark"] .badge.priority.low    { background: #15381f; color: #b2f2bb; } /* Soft Green Dark */
+
+[data-theme="dark"] .task-card[data-priority="1"] { border-left-color: #ff6b6b; }
+[data-theme="dark"] .task-card[data-priority="2"] { border-left-color: #ff922b; }
+[data-theme="dark"] .task-card[data-priority="3"] { border-left-color: #51cf66; }
+
+[data-theme="dark"] .task-action-btn:hover {
     background: var(--bg-secondary);
     border-color: var(--border);
 }
 
-[data-theme="dark"] .task-check-btn:hover {
-    background: var(--bg-tertiary);
-}
-
-[data-theme="dark"] .badge.reminder {
-    background: linear-gradient(135deg, #1e3a5f 0%, #1a2f4d 100%);
-    color: #60a5fa;
-}
-
-[data-theme="dark"] .badge.priority.high {
-    background: linear-gradient(135deg, #4a1a1a 0%, #3d1515 100%);
-    color: #fca5a5;
-}
-
-[data-theme="dark"] .badge.priority.medium {
-    background: linear-gradient(135deg, #4a3c1a 0%, #3d3215 100%);
-    color: #fde68a;
-}
-
-[data-theme="dark"] .badge.priority.low {
-    background: linear-gradient(135deg, #1a4d2e 0%, #163d25 100%);
-    color: #86efac;
-}
-
-[data-theme="dark"] .action-btn {
-    background: var(--bg-secondary);
+[data-theme="dark"] .delete-confirm-content {
+    background: var(--bg-primary);
     border-color: var(--border);
-    color: var(--text-secondary);
-}
-
-[data-theme="dark"] .action-btn:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
 }
 
 /* Theme toggle button */

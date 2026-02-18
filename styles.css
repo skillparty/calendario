@@ -3,34 +3,62 @@
 
 /* CSS Custom Properties - Single Source of Truth */
 :root {
-    /* Brand palette */
+    /* Brand palette - Soft Focus / Notion Style */
+    --soft-blue: #339af0;
+    --soft-blue-dark: #228be6;
+    --soft-blue-light: #a5d8ff;
+    --soft-red: #ff6b6b;
+    --soft-orange: #ff922b;
+    --soft-green: #51cf66;
+    --soft-pink: #f06595;
+    --soft-purple: #845ef7;
+    
+    /* Legacy Brand Colors (kept for reference, but unused in main theme) */
     --hunyadi-yellow: #edae49;
     --amaranth: #d1495b;
     --paynes-gray: #545f66;
     --cadet-gray: #829399;
     --mint-green: #d0f4ea;
-    --sizzling-red: #d1495b;
 
-    /* Semantic aliases (used by agenda-professional.css) */
-    --primary: #edae49;
-    --primary-dark: #d99a35;
-    --primary-light: #f5c46d;
-    --secondary: #d1495b;
-    --dark: #545f66;
-    --gray: #829399;
-    --light: #d0f4ea;
+    /* Semantic aliases (Global Theme) */
+    --primary: var(--soft-blue);
+    --primary-dark: var(--soft-blue-dark);
+    --primary-light: var(--soft-blue-light);
+    --secondary: var(--soft-pink);
+    --dark: #343a40;
+    --gray: #868e96;
+    --light: #f8f9fa;
 
-    /* Semantic status colors */
-    --success: #22c55e;
-    --warning: #f59e0b;
-    --error: #ef4444;
-    --info: #3b82f6;
+    /* Semantic status colors (Soft Focus) */
+    --success: var(--soft-green);
+    --warning: var(--soft-orange);
+    --error: var(--soft-red);
+    --info: var(--soft-blue);
 
     /* Background */
     --bg-primary: #ffffff;
     --bg-secondary: #f8f9fa;
     --bg-tertiary: #f5f6f7;
     --bg-hover: #f0f1f3;
+
+    /* Day Colors (Soft Focus - Solid/Darker Headers) */
+    --day-sun-bg: #fa5252; --day-sun-border: #c92a2a; --day-sun-text: #c92a2a; /* Red 600 / 900 */
+    --day-mon-bg: #228be6; --day-mon-border: #1864ab; --day-mon-text: #1864ab; /* Blue 600 / 900 */
+    --day-tue-bg: #40c057; --day-tue-border: #2b8a3e; --day-tue-text: #2b8a3e; /* Green 600 / 900 */
+    --day-wed-bg: #7950f2; --day-wed-border: #5f3dc4; --day-wed-text: #5f3dc4; /* Violet 600 / 900 */
+    --day-thu-bg: #fd7e14; --day-thu-border: #d9480f; --day-thu-text: #d9480f; /* Orange 600 / 900 */
+    --day-fri-bg: #e64980; --day-fri-border: #a61e4d; --day-fri-text: #a61e4d; /* Pink 600 / 900 */
+    --day-sat-bg: #15aabf; --day-sat-border: #0b7285; --day-sat-text: #0b7285; /* Cyan 600 / 900 */
+    --day-none-bg: #868e96; --day-none-border: #495057; --day-none-text: #495057; /* Gray 600 / 700 */
+
+    /* Subtle Day Backgrounds (for columns) */
+    --day-sun-soft: color-mix(in srgb, var(--day-sun-bg), transparent 92%);
+    --day-mon-soft: color-mix(in srgb, var(--day-mon-bg), transparent 92%);
+    --day-tue-soft: color-mix(in srgb, var(--day-tue-bg), transparent 92%);
+    --day-wed-soft: color-mix(in srgb, var(--day-wed-bg), transparent 92%);
+    --day-thu-soft: color-mix(in srgb, var(--day-thu-bg), transparent 92%);
+    --day-fri-soft: color-mix(in srgb, var(--day-fri-bg), transparent 92%);
+    --day-sat-soft: color-mix(in srgb, var(--day-sat-bg), transparent 92%);
 
     /* Text */
     --text-primary: #1a202c;
@@ -195,9 +223,9 @@ body {
 }
 
 .nav-item.active {
-    background: linear-gradient(135deg, var(--hunyadi-yellow), #f4c430);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: white;
-    box-shadow: 0 4px 12px rgba(237, 174, 73, 0.3);
+    box-shadow: 0 4px 12px rgba(51, 154, 240, 0.3);
 }
 
 .nav-icon {
@@ -237,7 +265,7 @@ body {
 
 .user-btn:hover {
     background: var(--bg-tertiary);
-    border-color: var(--hunyadi-yellow);
+    border-color: var(--primary);
     transform: translateY(-1px);
     box-shadow: var(--shadow-light);
 }
@@ -278,17 +306,17 @@ body {
     align-items: center;
     gap: var(--spacing-xs);
     transition: all 0.3s ease;
-    background-color: var(--hunyadi-yellow);
-    color: var(--bg-primary);
-    border: 1px solid var(--hunyadi-yellow);
+    background-color: var(--primary);
+    color: white;
+    border: 1px solid var(--primary);
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: var(--radius-md);
     font-weight: 500;
 }
 
 #login-btn:hover {
-    background-color: var(--bg-primary);
-    color: var(--hunyadi-yellow);
+    background-color: var(--primary-dark);
+    color: white;
 }
 
 #user-avatar {
@@ -373,6 +401,27 @@ main {
     box-shadow: var(--shadow-medium);
     border: 1px solid var(--border-color);
     overflow: hidden;
+    animation-duration: 0.25s;
+    animation-fill-mode: both;
+    animation-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+@keyframes fadeInView {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOutView {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-10px); }
+}
+
+.view.animate-in {
+    animation-name: fadeInView;
+}
+
+.view.animate-out {
+    animation-name: fadeOutView;
 }
 
 .hidden {
@@ -455,19 +504,19 @@ main {
 
 .day:hover {
     background-color: var(--bg-tertiary);
-    border-color: var(--cadet-gray);
+    border-color: var(--primary);
     transform: translateY(-2px);
     box-shadow: var(--shadow-medium);
 }
 
 .day.today {
-    background-color: var(--mint-green);
-    border-color: var(--hunyadi-yellow);
+    background-color: var(--primary-light);
+    border-color: var(--primary);
 }
 
 .day.today .day-number {
-    color: var(--paynes-gray);
-    font-weight: 600;
+    color: var(--primary-dark);
+    font-weight: 700;
 }
 
 .day.other-month {
@@ -495,8 +544,8 @@ main {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background-color: var(--hunyadi-yellow);
-    color: var(--bg-primary);
+    background-color: var(--primary);
+    color: white;
     border: none;
     font-size: 0.875rem;
     font-weight: 600;
@@ -509,23 +558,14 @@ main {
 }
 
 .day-add-btn:hover {
-    background-color: var(--amaranth);
+    background-color: var(--primary-dark);
     transform: scale(1.1);
     box-shadow: var(--shadow-medium);
 }
 
-/* Drag & Drop */
-.task-preview-item[draggable="true"] {
-    cursor: grab;
-}
-
-.task-preview-item.dragging {
-    opacity: 0.4;
-}
-
 .day.drag-over {
-    background: rgba(237, 174, 73, 0.12);
-    outline: 2px dashed var(--hunyadi-yellow, #edae49);
+    background: rgba(51, 154, 240, 0.12);
+    outline: 2px dashed var(--primary);
     outline-offset: -2px;
     border-radius: var(--radius-md);
 }
@@ -628,17 +668,17 @@ main {
 }
 
 .weekly-nav-btn:hover {
-    background: var(--hunyadi-yellow);
+    background: var(--primary);
     color: #fff;
-    border-color: var(--hunyadi-yellow);
+    border-color: var(--primary);
 }
 
 .weekly-today-btn {
     padding: 0.4rem 1rem;
     border-radius: 1rem;
-    border: 1px solid var(--hunyadi-yellow);
+    border: 1px solid var(--primary);
     background: transparent;
-    color: var(--hunyadi-yellow);
+    color: var(--primary);
     font-size: 0.8rem;
     font-weight: 600;
     font-family: inherit;
@@ -647,7 +687,7 @@ main {
 }
 
 .weekly-today-btn:hover {
-    background: var(--hunyadi-yellow);
+    background: var(--primary);
     color: #fff;
 }
 
@@ -685,12 +725,29 @@ main {
     border-right: none;
 }
 
+/* Weekly Day Colors (Soft Focus) */
+.weekly-day-header[data-day-index="0"] { border-top: 3px solid var(--day-sun-border); color: var(--day-sun-border); }
+.weekly-day-header[data-day-index="1"] { border-top: 3px solid var(--day-mon-border); color: var(--day-mon-border); }
+.weekly-day-header[data-day-index="2"] { border-top: 3px solid var(--day-tue-border); color: var(--day-tue-border); }
+.weekly-day-header[data-day-index="3"] { border-top: 3px solid var(--day-wed-border); color: var(--day-wed-border); }
+.weekly-day-header[data-day-index="4"] { border-top: 3px solid var(--day-thu-border); color: var(--day-thu-border); }
+.weekly-day-header[data-day-index="5"] { border-top: 3px solid var(--day-fri-border); color: var(--day-fri-border); }
+.weekly-day-header[data-day-index="6"] { border-top: 3px solid var(--day-sat-border); color: var(--day-sat-border); }
+
+.weekly-cell[data-day-index="0"] { background-color: var(--day-sun-soft); }
+.weekly-cell[data-day-index="1"] { background-color: var(--day-mon-soft); }
+.weekly-cell[data-day-index="2"] { background-color: var(--day-tue-soft); }
+.weekly-cell[data-day-index="3"] { background-color: var(--day-wed-soft); }
+.weekly-cell[data-day-index="4"] { background-color: var(--day-thu-soft); }
+.weekly-cell[data-day-index="5"] { background-color: var(--day-fri-soft); }
+.weekly-cell[data-day-index="6"] { background-color: var(--day-sat-soft); }
+
 .weekly-day-today {
-    background: rgba(237, 174, 73, 0.1);
+    background: var(--bg-tertiary); /* Reset specific background, rely on column color + today border */
 }
 
 .weekly-day-today .weekly-day-number {
-    background: var(--hunyadi-yellow);
+    background: var(--primary);
     color: #fff;
     border-radius: 50%;
     width: 28px;
@@ -748,12 +805,12 @@ main {
 }
 
 .weekly-cell:hover {
-    background: rgba(237, 174, 73, 0.04);
+    background: rgba(51, 154, 240, 0.04);
 }
 
 .weekly-cell.drag-over {
-    background: rgba(237, 174, 73, 0.12);
-    outline: 2px dashed var(--hunyadi-yellow, #edae49);
+    background: rgba(51, 154, 240, 0.12);
+    outline: 2px dashed var(--primary);
     outline-offset: -2px;
 }
 
@@ -990,7 +1047,7 @@ main {
 }
 
 .modal-task .task-content:hover {
-    border-color: var(--hunyadi-yellow, #edae49);
+    border-color: var(--primary);
 }
 
 .modal-task.completed .task-content {
@@ -1067,25 +1124,23 @@ main {
     border-radius: 0.5rem;
     background: var(--bg-primary);
     color: var(--text-primary);
-    font-size: 0.9375rem;
-    font-family: inherit;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .task-input-control:focus {
-    outline: none;
-    border-color: var(--hunyadi-yellow, #edae49);
-    box-shadow: 0 0 0 3px rgba(237, 174, 73, 0.15);
+outline: none;
+border-color: var(--primary);
+box-shadow: 0 0 0 3px rgba(51, 154, 240, 0.15);
 }
 
 textarea.task-input-control {
-    resize: vertical;
-    min-height: 2.5rem;
+resize: vertical;
+min-height: 2.5rem;
 }
 
 .task-input-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 0.75rem;
     gap: 0.75rem;
 }
 
@@ -1119,9 +1174,9 @@ textarea.task-input-control {
 }
 
 .priority-option.selected {
-    border-color: var(--hunyadi-yellow, #edae49);
-    background: rgba(237, 174, 73, 0.08);
-    color: var(--text-primary, #1a202c);
+    border-color: var(--primary);
+    background: rgba(51, 154, 240, 0.08);
+    color: var(--text-primary);
 }
 
 .priority-dot {
@@ -1158,8 +1213,8 @@ textarea.task-input-control {
 }
 
 .tags-input-wrapper:focus-within {
-    border-color: var(--hunyadi-yellow, #edae49);
-    box-shadow: 0 0 0 3px rgba(237, 174, 73, 0.15);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(51, 154, 240, 0.15);
 }
 
 .tags-chips {
@@ -1173,9 +1228,9 @@ textarea.task-input-control {
     align-items: center;
     gap: 0.2rem;
     padding: 0.2rem 0.5rem;
-    background: rgba(237, 174, 73, 0.12);
+    background: rgba(51, 154, 240, 0.12);
     color: var(--text-primary);
-    border: 1px solid rgba(237, 174, 73, 0.3);
+    border: 1px solid rgba(51, 154, 240, 0.3);
     border-radius: 1rem;
     font-size: 0.75rem;
     font-weight: 500;
@@ -1232,9 +1287,9 @@ textarea.task-input-control {
 .task-tag {
     display: inline-block;
     padding: 0.15rem 0.5rem;
-    background: rgba(237, 174, 73, 0.1);
-    color: var(--hunyadi-yellow, #edae49);
-    border: 1px solid rgba(237, 174, 73, 0.25);
+    background: rgba(51, 154, 240, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(51, 154, 240, 0.25);
     border-radius: 1rem;
     font-size: 0.7rem;
     font-weight: 600;
@@ -1282,7 +1337,7 @@ textarea.task-input-control {
 
 .task-input-save-btn {
     padding: 0.625rem 1.5rem;
-    background: linear-gradient(135deg, var(--hunyadi-yellow, #edae49) 0%, #d99a35 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     border: none;
     border-radius: 0.5rem;
     color: white;
@@ -1290,12 +1345,12 @@ textarea.task-input-control {
     font-family: inherit;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(237, 174, 73, 0.3);
+    box-shadow: 0 2px 8px rgba(51, 154, 240, 0.3);
 }
 
 .task-input-save-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(237, 174, 73, 0.4);
+    box-shadow: 0 4px 12px rgba(51, 154, 240, 0.4);
 }
 
 .pdf-modal-btn {
@@ -1313,15 +1368,15 @@ textarea.task-input-control {
 }
 
 .pdf-modal-btn-primary {
-    background: linear-gradient(135deg, var(--hunyadi-yellow, #edae49) 0%, #d99a35 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: white;
     margin-right: 0.5rem;
-    box-shadow: 0 2px 8px rgba(237, 174, 73, 0.3);
+    box-shadow: 0 2px 8px rgba(51, 154, 240, 0.3);
 }
 
 .pdf-modal-btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(237, 174, 73, 0.4);
+    box-shadow: 0 4px 12px rgba(51, 154, 240, 0.4);
 }
 
 .pdf-modal-btn-secondary {
@@ -1371,7 +1426,7 @@ textarea.task-input-control {
 
 .pdf-radio-label input[type="radio"],
 .pdf-radio-label input[type="checkbox"] {
-    accent-color: var(--hunyadi-yellow, #edae49);
+    accent-color: var(--primary);
 }
 
 .pdf-option-group {
@@ -1402,7 +1457,7 @@ textarea.task-input-control {
 
 .pdf-select:focus {
     outline: none;
-    border-color: var(--hunyadi-yellow, #edae49);
+    border-color: var(--primary);
 }
 
 .pdf-date-row {
@@ -1428,7 +1483,7 @@ textarea.task-input-control {
 
 .pdf-date-input:focus {
     outline: none;
-    border-color: var(--hunyadi-yellow, #edae49);
+    border-color: var(--primary);
 }
 
 .pdf-options-section {
@@ -1616,7 +1671,7 @@ textarea.task-input-control {
 }
 
 .footer-link:hover {
-    color: var(--hunyadi-yellow);
+    color: var(--primary);
     background: var(--bg-tertiary);
     transform: translateY(-2px);
 }
@@ -1696,15 +1751,15 @@ textarea.task-input-control {
         transform: scale(1);
     }
     25% {
-        background-color: rgba(237, 174, 73, 0.15);
+        background-color: rgba(51, 154, 240, 0.15);
         transform: scale(1.02);
     }
     50% {
-        background-color: rgba(237, 174, 73, 0.25);
+        background-color: rgba(51, 154, 240, 0.25);
         transform: scale(1.02);
     }
     75% {
-        background-color: rgba(237, 174, 73, 0.15);
+        background-color: rgba(51, 154, 240, 0.15);
         transform: scale(1.02);
     }
     100% {

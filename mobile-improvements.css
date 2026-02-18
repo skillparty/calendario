@@ -1,11 +1,10 @@
-/* ========================================
-   MEJORAS RESPONSIVE PARA MÓVILES
+/* ========== MEJORAS RESPONSIVE PARA MÓVILES
    Calendar10 - Optimizado para Touch Devices
    ======================================== */
 
 /* ========== MEJORAS HEADER MÓVIL ========== */
 @media (max-width: 768px) {
-    .header-modern {
+    .header-minimal {
         position: sticky;
         top: 0;
         z-index: 100;
@@ -238,7 +237,7 @@
 
 /* ========== MEJORAS FOOTER MÓVIL ========== */
 @media (max-width: 768px) {
-    .footer-modern {
+    .footer-minimal {
         padding: var(--spacing-lg) 0;
     }
     
@@ -246,7 +245,7 @@
         padding: 1.5rem 1rem 1rem;
     }
     
-    .footer-main {
+    .footer-content {
         flex-direction: column;
         gap: var(--spacing-lg);
         text-align: center;
@@ -259,26 +258,23 @@
         gap: var(--spacing-md);
     }
     
-    .footer-brand-logo {
+    .footer-logo {
         width: 90px;
         height: 90px;
     }
     
-    .footer-brand-name {
+    .footer-name {
         font-size: 1.25rem;
     }
     
-    .footer-brand-tagline {
-        font-size: 0.85rem;
-    }
-    
-    .footer-contact-list {
+    .footer-links {
         flex-direction: column;
         align-items: stretch;
         gap: var(--spacing-sm);
         width: 100%;
         max-width: 320px;
         margin: 0 auto;
+        display: flex;
     }
     
     .footer-link {
@@ -288,6 +284,8 @@
         border-radius: var(--radius-md);
         min-height: 48px;
         width: 100%;
+        display: flex;
+        align-items: center;
     }
 }
 
@@ -330,12 +328,12 @@
         font-size: 0.75rem;
     }
     
-    .footer-brand-logo {
+    .footer-logo {
         width: 80px;
         height: 80px;
     }
     
-    .footer-brand-name {
+    .footer-name {
         font-size: 1.1rem;
     }
 }
@@ -433,11 +431,11 @@
 /* ========== SAFE AREA INSETS (iPhone X+) ========== */
 @supports (padding: max(0px)) {
     @media (max-width: 768px) {
-        .header-modern {
+        .header-minimal {
             padding-top: max(env(safe-area-inset-top), var(--spacing-sm));
         }
         
-        .footer-modern {
+        .footer-minimal {
             padding-bottom: max(env(safe-area-inset-bottom), var(--spacing-md));
         }
         
@@ -460,7 +458,7 @@
 /* ========== DARK MODE SUPPORT ========== */
 @media (prefers-color-scheme: dark) {
     @media (max-width: 768px) {
-        .header-modern {
+        .header-minimal {
             background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
         }
         
@@ -468,7 +466,7 @@
             background: #1c1c1e;
         }
         
-        .footer-modern {
+        .footer-minimal {
             background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
         }
     }

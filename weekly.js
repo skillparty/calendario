@@ -9,6 +9,7 @@ import { isLoggedInWithBackend, updateTaskOnBackend, pushLocalTasksToBackend } f
 import { showToast } from './utils/UIFeedback.js';
 import { escapeHtml } from './utils/helpers.js';
 import { icons } from './icons.js';
+import { SwipeHandler } from './utils/gestures.js';
 
 const HOURS_START = 6;
 const HOURS_END = 22;
@@ -80,7 +81,7 @@ export function renderWeekly() {
     const dayStart = new Date(d); dayStart.setHours(0, 0, 0, 0);
     const isPast = dayStart < today;
     html += `
-      <div class="weekly-day-header${todayClass}" data-date="${dateKey}">
+      <div class="weekly-day-header${todayClass}" data-date="${dateKey}" data-day-index="${d.getDay()}">
         <span class="weekly-day-name">${DAY_NAMES[d.getDay()]}</span>
         <span class="weekly-day-number">${d.getDate()}</span>
       </div>
@@ -108,7 +109,7 @@ export function renderWeekly() {
       const isPast = dayStart < today;
       const cellClass = isPast ? 'weekly-cell weekly-cell-past' : 'weekly-cell';
 
-      html += `<div class="${cellClass}" data-date="${dateKey}" data-hour="${hourStr}">`;
+      html += `<div class="${cellClass}" data-date="${dateKey}" data-hour="${hourStr}" data-day-index="${d.getDay()}">`;
       hourTasks.forEach(task => {
         const completedClass = task.completed ? ' weekly-task-completed' : '';
         const priorityClass = task.priority === 1 ? 'high' : task.priority === 2 ? 'medium' : 'low';
@@ -149,6 +150,24 @@ export function renderWeekly() {
 
   html += `</div>`;
   container.innerHTML = html;
+
+  // Setup gestures if not already attached
+  if (!container.dataset.gesturesAttached) {
+    new SwipeHandler(container, {
+      onSwipeLeft: () => {
+        weekStart = new Date(weekStart);
+        weekStart.setDate(weekStart.getDate() + 7);
+        renderWeekly();
+      },
+      onSwipeRight: () => {
+        weekStart = new Date(weekStart);
+        weekStart.setDate(weekStart.getDate() - 7);
+        renderWeekly();
+      },
+      threshold: 60
+    });
+    container.dataset.gesturesAttached = 'true';
+  }
 
   // Navigation
   const prevBtn = document.getElementById('prev-week');

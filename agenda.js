@@ -247,6 +247,16 @@ function handleAgendaActionClick(event) {
     return;
   }
 
+  if (action === 'filter-status') {
+    event.preventDefault();
+    event.stopPropagation();
+    const newStatus = target.dataset.filterValue || 'all';
+    const monthSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
+    const prioritySel = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
+    renderAgenda(monthSel?.value || 'all', newStatus, prioritySel?.value || 'all');
+    return;
+  }
+
   const filterMonth = state.filters.month || 'all';
   const filterStatus = state.filters.status || 'all';
   const prioritySel = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
@@ -395,6 +405,12 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
       return taskDate.getMonth() === targetMonth;
     });
   }
+
+  // Calculate stats BEFORE status/priority filters
+  const statsTotal = allTasks.length;
+  const statsCompleted = allTasks.filter(t => t.completed).length;
+  const statsPending = statsTotal - statsCompleted;
+
   if (filterStatus !== 'all') {
     allTasks = allTasks.filter(task => task.completed === (filterStatus === 'completed'));
   }
@@ -406,29 +422,27 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
   // Función para obtener color por día de la semana
   /** @param {string|null} dateString */
   function getColorByDay(dateString) {
-    if (!dateString) return { bg: 'rgba(156, 163, 175, 0.1)', border: '#9ca3af', text: '#6b7280' }; // Gris para sin fecha
+    if (!dateString) return { bg: 'var(--day-none-bg)', border: 'var(--day-none-border)', text: 'var(--day-none-text)' };
     
     const date = new Date(dateString + 'T00:00:00');
     const dayOfWeek = date.getDay(); // 0 = Domingo, 1 = Lunes, etc.
     
     /** @type {Record<number, {bg: string, border: string, text: string}>} */
     const dayColors = {
-      0: { bg: 'rgba(239, 68, 68, 0.1)', border: '#ef4444', text: '#dc2626' },   // Domingo - Rojo
-      1: { bg: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6', text: '#2563eb' }, // Lunes - Azul
-      2: { bg: 'rgba(34, 197, 94, 0.1)', border: '#22c55e', text: '#16a34a' },  // Martes - Verde
-      3: { bg: 'rgba(168, 85, 247, 0.1)', border: '#a855f7', text: '#9333ea' }, // Miércoles - Púrpura
-      4: { bg: 'rgba(245, 158, 11, 0.1)', border: '#f59e0b', text: '#d97706' }, // Jueves - Ámbar
-      5: { bg: 'rgba(236, 72, 153, 0.1)', border: '#ec4899', text: '#db2777' }, // Viernes - Rosa
-      6: { bg: 'rgba(20, 184, 166, 0.1)', border: '#14b8a6', text: '#0d9488' }  // Sábado - Teal
+      0: { bg: 'var(--day-sun-bg)', border: 'var(--day-sun-border)', text: 'var(--day-sun-text)' },
+      1: { bg: 'var(--day-mon-bg)', border: 'var(--day-mon-border)', text: 'var(--day-mon-text)' },
+      2: { bg: 'var(--day-tue-bg)', border: 'var(--day-tue-border)', text: 'var(--day-tue-text)' },
+      3: { bg: 'var(--day-wed-bg)', border: 'var(--day-wed-border)', text: 'var(--day-wed-text)' },
+      4: { bg: 'var(--day-thu-bg)', border: 'var(--day-thu-border)', text: 'var(--day-thu-text)' },
+      5: { bg: 'var(--day-fri-bg)', border: 'var(--day-fri-border)', text: 'var(--day-fri-text)' },
+      6: { bg: 'var(--day-sat-bg)', border: 'var(--day-sat-border)', text: 'var(--day-sat-text)' }
     };
     
     return dayColors[dayOfWeek];
   }
 
   // Actualizar badges de estadísticas
-  const totalTasks = allTasks.length;
-  const completedTasks = allTasks.filter(t => t.completed).length;
-  const pendingTasks = totalTasks - completedTasks;
+  // const totalTasks = allTasks.length; // REMOVED: Now calculated before filters
   
   if (allTasks.length === 0) {
     html += `
@@ -443,7 +457,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
         </div>
         <h3 class="empty-state-title">No hay tareas que mostrar</h3>
         <p class="empty-state-description">
-          ${filterMonth !== 'all' || filterStatus !== 'all'
+          ${filterMonth !== 'all' || filterStatus !== 'all' || filterPriority !== 'all'
             ? 'No se encontraron tareas con los filtros actuales. Prueba ajustando los filtros o crea una nueva tarea.'
             : '¡Comienza agregando tu primera tarea del día!'}
         </p>
@@ -512,7 +526,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
       
       html += `
         <li class="task-date-group"${todayId}>
-          <div class="date-group-header" style="border-left: 4px solid ${dayColors.border};">
+          <div class="date-group-header" style="border-left: 4px solid ${dayColors.border}; background-color: ${dayColors.bg};">
             ${isToday ? getIcon('pin', 'date-group-icon') : getIcon('calendar', 'date-group-icon')}
             <h3 class="date-group-title">${dateLabel}</h3>
             <span class="date-group-count">${tasksForDate.length}</span>
@@ -643,27 +657,27 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
                                 <span>Resumen</span>
                             </h3>
                             <div class="stats-overview">
-                                <div class="stat-item total" id="total-tasks-stat">
-                                    <div class="stat-value">${totalTasks}</div>
+                                <button type="button" class="stat-item total${filterStatus === 'all' ? ' active' : ''}" id="total-tasks-stat" data-action="filter-status" data-filter-value="all" title="Mostrar todas">
+                                    <div class="stat-value">${statsTotal}</div>
                                     <div class="stat-label">Total</div>
                                     <div class="stat-progress">
                                         <div class="progress-bar" style="width: 100%"></div>
                                     </div>
-                                </div>
-                                <div class="stat-item completed" id="completed-tasks-stat">
-                                    <div class="stat-value">${completedTasks}</div>
+                                </button>
+                                <button type="button" class="stat-item completed${filterStatus === 'completed' ? ' active' : ''}" id="completed-tasks-stat" data-action="filter-status" data-filter-value="completed" title="Mostrar completadas">
+                                    <div class="stat-value">${statsCompleted}</div>
                                     <div class="stat-label">Completadas</div>
                                     <div class="stat-progress">
-                                        <div class="progress-bar" style="width: ${totalTasks > 0 ? (completedTasks / totalTasks * 100) : 0}%"></div>
+                                        <div class="progress-bar" style="width: ${statsTotal > 0 ? (statsCompleted / statsTotal * 100) : 0}%"></div>
                                     </div>
-                                </div>
-                                <div class="stat-item pending" id="pending-tasks-stat">
-                                    <div class="stat-value">${pendingTasks}</div>
+                                </button>
+                                <button type="button" class="stat-item pending${filterStatus === 'pending' ? ' active' : ''}" id="pending-tasks-stat" data-action="filter-status" data-filter-value="pending" title="Mostrar pendientes">
+                                    <div class="stat-value">${statsPending}</div>
                                     <div class="stat-label">Pendientes</div>
                                     <div class="stat-progress">
-                                        <div class="progress-bar" style="width: ${totalTasks > 0 ? (pendingTasks / totalTasks * 100) : 0}%"></div>
+                                        <div class="progress-bar" style="width: ${statsTotal > 0 ? (statsPending / statsTotal * 100) : 0}%"></div>
                                     </div>
-                                </div>
+                                </button>
                             </div>
                         </div>
                         
@@ -889,14 +903,32 @@ function toggleTaskWithAnimation(id, filterMonth, filterStatus, filterPriority =
 
 /** Update stat badge numbers from current task data without re-rendering */
 function updateStatBadges() {
-  const allCards = document.querySelectorAll('.task-card');
-  let total = 0, completed = 0;
-  allCards.forEach(c => {
-    if (!c.classList.contains('hidden-by-search')) {
-      total++;
-      if (c.classList.contains('completed')) completed++;
-    }
-  });
+  const monthFilterEl = document.getElementById('month-filter');
+  const filterMonth = monthFilterEl instanceof HTMLSelectElement ? monthFilterEl.value : 'all';
+  
+  // Calculate from data, not DOM, to be independent of view filters
+  let allTasks = Object.entries(getTasks()).flatMap(([date, list]) => (list || []).map(t => ({ ...t, date: date === 'undated' ? null : date })));
+  
+  if (filterMonth !== 'all') {
+    const targetMonth = parseInt(filterMonth);
+    allTasks = allTasks.filter(task => {
+      if (!task.date) return false;
+      const taskDate = new Date(task.date + 'T00:00:00');
+      return taskDate.getMonth() === targetMonth;
+    });
+  }
+
+  // Filter by search term if active (matches render logic)
+  if (agendaSearchTerm.trim()) {
+    const term = agendaSearchTerm.trim().toLowerCase();
+    allTasks = allTasks.filter(t => 
+      (t.title?.toLowerCase() || '').includes(term) || 
+      (t.description?.toLowerCase() || '').includes(term)
+    );
+  }
+
+  const total = allTasks.length;
+  const completed = allTasks.filter(t => t.completed).length;
   const pending = total - completed;
 
   // Update Sidebar Stats
@@ -918,7 +950,7 @@ function updateStatBadges() {
       }
   };
 
-  updateStatItem('total-tasks-stat', total, total); // Total progress always 100% or relative? usually 100%
+  updateStatItem('total-tasks-stat', total, total); 
   updateStatItem('completed-tasks-stat', completed, total);
   updateStatItem('pending-tasks-stat', pending, total);
 }

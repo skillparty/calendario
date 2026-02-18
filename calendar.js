@@ -11,6 +11,7 @@ import { openModal, closeModal } from './utils/modal.js';
 import { icons } from './icons.js';
 import { escapeHtml } from './utils/helpers.js';
 import { confirmDeleteTask, toggleTask } from './utils/taskActions.js';
+import { SwipeHandler } from './utils/gestures.js';
 
 // Utilities
 /** @param {number} month @returns {string} */
@@ -150,7 +151,31 @@ export function renderCalendar() {
 }
 
 /** @returns {void} */
+function setupCalendarGestures() {
+  const calendarView = document.getElementById('calendar-view');
+  if (!calendarView) return;
+
+  new SwipeHandler(calendarView, {
+    onSwipeLeft: () => {
+      // Next Month
+      const currentDate = state.currentDate;
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+      renderCalendar();
+    },
+    onSwipeRight: () => {
+      // Prev Month
+      const currentDate = state.currentDate;
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+      renderCalendar();
+    },
+    threshold: 60 // slightly higher threshold to avoid accidental swipes while scrolling
+  });
+}
+
+/** @returns {void} */
 export function initCalendar() {
+  setupCalendarGestures();
+
   // Event delegation for calendar interactions
   document.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement} */ (e.target);

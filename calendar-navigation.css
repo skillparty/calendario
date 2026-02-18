@@ -263,13 +263,13 @@
 }
 
 .day.today {
-    background: linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%);
+    background: linear-gradient(135deg, #e7f5ff 0%, #d0ebff 100%); /* Blue 50-100 */
     border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(237, 174, 73, 0.2);
+    box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.2);
 }
 
 [data-theme="dark"] .day.today {
-    background: linear-gradient(135deg, #2d2416 0%, #3d3020 100%);
+    background: linear-gradient(135deg, #183145 0%, #1c3d5a 100%); /* Dark Blue */
 }
 
 .day.has-tasks {
