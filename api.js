@@ -137,13 +137,19 @@ export async function fetchAllTasksFromBackend(limit = 100) {
 // Load all tasks from backend and place into state in { dateKey: Task[] } form
 // IMPORTANT: The backend is the source of truth, BUT we must not overwrite
 // local "dirty" changes that happened while the fetch was in progress.
-/** @returns {Promise<boolean>} */
-export async function loadTasksIntoState() {
+/** @param {{ forceClean?: boolean }} [options]
+ * @returns {Promise<boolean>} */
+export async function loadTasksIntoState(options = {}) {
+  const { forceClean = false } = options;
   if (!isLoggedInWithBackend()) return false;
 
-  // 1. Push dirty local changes to the server BEFORE fetching
+  if (forceClean) {
+    console.log('[sync] forceClean mode — server is absolute source of truth');
+  }
+
+  // 1. Push dirty local changes to the server BEFORE fetching (skip in forceClean mode)
   const preFetchState = getTasks();
-  const dirtyTasks = Object.values(preFetchState).flat().filter(t => t.dirty);
+  const dirtyTasks = forceClean ? [] : Object.values(preFetchState).flat().filter(t => t.dirty);
 
   if (dirtyTasks.length > 0) {
     console.log('[sync] Pushing', dirtyTasks.length, 'dirty tasks before fetch');
@@ -166,24 +172,24 @@ export async function loadTasksIntoState() {
   const list = await fetchAllTasksFromBackend(100);
 
   // 3. Merging Logic: Re-read state in case it changed during fetch/push
-  const currentAll = getTasks();
+  const currentAll = forceClean ? {} : getTasks();
   const currentDirtyMap = new Map();
-  Object.values(currentAll).flat().forEach(t => {
-    if (t.dirty) currentDirtyMap.set(String(t.id), t);
-  });
+  if (!forceClean) {
+    Object.values(currentAll).flat().forEach(t => {
+      if (t.dirty) currentDirtyMap.set(String(t.id), t);
+    });
+  }
 
   // Build a set of all server task IDs for quick lookup
   const serverIdSet = new Set(list.map(t => String(t.id)));
 
   // Identify local-only tasks and "orphaned" tasks (synced locally but missing from server)
-  // We preserve both to ensure no data loss.
-  const tasksToPreserve = Object.values(currentAll).flat().filter(t => {
+  // In forceClean mode, we do NOT preserve local tasks — server is the sole source of truth.
+  const tasksToPreserve = forceClean ? [] : Object.values(currentAll).flat().filter(t => {
     // 1. Task was created locally and never got a server ID
     if (!t.serverId && String(t.id).startsWith('local_')) return true;
 
     // 2. Task has a server ID (was synced) but is NOT in the current server list
-    // This happens if server lost data or previous sync was partial. We want to RECOVER these.
-    // Note: We checking if the *server ID* is in the fetched set.
     const sId = String(t.serverId || t.id);
     if ((t.serverId || (t.id && !String(t.id).startsWith('local_'))) && !serverIdSet.has(sId)) {
       return true;
@@ -231,6 +237,7 @@ export async function loadTasksIntoState() {
   const finalState = {};
 
   // Helper to add task to state
+  /** @param {any} t */
   const addTaskToState = (t) => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
     if (!finalState[dateKey]) finalState[dateKey] = [];
@@ -308,8 +315,9 @@ export async function loadTasksIntoState() {
 
   // 6. Push state - this now respects dirty concurrent edits
   setTasks(finalState);
+  console.log(`[sync] State updated: ${Object.values(finalState).flat().length} tasks loaded from server${forceClean ? ' (forceClean)' : ''}`);
 
-  if (tasksToPreserve.length > 0) {
+  if (!forceClean && tasksToPreserve.length > 0) {
     pushLocalTasksToBackend().catch(err => console.error('Background push failed:', err));
   }
 

@@ -218,9 +218,12 @@ async function handleOAuthCallback() {
         showAuthStatus('Inicio de sesión exitoso');
         // Load tasks separately — retry up to 4 times with backoff to handle backend cold starts (503)
         (async () => {
+          // Clear stale local tasks before loading from server to prevent ghost duplicates
+          localStorage.removeItem('calendarTasks');
+          setTasks({}, { silent: true });
           for (let attempt = 1; attempt <= 4; attempt++) {
             try {
-              await loadTasksIntoState();
+              await loadTasksIntoState({ forceClean: true });
               notifyTasksUpdated();
               scheduleBackendSync(); // Start polling now that we have a valid JWT
               return;
@@ -259,7 +262,7 @@ async function handleOAuthCallback() {
         if (sess && sess.user) {
           if (sess.jwt) {
             try {
-              await loadTasksIntoState();
+              await loadTasksIntoState({ forceClean: true });
               notifyTasksUpdated(); // Ensure UI re-renders with fresh server data
               scheduleBackendSync(); // Resume polling for returning JWT users
             } catch (e) {
@@ -381,7 +384,7 @@ function scheduleBackendSync() {
     } catch (e) {
       console.warn('[backend-sync] poll failed:', e);
     }
-  }, 120000); // every 2 minutes
+  }, 60000); // every 60 seconds for better multi-device sync
 }
 
 /** @returns {void} */

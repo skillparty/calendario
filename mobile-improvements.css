@@ -19,7 +19,7 @@
         gap: var(--spacing-md);
         align-items: stretch;
     }
-    
+
     /* Logo centrado */
     .header-left {
         order: 1;
@@ -27,13 +27,13 @@
         display: flex;
         justify-content: center;
     }
-    
+
     .brand-logo {
         width: 80px !important;
         height: 80px !important;
         border-radius: 20px;
     }
-    
+
     /* Navegación touch-friendly */
     .header-nav {
         order: 2;
@@ -46,7 +46,7 @@
         flex: none;
         justify-content: stretch;
     }
-    
+
     .nav-item {
         flex: 1;
         justify-content: center;
@@ -58,28 +58,28 @@
         align-items: center;
         gap: var(--spacing-xs);
     }
-    
+
     .nav-icon {
         font-size: 1.3rem;
     }
-    
+
     .nav-text {
         display: inline;
         font-size: 0.9rem;
     }
-    
+
     /* Usuario centrado */
     .header-right {
         order: 3;
         width: 100%;
         flex: none;
     }
-    
+
     .user-section {
         width: 100%;
         justify-content: center;
     }
-    
+
     .user-btn {
         width: 100%;
         max-width: 320px;
@@ -88,11 +88,11 @@
         font-size: 0.95rem;
         min-height: 48px;
     }
-    
+
     .user-text {
         display: inline;
     }
-    
+
     #user-info {
         width: 100%;
         flex-direction: row;
@@ -107,7 +107,7 @@
     #calendar-view {
         padding: var(--spacing-sm);
     }
-    
+
     .calendar-nav {
         flex-direction: row;
         justify-content: space-between;
@@ -115,7 +115,7 @@
         gap: var(--spacing-sm);
         margin-bottom: var(--spacing-md);
     }
-    
+
     .calendar-nav button {
         min-height: 44px;
         min-width: 44px;
@@ -123,40 +123,40 @@
         font-size: 0.85rem;
         white-space: nowrap;
     }
-    
+
     .calendar-nav h2 {
         font-size: 1.1rem;
         flex-shrink: 0;
         text-align: center;
     }
-    
+
     .calendar-grid {
         gap: 3px;
     }
-    
+
     .calendar-grid .day {
         min-height: 65px;
         padding: var(--spacing-xs);
         border-radius: 8px;
     }
-    
+
     .day-content {
         padding: var(--spacing-xs);
     }
-    
+
     .day-number {
         font-size: 0.85rem;
         font-weight: 600;
     }
-    
+
     .task-count {
         font-size: 0.65rem;
     }
-    
+
     .task-preview {
         display: none;
     }
-    
+
     .day-add-btn {
         width: 26px;
         height: 26px;
@@ -170,7 +170,7 @@
         padding: 0;
         align-items: flex-end;
     }
-    
+
     .modal-content {
         width: 100%;
         max-width: none;
@@ -179,23 +179,24 @@
         border-radius: 20px 20px 0 0;
         animation: slideUpModal 0.3s ease-out;
     }
-    
+
     @keyframes slideUpModal {
         from {
             transform: translateY(100%);
             opacity: 0;
         }
+
         to {
             transform: translateY(0);
             opacity: 1;
         }
     }
-    
+
     .modal-content h3 {
         font-size: 1.125rem;
         padding-right: 40px;
     }
-    
+
     .close-btn {
         width: 40px;
         height: 40px;
@@ -203,7 +204,7 @@
         top: var(--spacing-sm);
         right: var(--spacing-sm);
     }
-    
+
     .modal-content input,
     .modal-content select,
     .modal-content textarea {
@@ -211,24 +212,24 @@
         padding: var(--spacing-md);
         min-height: 48px;
     }
-    
+
     .modal-content button {
         min-height: 48px;
         padding: var(--spacing-md) var(--spacing-lg);
         font-size: 1rem;
     }
-    
+
     .modal-task {
         flex-direction: column;
         gap: var(--spacing-sm);
         padding: var(--spacing-md);
     }
-    
+
     .modal-task button {
         width: 100%;
         margin-left: 0;
     }
-    
+
     #add-task-modal-btn {
         width: 100%;
         padding: var(--spacing-md);
@@ -240,33 +241,33 @@
     .footer-minimal {
         padding: var(--spacing-lg) 0;
     }
-    
+
     .footer-container {
         padding: 1.5rem 1rem 1rem;
     }
-    
+
     .footer-content {
         flex-direction: column;
         gap: var(--spacing-lg);
         text-align: center;
     }
-    
+
     .footer-brand {
         justify-content: center;
         flex-direction: column;
         align-items: center;
         gap: var(--spacing-md);
     }
-    
+
     .footer-logo {
         width: 90px;
         height: 90px;
     }
-    
+
     .footer-name {
         font-size: 1.25rem;
     }
-    
+
     .footer-links {
         flex-direction: column;
         align-items: stretch;
@@ -276,7 +277,7 @@
         margin: 0 auto;
         display: flex;
     }
-    
+
     .footer-link {
         justify-content: center;
         padding: var(--spacing-md);
@@ -295,44 +296,44 @@
         padding: var(--spacing-sm) 0.75rem;
         gap: var(--spacing-sm);
     }
-    
+
     .brand-logo {
         width: 70px !important;
         height: 70px !important;
         border-radius: 18px;
     }
-    
+
     .nav-item {
         padding: var(--spacing-sm);
         font-size: 0.85rem;
         min-height: 44px;
     }
-    
+
     .nav-icon {
         font-size: 1.2rem;
     }
-    
+
     .nav-text {
         font-size: 0.8rem;
     }
-    
+
     .calendar-nav h2 {
         font-size: 1rem;
     }
-    
+
     .calendar-grid .day {
         min-height: 55px;
     }
-    
+
     .day-number {
         font-size: 0.75rem;
     }
-    
+
     .footer-logo {
         width: 80px;
         height: 80px;
     }
-    
+
     .footer-name {
         font-size: 1.1rem;
     }
@@ -340,6 +341,7 @@
 
 /* ========== TOUCH DEVICE IMPROVEMENTS ========== */
 @media (hover: none) and (pointer: coarse) {
+
     /* Eliminar hover effects en touch devices */
     .nav-item:hover,
     .user-btn:hover,
@@ -348,24 +350,24 @@
     .footer-link:hover {
         transform: none;
     }
-    
+
     /* Mejorar active states para feedback táctil */
     .nav-item:active {
         transform: scale(0.97);
         opacity: 0.9;
     }
-    
+
     .user-btn:active,
     button:active {
         transform: scale(0.98);
         opacity: 0.9;
     }
-    
+
     .day:active {
         transform: scale(0.98);
         opacity: 0.9;
     }
-    
+
     /* Asegurar touch targets mínimos */
     button,
     .nav-item,
@@ -376,9 +378,51 @@
         min-height: 44px;
         min-width: 44px;
     }
-    
+
     .day-content {
         min-height: 44px;
+    }
+
+    /* Agenda-specific touch improvements */
+    .task-card {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    .task-card:active {
+        background: var(--bg-hover);
+        transition: background 0.1s;
+    }
+
+    .task-check-btn:active {
+        transform: scale(1.15);
+        transition: transform 0.1s;
+    }
+
+    .task-action-btn:active {
+        transform: scale(0.92);
+        background: var(--bg-hover);
+        transition: all 0.1s;
+    }
+
+    .badge.priority {
+        min-height: 28px;
+        min-width: 28px;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .toolbar-select {
+        min-height: 44px;
+    }
+
+    .toolbar-btn-icon {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .fab-add-task:active {
+        transform: scale(0.92);
+        transition: transform 0.15s;
     }
 }
 
@@ -398,17 +442,17 @@
         padding: var(--spacing-sm) 1rem;
         min-height: 60px;
     }
-    
+
     .header-left {
         width: auto;
         flex: 0 0 auto;
     }
-    
+
     .brand-logo {
         width: 50px !important;
         height: 50px !important;
     }
-    
+
     .header-nav {
         flex-direction: row;
         width: auto;
@@ -416,12 +460,12 @@
         display: flex;
         grid-template-columns: none;
     }
-    
+
     .header-right {
         width: auto;
         flex: 0 0 auto;
     }
-    
+
     .modal-content {
         max-height: 85vh;
         overflow-y: auto;
@@ -434,19 +478,26 @@
         .header-minimal {
             padding-top: max(env(safe-area-inset-top), var(--spacing-sm));
         }
-        
+
         .footer-minimal {
             padding-bottom: max(env(safe-area-inset-bottom), var(--spacing-md));
         }
-        
+
         .modal-content {
             padding-bottom: max(env(safe-area-inset-bottom), var(--spacing-lg));
+        }
+
+        /* FAB safe area for iPhone X+ */
+        .fab-add-task {
+            bottom: calc(max(env(safe-area-inset-bottom), 0px) + 1.5rem);
         }
     }
 }
 
 /* ========== HIGH DPI DISPLAYS ========== */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
+
     .brand-logo,
     .footer-brand-logo,
     .day-add-btn {
@@ -461,11 +512,11 @@
         .header-minimal {
             background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
         }
-        
+
         .modal-content {
             background: #1c1c1e;
         }
-        
+
         .footer-minimal {
             background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
         }

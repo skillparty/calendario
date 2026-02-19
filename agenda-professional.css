@@ -1221,14 +1221,14 @@
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .agenda-container {
-        padding: 0.5rem 0.375rem 5.5rem;
-        gap: 0.5rem;
+        padding: 0.625rem 0.5rem 6rem;
+        gap: 0.625rem;
     }
 
     .agenda-toolbar {
-        padding: 0.5rem 0.625rem;
-        gap: 0.375rem;
-        border-radius: 0.625rem;
+        padding: 0.625rem 0.75rem;
+        gap: 0.5rem;
+        border-radius: 0.75rem;
         flex-direction: column;
         align-items: stretch;
     }
@@ -1241,7 +1241,7 @@
         width: 100%;
         flex-direction: column;
         align-items: stretch;
-        gap: 0.375rem;
+        gap: 0.5rem;
     }
 
     /* Search row */
@@ -1252,7 +1252,9 @@
 
     .search-input {
         font-size: 16px;
-        min-height: 2.25rem;
+        min-height: 2.5rem;
+        padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+        border-radius: 0.625rem;
     }
 
     /* Prevents iOS zoom */
@@ -1263,7 +1265,7 @@
         display: flex;
         flex-wrap: nowrap;
         overflow-x: auto;
-        gap: 0.25rem;
+        gap: 0.375rem;
         padding-bottom: 2px;
         scrollbar-width: none;
         -webkit-overflow-scrolling: touch;
@@ -1274,17 +1276,19 @@
     }
 
     .toolbar-btn-icon {
-        width: 2rem;
-        height: 2rem;
-        min-width: 2rem;
+        width: 2.25rem;
+        height: 2.25rem;
+        min-width: 2.25rem;
+        border-radius: 0.5rem;
     }
 
     .toolbar-select {
         flex: 1;
         min-width: 0;
-        font-size: 0.6875rem;
-        min-height: 2rem;
-        padding: 0.3rem 1.5rem 0.3rem 0.5rem;
+        font-size: 0.75rem;
+        min-height: 2.25rem;
+        padding: 0.375rem 1.5rem 0.375rem 0.625rem;
+        border-radius: 0.5rem;
     }
 
     .toolbar-btn-add {
@@ -1300,7 +1304,7 @@
         grid-template-columns: 1fr;
         display: flex;
         flex-direction: column;
-        gap: 0.375rem;
+        gap: 0.5rem;
     }
 
     /* Sidebar: compact stats strip */
@@ -1315,8 +1319,8 @@
     }
 
     .sidebar-block {
-        padding: 0.375rem 0.5rem;
-        border-radius: 0.5rem;
+        padding: 0.5rem 0.625rem;
+        border-radius: 0.625rem;
     }
 
     .sidebar-title {
@@ -1334,14 +1338,14 @@
     /* Stats: compact horizontal */
     .stats-overview {
         flex-direction: row;
-        gap: 0.25rem;
+        gap: 0.375rem;
     }
 
     .stat-item {
         flex: 1;
         min-width: 0;
-        padding: 0.3rem 0.375rem;
-        border-radius: 0.375rem;
+        padding: 0.5rem 0.5rem;
+        border-radius: 0.5rem;
         background: var(--bg-primary);
         border: 1px solid var(--border);
         align-items: center;
@@ -1349,11 +1353,11 @@
     }
 
     .stat-item .stat-value {
-        font-size: 0.9375rem;
+        font-size: 1.125rem;
     }
 
     .stat-item .stat-label {
-        font-size: 0.5625rem;
+        font-size: 0.625rem;
     }
 
     .stat-item .stat-progress {
@@ -1362,7 +1366,7 @@
 
     /* Tasks section */
     .tasks-section {
-        border-radius: 0.625rem;
+        border-radius: 0.75rem;
         overflow: hidden;
     }
 
@@ -1371,7 +1375,7 @@
     }
 
     .date-group-header {
-        padding: 0.5rem 0.75rem;
+        padding: 0.625rem 0.875rem;
         top: 0;
         border-radius: 0;
         width: 100%;
@@ -1379,40 +1383,42 @@
     }
 
     .date-group-title {
-        font-size: 0.8125rem;
+        font-size: 0.875rem;
     }
 
     .date-group-count {
-        min-width: 1.25rem;
-        height: 1.25rem;
-        font-size: 0.6875rem;
+        min-width: 1.375rem;
+        height: 1.375rem;
+        font-size: 0.75rem;
     }
 
     /* Task cards — readable with accessible actions */
     .task-card {
-        padding: 0.75rem 0.625rem;
+        padding: 0.875rem 0.75rem;
         position: relative;
     }
 
     .task-card-content {
-        gap: 0.5rem;
+        gap: 0.625rem;
         padding-right: 0;
     }
 
     /* Remove padding, actions are below or inline */
     .task-card-header {
-        gap: 0.5rem;
+        gap: 0.625rem;
         margin-bottom: 0.5rem;
     }
 
     .task-card-title {
-        font-size: 0.9375rem;
+        font-size: 1rem;
         font-weight: 600;
+        line-height: 1.4;
     }
 
     .task-card-description {
-        font-size: 0.8125rem;
+        font-size: 0.875rem;
         -webkit-line-clamp: 3;
+        line-clamp: 3;
     }
 
     /* Actions: always visible, large touch targets */
@@ -1427,15 +1433,18 @@
         padding: 0;
         width: 100%;
         border-top: 1px solid var(--border);
-        padding-top: 0.5rem;
+        padding-top: 0.625rem;
     }
 
     .task-action-btn {
-        width: 2.5rem;
-        height: 2.5rem;
-        border-radius: 0.5rem;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 0.625rem;
         background: var(--bg-secondary);
         border: 1px solid var(--border);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .task-action-btn:active {
@@ -1448,66 +1457,81 @@
         height: 1.5rem;
     }
 
+    /* Meta info */
+    .task-card-meta {
+        gap: 0.75rem;
+    }
+
+    .meta-item {
+        font-size: 0.8125rem;
+    }
+
     /* Empty state */
     .empty-state {
-        padding: 2.5rem 1.25rem;
+        padding: 3rem 1.5rem;
     }
 
     .empty-state-title {
-        font-size: 0.9375rem;
+        font-size: 1rem;
     }
 
     .empty-state-description {
-        font-size: 0.8125rem;
+        font-size: 0.875rem;
+    }
+
+    .empty-state-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.875rem;
+        min-height: 2.75rem;
     }
 }
 
 @media (max-width: 480px) {
     .agenda-container {
-        padding: 0.25rem 0.25rem 5rem;
-        gap: 0.25rem;
+        padding: 0.375rem 0.375rem 5.5rem;
+        gap: 0.375rem;
     }
 
     .agenda-toolbar {
-        padding: 0.375rem 0.4rem;
-        gap: 0.25rem;
+        padding: 0.5rem 0.5rem;
+        gap: 0.375rem;
     }
 
     .search-input {
-        min-height: 1.875rem;
-        font-size: 15px;
+        min-height: 2.25rem;
+        font-size: 16px;
     }
 
     .toolbar-select {
-        font-size: 0.625rem;
-        min-height: 1.75rem;
-        padding: 0.25rem 1.25rem 0.25rem 0.375rem;
+        font-size: 0.6875rem;
+        min-height: 2rem;
+        padding: 0.3rem 1.25rem 0.3rem 0.5rem;
     }
 
     .toolbar-btn-icon {
-        width: 1.75rem;
-        height: 1.75rem;
-        min-width: 1.75rem;
+        width: 2rem;
+        height: 2rem;
+        min-width: 2rem;
     }
 
     .task-card {
-        padding: 0.375rem 0.5rem;
+        padding: 0.75rem 0.625rem;
     }
 
     .task-card-title {
-        font-size: 0.75rem;
+        font-size: 0.9375rem;
     }
 
     .task-card-description {
-        font-size: 0.6875rem;
+        font-size: 0.8125rem;
     }
 
     .date-group-header {
-        padding: 0.375rem 0.5rem;
+        padding: 0.5rem 0.625rem;
     }
 
     .date-group-title {
-        font-size: 0.6875rem;
+        font-size: 0.75rem;
     }
 
     .task-card-badges {
@@ -1515,27 +1539,29 @@
     }
 
     .task-action-btn {
-        width: 1.625rem;
-        height: 1.625rem;
+        width: 2.25rem;
+        height: 2.25rem;
     }
 
     .stat-item {
-        padding: 0.25rem 0.25rem;
+        padding: 0.375rem 0.375rem;
     }
 
     .stat-item .stat-value {
-        font-size: 0.8125rem;
+        font-size: 1rem;
     }
 
     .stat-item .stat-label {
-        font-size: 0.5rem;
+        font-size: 0.5625rem;
     }
 
     .fab-add-task {
-        bottom: 1.25rem;
-        right: 1.25rem;
-        width: 3rem;
-        height: 3rem;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        width: 3.25rem;
+        height: 3.25rem;
+        box-shadow: 0 4px 16px rgba(51, 154, 240, 0.4),
+            0 2px 6px rgba(0, 0, 0, 0.15);
     }
 
     .fab-add-task .icon svg {
