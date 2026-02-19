@@ -39,7 +39,7 @@
         order: 2;
         width: 100%;
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: var(--spacing-sm);
         margin: 0;
         padding: 0;
@@ -50,8 +50,8 @@
     .nav-item {
         flex: 1;
         justify-content: center;
-        padding: var(--spacing-md);
-        font-size: 0.95rem;
+        padding: var(--spacing-sm);
+        font-size: 0.85rem;
         min-height: 48px;
         border-radius: var(--radius-md);
         display: flex;
@@ -60,12 +60,12 @@
     }
 
     .nav-icon {
-        font-size: 1.3rem;
+        font-size: 1.1rem;
     }
 
     .nav-text {
         display: inline;
-        font-size: 0.9rem;
+        font-size: 0.78rem;
     }
 
     /* Usuario centrado */
@@ -305,16 +305,16 @@
 
     .nav-item {
         padding: var(--spacing-sm);
-        font-size: 0.85rem;
+        font-size: 0.78rem;
         min-height: 44px;
     }
 
     .nav-icon {
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
 
     .nav-text {
-        font-size: 0.8rem;
+        font-size: 0.72rem;
     }
 
     .calendar-nav h2 {
