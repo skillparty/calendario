@@ -6,43 +6,43 @@
  * @typedef {import('./types').TasksByDate} TasksByDate
  */
 
-import { state, setTasks, getTasks, updateTasks } from './state.js';
+import { state, setTasks, getTasks, updateTasks, notifyTasksUpdated } from './state.js';
 
-const DEBUG = window.location.hostname === 'localhost';
+/** @param {unknown} payload @returns {Record<string, any> | null} */
+function unwrapTaskPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  if ('data' in payload && payload.data && typeof payload.data === 'object') {
+    return /** @type {Record<string, any>} */ (payload.data);
+  }
+  return /** @type {Record<string, any>} */ (payload);
+}
+
+/** @param {any} priority @returns {number} */
+function normalizePriorityValue(priority) {
+  if (priority === 1 || priority === '1' || priority === 'alta') return 1;
+  if (priority === 2 || priority === '2' || priority === 'media') return 2;
+  if (priority === 3 || priority === '3' || priority === 'baja') return 3;
+  return 1;
+}
+
+/** @param {{ title?: string; description?: string | null; date?: string | null; time?: string | null }} taskLike */
+function buildTaskSignature(taskLike) {
+  const title = (taskLike.title || '').trim().toLowerCase();
+  const description = (taskLike.description || '').trim().toLowerCase();
+  const date = taskLike.date || null;
+  const time = taskLike.time || null;
+  return `${title}|${description}|${date || ''}|${time || ''}`;
+}
 
 /** @type {string} */
 // Backend URL - actualizado con el nuevo despliegue de Vercel
-export const API_BASE_URL = window.location.hostname === 'localhost'
+export const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000'
   : 'https://backend-eight-zeta-snldyompdv.vercel.app';
 
 /** @returns {boolean} */
 export function isLoggedInWithBackend() {
   return !!(state.userSession && state.userSession.jwt);
-}
-
-/**
- * @param {Task & {serverId?: number}} task
- * @returns {number | null}
- */
-function getServerId(task) {
-  if (typeof task?.serverId === 'number') return task.serverId;
-  if (typeof task?.id === 'number') return task.id;
-  const id = String(task?.id || '');
-  if (/^\d+$/.test(id)) return parseInt(id, 10);
-  return null;
-}
-
-/**
- * @param {any} raw
- * @returns {'alta' | 'media' | 'baja'}
- */
-function mapPriorityToServer(raw) {
-  if (raw === 'alta' || raw === 'media' || raw === 'baja') return raw;
-  const p = parseInt(raw || '3', 10);
-  if (p === 1) return 'alta';
-  if (p === 2) return 'media';
-  return 'baja';
 }
 
 /**
@@ -53,31 +53,34 @@ function mapPriorityToServer(raw) {
  */
 export async function apiFetch(path, options = {}, retries = 3) {
   /** @type {Record<string, string>} */
-  const headers = /** @type {any} */ (Object.assign({
-    'Content-Type': 'application/json',
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0'
-  }, options.headers || {}));
+  const headers = Object.assign({ 'Content-Type': 'application/json' }, /** @type {Record<string, string>} */ (options.headers || {}));
   if (state.userSession && state.userSession.jwt) {
     headers['Authorization'] = `Bearer ${state.userSession.jwt}`;
   }
-  const init = Object.assign({}, options, { headers, cache: 'no-store' });
-  const fetchPath = path;
+  const init = Object.assign({}, options, { headers });
 
-  if (DEBUG) console.log('API Request:', { url: API_BASE_URL + fetchPath, method: init.method || 'GET' });
+  console.log('API Request:', {
+    url: API_BASE_URL + path,
+    method: init.method || 'GET',
+    headers: headers,
+    body: init.body
+  });
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(API_BASE_URL + fetchPath, init);
-
-      if (DEBUG) console.log('API Response:', res.status, res.statusText);
-
-      if (!res.ok && DEBUG) {
+      const res = await fetch(API_BASE_URL + path, init);
+      
+      console.log('API Response:', {
+        status: res.status,
+        statusText: res.statusText,
+        url: res.url
+      });
+      
+      if (!res.ok) {
         const errorText = await res.clone().text();
         console.error('API Error Response:', errorText);
       }
-
+      
       if ((res.status === 502 || res.status === 503) && attempt < retries) {
         await new Promise(r => setTimeout(r, 1000 * attempt));
         continue;
@@ -91,218 +94,74 @@ export async function apiFetch(path, options = {}, retries = 3) {
       throw err;
     }
   }
-  throw new Error(`apiFetch failed after ${retries} retries`);
+
+  throw new Error('Request failed after retries');
 }
 
 // Pagination utility to retrieve all tasks from the backend
 /** @param {number} [limit=100] @returns {Promise<APITask[]>} */
 export async function fetchAllTasksFromBackend(limit = 100) {
   const aggregate = [];
-  const seenIds = new Set();
   let offset = 0;
-  let guard = 0;
+  /** @type {Set<string>} */
+  const seenIds = new Set();
+  /** @type {string | null} */
+  let previousPageFingerprint = null;
 
   while (true) {
     const res = await apiFetch(`/api/tasks?limit=${limit}&offset=${offset}`);
     if (!res.ok) throw new Error('Tasks list HTTP ' + res.status);
     const data = await res.json();
-    const chunk = data.data || [];
+    const chunkRaw = Array.isArray(data.data) ? data.data : [];
 
-    if (!Array.isArray(chunk) || chunk.length === 0) break;
+    const chunk = chunkRaw.filter((/** @type {any} */ task) => {
+      const id = task && task.id !== undefined && task.id !== null ? String(task.id) : null;
+      if (!id) return true;
+      if (seenIds.has(id)) return false;
+      seenIds.add(id);
+      return true;
+    });
 
-    let newItems = 0;
-    for (const task of chunk) {
-      const key = String(task.id);
-      if (!seenIds.has(key)) {
-        seenIds.add(key);
-        aggregate.push(task);
-        newItems += 1;
-      }
-    }
+    aggregate.push(...chunk);
 
-    // Normal paginated backend: last page is shorter than limit
-    if (chunk.length < limit) break;
+    const pageFingerprint = chunkRaw.map((/** @type {any} */ task) => String(task?.id ?? '')).join(',');
+    if (chunkRaw.length < limit) break;
+    if (pageFingerprint && previousPageFingerprint === pageFingerprint) break;
+    if (chunk.length === 0) break;
 
-    // Non-paginated backend fallback: same chunk repeats forever
-    if (newItems === 0) break;
-
-    guard += 1;
-    if (guard > 1000) break;
-
+    previousPageFingerprint = pageFingerprint;
     offset += limit;
   }
   return aggregate;
 }
 
-// Notify UI about sync status (for debug/user feedback)
-export function notifySyncStatus(status, details = {}) {
-  window.dispatchEvent(new CustomEvent('sync-status-changed', {
-    detail: { status, timestamp: new Date(), ...details }
-  }));
-}
-
 // Load all tasks from backend and place into state in { dateKey: Task[] } form
-// IMPORTANT: The backend is the source of truth, BUT we must not overwrite
-// local "dirty" changes that happened while the fetch was in progress.
-/** @param {{ forceClean?: boolean }} [options]
- * @returns {Promise<boolean>} */
-export async function loadTasksIntoState(options = {}) {
-  notifySyncStatus('syncing', { method: 'loadTasksIntoState' });
-  const { forceClean = false } = options;
+/** @returns {Promise<boolean>} */
+export async function loadTasksIntoState() {
   if (!isLoggedInWithBackend()) return false;
-
-  if (forceClean) {
-    console.log('[sync] forceClean mode — server is absolute source of truth');
-  }
-
-  // 1. Push dirty local changes to the server BEFORE fetching (skip in forceClean mode)
-  const preFetchState = getTasks();
-  const dirtyTasks = forceClean ? [] : Object.values(preFetchState).flat().filter(t => t.dirty);
-
-  if (dirtyTasks.length > 0) {
-    console.log('[sync] Pushing', dirtyTasks.length, 'dirty tasks before fetch');
-    await Promise.allSettled(dirtyTasks.map(async (t) => {
-      const sId = t.serverId ?? (typeof t.id === 'number' ? t.id : (/^\d+$/.test(String(t.id)) ? Number(t.id) : null));
-      if (sId) {
-        try {
-          /** @type {Record<string, any>} */
-          const payload = { completed: !!t.completed };
-          if (t.title) payload.title = t.title;
-          if (t.description !== undefined) payload.description = t.description || null;
-          if (t.priority !== undefined) payload.priority = mapPriorityToServer(t.priority);
-          await updateTaskOnBackend(sId, payload);
-        } catch (e) { console.warn('[sync] dirty-push FAILED for', sId, e); }
-      }
-    }));
-  }
-
-  // 2. Fetch latest from server
   const list = await fetchAllTasksFromBackend(100);
-
-  // 3. Merging Logic: Re-read state in case it changed during fetch/push
-  const currentAll = forceClean ? {} : getTasks();
-  const currentDirtyMap = new Map();
-  if (!forceClean) {
-    Object.values(currentAll).flat().forEach(t => {
-      if (t.dirty) currentDirtyMap.set(String(t.id), t);
-    });
-  }
-
-  // Build a set of all server task IDs for quick lookup
-  const serverIdSet = new Set(list.map(t => String(t.id)));
-
-  // 4. MERGING STRATEGY (The Fix for "Two Calendars" and Persistence)
-  // We need to combine:
-  // A. The fresh server list (uniqueList) - The Source of Truth
-  // B. Local "Drafts" (dirty tasks) - User's unsynced changes
-  // C. Local-only tasks (no serverId) - Newly created tasks not yet synced
-
-  // DEDUPLICATION LOGIC
-  // Group tasks by signature to find duplicates
-  const seenSignatures = new Map();
-  const duplicatesToDelete = [];
-  const uniqueList = [];
-
-  // Sort list by ID (assuming lower ID = older = original)
-  list.sort((a, b) => a.id - b.id);
-
-  for (const t of list) {
+  /** @type {TasksByDate} */
+  const byDate = {};
+  list.forEach(t => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
-    // Signature: title + date + time + description
-    const signature = `${t.title}|${dateKey}|${t.time || ''}|${t.description || ''}`;
-
-    if (seenSignatures.has(signature)) {
-      // This is a duplicate!
-      duplicatesToDelete.push(t.id);
-    } else {
-      seenSignatures.set(signature, t.id);
-      uniqueList.push(t);
-    }
-  }
-
-  // If duplicates found, trigger background cleanup
-  if (duplicatesToDelete.length > 0) {
-    console.warn(`Found ${duplicatesToDelete.length} duplicate tasks. cleaning up...`);
-    // Delete in background to not block UI
-    (async () => {
-      for (let i = 0; i < duplicatesToDelete.length; i += 5) {
-        const chunk = duplicatesToDelete.slice(i, i + 5);
-        await Promise.allSettled(chunk.map((/** @type {number|string} */ id) => deleteTaskOnBackend(id).catch(() => { })));
-      }
-      console.log('Duplicate cleanup complete');
-    })();
-  }
-
-  // Build a map of the fresh server data for easy lookup
-  const serverMap = new Map(uniqueList.map(t => [String(t.id), t]));
-
-  // Identify which local tasks to keep (Preserve dirty & local-only)
-  // CRITICAL: We DROP any task that has a serverId, is NOT dirty, and is NOT in serverMap.
-  // This means it was deleted on another device.
-  const allLocalTasks = Object.values(currentAll).flat();
-  const tasksToPreserve = forceClean ? [] : allLocalTasks.filter(t => {
-    // Keep local-only tasks (they haven't been synced yet)
-    if (!t.serverId && String(t.id).startsWith('local_')) return true;
-
-    // Keep dirty tasks (user modified them here, we must sync this change later)
-    if (t.dirty) return true;
-
-    return false;
+    if (!byDate[dateKey]) byDate[dateKey] = [];
+    const parsedServerId = Number(t.id);
+    /** @type {Task} */
+    const mapped = {
+      id: String(t.id),
+      serverId: Number.isFinite(parsedServerId) ? parsedServerId : undefined,
+      title: t.title,
+      description: t.description || '',
+      date: dateKey === 'undated' ? null : dateKey,
+      time: t.time || null,
+      completed: !!t.completed,
+      isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
+      priority: normalizePriorityValue(t.priority),
+      tags: t.tags || []
+    };
+    byDate[dateKey].push(mapped);
   });
-
-
-
-  /** @type {import('../types').TasksState} */
-  const finalState = {};
-
-  const addTaskToState = (t) => {
-    const dateKey = (t.date || '').slice(0, 10) || 'undated';
-    if (!finalState[dateKey]) finalState[dateKey] = [];
-    finalState[dateKey].push(t);
-  };
-
-  // 1. Process Server Tasks (Base)
-  // If we have a preserved "dirty" version of this task, use that instead.
-  uniqueList.forEach(serverTask => {
-    // Check if we have a dirty local version
-    // We match by serverId (preferred) or id
-    const sId = String(serverTask.id);
-    const dirtyVersion = tasksToPreserve.find(local =>
-      (local.serverId && String(local.serverId) === sId) ||
-      (String(local.id) === sId)
-    );
-
-    if (dirtyVersion) {
-      // Keep local dirty version (it has latest changes to push)
-      addTaskToState(dirtyVersion);
-      // Remove from preserved list so we don't add it again
-      const idx = tasksToPreserve.indexOf(dirtyVersion);
-      if (idx > -1) tasksToPreserve.splice(idx, 1);
-    } else {
-      // Use server version
-      addTaskToState(serverTask);
-    }
-  });
-
-  // 2. Add remaining preserved tasks (Local-only or Dirty Orphans)
-  // Dirty Orphans: Tasks we have locally as dirty, but server doesn't have them anymore.
-  // This is a conflict: We modified it, but someone else deleted it?
-  // For now, we restore them so our change isn't lost (and it will likely be re-created or fail sync).
-  tasksToPreserve.forEach(t => {
-    addTaskToState(t);
-  });
-  // 6. Push state - this now respects dirty concurrent edits
-  setTasks(finalState);
-  console.log(`[sync] State updated: ${Object.values(finalState).flat().length} tasks loaded from server${forceClean ? ' (forceClean)' : ''}`);
-
-  if (!forceClean && tasksToPreserve.length > 0) {
-    pushLocalTasksToBackend().catch(err => {
-      console.error('Background push failed:', err);
-      notifySyncStatus('error', { error: 'Push failed' });
-    });
-  }
-
-  notifySyncStatus('synced', { count: Object.values(finalState).flat().length });
+  setTasks(byDate);
   return true;
 }
 
@@ -310,82 +169,100 @@ export async function loadTasksIntoState(options = {}) {
 /** @returns {Promise<void>} */
 export async function pushLocalTasksToBackend() {
   if (!isLoggedInWithBackend()) return;
-
-  // Validate JWT before firing bulk requests — abort on 401
-  const authCheck = await apiFetch('/api/auth/me', {}, 1).catch(() => null);
-  if (authCheck && authCheck.status === 401) {
-    console.warn('[sync] JWT invalid/expired — clearing session');
-    const { setUserSession } = await import('./state.js');
-    setUserSession(null);
-    return;
-  }
-
   const server = await fetchAllTasksFromBackend(100);
   const serverById = new Map(server.map(t => [String(t.id), t]));
 
-  const localList = Object.entries(getTasks() || {}).flatMap(([date, list]) => (list || []).map(t => ({ ...t, date })));
-  const localServerIds = new Set(
-    localList
-      .map(t => getServerId(t))
-      .filter((id) => id !== null)
-      .map((id) => String(id))
+  /** @type {Map<string, APITask[]>} */
+  const serverBySignature = new Map();
+  for (const serverTask of server) {
+    const signature = buildTaskSignature({
+      title: serverTask.title,
+      description: serverTask.description || '',
+      date: (serverTask.date || '').slice(0, 10) || null,
+      time: serverTask.time || null
+    });
+    const bucket = serverBySignature.get(signature) || [];
+    bucket.push(serverTask);
+    serverBySignature.set(signature, bucket);
+  }
+
+  const localList = Object.entries(getTasks() || {}).flatMap(([dateKey, list]) =>
+    (list || []).map(t => ({ ...t, date: dateKey === 'undated' ? null : dateKey }))
   );
-  /** @type {Array<{ oldId: string; newId: string; serverId: number }>} */
-  const idReplacements = [];
 
-  const tasksToClearDirty = new Set();
-  let authFailed = false;
+  /** @type {Array<{ localId: string; serverId: number }>} */
+  const relinkMappings = [];
 
-  // Build parallel create/update promises
-  /** @type {Promise<void>[]} */
-  const syncPromises = localList.map(async (t) => {
-    if (authFailed) return;
-    const resolvedServerId = getServerId(t);
-    const existing = resolvedServerId ? serverById.get(String(resolvedServerId)) : null;
+  // Create or update
+  for (const t of localList) {
+    const explicitServerId = t.serverId !== undefined && t.serverId !== null ? String(t.serverId) : null;
+    const numericTaskId = /^\d+$/.test(String(t.id)) ? String(t.id) : null;
+
+    /** @type {APITask | undefined} */
+    let existing = undefined;
+    if (explicitServerId) {
+      existing = serverById.get(explicitServerId);
+    }
+    if (!existing && numericTaskId) {
+      existing = serverById.get(numericTaskId);
+    }
+    if (!existing) {
+      const signature = buildTaskSignature({
+        title: t.title,
+        description: t.description || '',
+        date: t.date,
+        time: t.time || null
+      });
+      const bucket = serverBySignature.get(signature) || [];
+      existing = bucket.shift();
+      if (bucket.length > 0) serverBySignature.set(signature, bucket);
+      else serverBySignature.delete(signature);
+
+      if (existing) {
+        const existingServerId = Number(existing.id);
+        if (String(t.id) !== String(existing.id) && Number.isFinite(existingServerId)) {
+          relinkMappings.push({ localId: String(t.id), serverId: existingServerId });
+        }
+      }
+    }
+
     if (!existing) {
       /** @type {any} */
       const payload = {
         title: t.title,
         completed: Boolean(t.completed),
         is_reminder: t.isReminder !== undefined ? Boolean(t.isReminder) : true,
-        priority: mapPriorityToServer(t.priority),
+        priority: Number(t.priority || 1),
         tags: Array.isArray(t.tags) ? t.tags : []
       };
-
+      
       // Only add description if it's not empty
       if (t.description && t.description.trim() !== '') {
         payload.description = t.description.trim();
       }
-
+      
       // Only add date if it's valid (not null, not empty, not 'undated')
       if (t.date && t.date !== 'undated' && t.date.trim() !== '') {
         const dateStr = t.date.trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
           payload.date = dateStr;
-
+          
           // Only add time if date is present and time is valid
           if (t.time && t.time.trim() !== '') {
             payload.time = t.time.trim();
           }
         }
       }
-
+      
       const createRes = await apiFetch('/api/tasks', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-
-      if (createRes.status === 401) { authFailed = true; return; }
       if (createRes.ok) {
-        const created = await createRes.clone().json().catch(() => null);
-        const createdId = created && created.id !== undefined ? Number(created.id) : null;
-        if (createdId && Number.isFinite(createdId)) {
-          serverById.set(String(createdId), created);
-          localServerIds.add(String(createdId));
-          if (String(t.id) !== String(createdId) || t.serverId !== createdId) {
-            idReplacements.push({ oldId: String(t.id), newId: String(createdId), serverId: createdId });
-          }
-          tasksToClearDirty.add(String(t.id));
+        const createdPayload = unwrapTaskPayload(await createRes.json());
+        const createdServerId = Number(createdPayload?.id);
+        if (Number.isFinite(createdServerId)) {
+          relinkMappings.push({ localId: String(t.id), serverId: createdServerId });
         }
       }
     } else {
@@ -400,70 +277,47 @@ export async function pushLocalTasksToBackend() {
       const exRem = existing.is_reminder !== undefined ? existing.is_reminder : true;
       const loRem = t.isReminder !== undefined ? t.isReminder : true;
       if (exRem !== loRem) diff.is_reminder = loRem;
-      if ((existing.priority || 1) !== (t.priority || 1)) diff.priority = t.priority || 1;
+      if (normalizePriorityValue(existing.priority) !== normalizePriorityValue(t.priority)) diff.priority = t.priority || 1;
       const exTags = JSON.stringify(existing.tags || []);
       const loTags = JSON.stringify(t.tags || []);
       if (exTags !== loTags) diff.tags = t.tags || [];
       if (Object.keys(diff).length > 0) {
-        const putRes = await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff), keepalive: true });
-        if (putRes.status === 401) { authFailed = true; return; }
+        await apiFetch(`/api/tasks/${existing.id}`, { method: 'PUT', body: JSON.stringify(diff) });
       }
-      // Mark as synced regardless of whether diff was needed
-      tasksToClearDirty.add(String(t.id));
     }
-  });
+  }
 
-  await Promise.allSettled(syncPromises);
-
-  // NOTE: We intentionally do NOT delete server tasks that are missing locally.
-  // Other devices may have created tasks that this device hasn't fetched yet.
-  // Task deletion is handled explicitly by deleteTask() / deleteTaskOnBackend().
-
-  if (idReplacements.length > 0 || tasksToClearDirty.size > 0) {
-    updateTasks((draft) => {
-      Object.keys(draft).forEach((dateKey) => {
-        draft[dateKey] = (draft[dateKey] || []).map((task) => {
-          let updatedTask = task;
-
-          const replacement = idReplacements.find((entry) => entry.oldId === String(task.id));
-          if (replacement) {
-            updatedTask = { ...task, id: replacement.newId, serverId: replacement.serverId };
-          }
-
-          // Clear dirty flag if it was successfully verified/synced
-          // Check against old ID (t.id) because that's what we tracked in the loop
-          // Note: if replacement occurred, it means we created it, so it is synced.
-          if (tasksToClearDirty.has(String(task.id))) {
-            if (updatedTask.dirty) {
-              updatedTask.dirty = false;
-            }
-          }
-
-          return updatedTask;
+  if (relinkMappings.length > 0) {
+    updateTasks(draft => {
+      Object.keys(draft).forEach(dateKey => {
+        draft[dateKey] = (draft[dateKey] || []).map(task => {
+          const mapping = relinkMappings.find(m => String(task.id) === m.localId);
+          if (!mapping) return task;
+          return {
+            ...task,
+            id: String(mapping.serverId),
+            serverId: mapping.serverId,
+            dirty: false
+          };
         });
       });
     }, { silent: true });
+    notifyTasksUpdated();
   }
 }
 
 /** @param {any} payload */
 export async function createTaskOnBackend(payload) {
+  console.log('Original payload received:', payload);
+  
   // Ensure payload matches backend validation exactly
   /** @type {Record<string, any>} */
   const cleanPayload = {
     title: payload.title || '',
     completed: Boolean(payload.completed),
     is_reminder: Boolean(payload.isReminder || payload.is_reminder),
-    // Map priority integer to string enum for DB
-    priority: (function () {
-      const p = parseInt(payload.priority || '3');
-      if (p === 1) return 'alta';
-      if (p === 2) return 'media';
-      return 'baja'; // Default (3)
-    })(),
-    tags: Array.isArray(payload.tags) ? payload.tags : [],
-    recurrence: payload.recurrence || null,
-    recurrence_id: payload.recurrenceId || payload.recurrence_id || null
+    priority: parseInt(payload.priority || '3'),
+    tags: Array.isArray(payload.tags) ? payload.tags : []
   };
 
   // Only add description if it's not empty
@@ -472,17 +326,17 @@ export async function createTaskOnBackend(payload) {
   }
 
   // Only include date if it's a valid date string (not null, not empty, not undefined)
-  if (payload.date &&
-    typeof payload.date === 'string' &&
-    payload.date.trim() !== '' &&
-    payload.date !== 'null' &&
-    payload.date !== 'undefined') {
-
+  if (payload.date && 
+      typeof payload.date === 'string' && 
+      payload.date.trim() !== '' && 
+      payload.date !== 'null' && 
+      payload.date !== 'undefined') {
+    
     const dateStr = payload.date.trim();
     // Validate date format (YYYY-MM-DD)
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       cleanPayload.date = dateStr;
-
+      
       // Only include time if date is present and time is valid
       if (payload.time && typeof payload.time === 'string' && payload.time.trim() !== '') {
         cleanPayload.time = payload.time.trim();
@@ -492,32 +346,30 @@ export async function createTaskOnBackend(payload) {
     }
   }
 
+  console.log('Clean payload to send:', cleanPayload);
+  console.log('Payload keys:', Object.keys(cleanPayload));
+  
   const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(cleanPayload) });
   if (!res.ok) {
     const errorText = await res.text();
     console.error('Create task failed:', res.status, errorText);
     throw new Error('HTTP ' + res.status + ': ' + errorText);
   }
-  return res.json();
+  const data = await res.json();
+  return unwrapTaskPayload(data) || data;
 }
 
-/** @param {number|string} serverId @param {Partial<{title:string;description:string|null;date:string|null;time:string|null;completed:boolean;is_reminder:boolean;priority:number;tags:string[];recurrence:string|null;recurrence_id:string|null}>} payload */
+/** @param {number|string} serverId @param {Partial<{title:string;description:string|null;date:string|null;time:string|null;completed:boolean;is_reminder:boolean;priority:number;tags:string[]}>} payload */
 export async function updateTaskOnBackend(serverId, payload) {
-  console.log('[updateTaskOnBackend] PUT /api/tasks/' + serverId, payload);
-  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload), keepalive: true });
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    console.error('[updateTaskOnBackend] FAILED:', res.status, errText);
-    throw new Error('HTTP ' + res.status + ': ' + errText);
-  }
-  const json = await res.json();
-  console.log('[updateTaskOnBackend] SUCCESS:', json);
-  return json;
+  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return unwrapTaskPayload(data) || data;
 }
 
 /** @param {number|string} serverId */
 export async function deleteTaskOnBackend(serverId) {
-  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'DELETE', keepalive: true });
+  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return true;
 }

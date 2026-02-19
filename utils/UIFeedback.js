@@ -92,6 +92,34 @@ export function showAuthToast(message, isError = false) {
 export function showUndoToast(message, opts) {
   const { onUndo, duration = 5000 } = opts;
 
+  const existingA11yAlert = document.getElementById('undo-a11y-alert');
+  if (existingA11yAlert) existingA11yAlert.remove();
+
+  const a11yAlert = document.createElement('div');
+  a11yAlert.id = 'undo-a11y-alert';
+  a11yAlert.setAttribute('role', 'alert');
+  a11yAlert.setAttribute('aria-live', 'assertive');
+  a11yAlert.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:100000;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);font-size:14px;';
+
+  const text = document.createElement('span');
+  text.textContent = message;
+  const undoButton = document.createElement('button');
+  undoButton.type = 'button';
+  undoButton.textContent = 'Deshacer';
+  undoButton.style.cssText = 'border:none;background:transparent;color:var(--agenda-accent, #339af0);font-weight:700;cursor:pointer;padding:0;';
+  undoButton.addEventListener('click', () => {
+    onUndo();
+    a11yAlert.remove();
+  });
+
+  a11yAlert.appendChild(text);
+  a11yAlert.appendChild(undoButton);
+  document.body.appendChild(a11yAlert);
+
+  window.setTimeout(() => {
+    if (a11yAlert.isConnected) a11yAlert.remove();
+  }, duration);
+
   toast(message, {
     duration: duration,
     action: {

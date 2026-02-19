@@ -101,6 +101,7 @@ function restoreTask(task) {
   updateTasks(draft => {
     const dateKey = task.date || 'undated';
     if (!draft[dateKey]) draft[dateKey] = [];
+    draft[dateKey] = (draft[dateKey] || []).filter(t => String(t.id) !== String(task.id));
     draft[dateKey].push(task);
   });
   notifyTasksUpdated();
@@ -152,7 +153,7 @@ export function toggleTask(id, options = {}) {
         .then((result) => {
            console.log('[toggleTask] sync OK for', id, 'serverId:', serverId, 'result:', result);
            // Verify server actually persisted the value
-           const serverCompleted = result?.data?.completed;
+            const serverCompleted = result?.completed ?? result?.data?.completed;
            const expectedCompleted = /** @type {import('../types').Task} */ (found).completed;
            if (serverCompleted !== undefined && serverCompleted !== expectedCompleted) {
              console.error('[toggleTask] SERVER MISMATCH! server:', serverCompleted, 'expected:', expectedCompleted);

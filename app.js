@@ -10,18 +10,11 @@ import { state, setCurrentDate, setTasks, getTasks, setUserSession, setUserGistI
 import { API_BASE_URL, isLoggedInWithBackend, loadTasksIntoState, pushLocalTasksToBackend } from './api.js';
 import { renderCalendar, initCalendar, showTaskInputModal } from './calendar.js';
 import { renderAgenda } from './agenda.js';
-import { renderWeekly } from './weekly.js';
 import { showPdfExportModal } from './pdf.js';
-import { showAuthToast, showSyncToast, showToast } from './utils/UIFeedback.js';
-
-console.log('Calendar10 App v2.1.2 - Fixes Loaded (Sync/Mobile/Keepalive)');
-
 
 // GitHub OAuth constants
-const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
-const GITHUB_REDIRECT_URI = (typeof window !== 'undefined' && window.location && window.location.origin)
-  ? window.location.origin
-  : (import.meta.env.VITE_OAUTH_REDIRECT_URI || 'https://calendario-frontend-ashy.vercel.app');
+const GITHUB_CLIENT_ID = 'Ov23liO2tcNCvR8xrHov';
+const GITHUB_REDIRECT_URI = 'https://calendario-frontend-ashy.vercel.app';
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const GITHUB_DEVICE_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -36,91 +29,79 @@ const OAUTH_PROXY_URL = API_BASE_URL + '/api/auth/github';
 /** @type {HTMLElement | null} */ let userName;
 /** @type {HTMLElement | null} */ let calendarView;
 /** @type {HTMLElement | null} */ let agendaView;
-/** @type {HTMLButtonElement | null} */ let weeklyBtn;
-/** @type {HTMLElement | null} */ let weeklyView;
-
-/** Hide the initial loading overlay */
-function hideAppLoading() {
-  const overlay = document.getElementById('app-loading');
-  if (overlay) overlay.classList.add('hidden');
-}
 
 /** @param {string} message @param {boolean} [isError=false] */
 function showAuthStatus(message, isError = false) {
-  showAuthToast(message, isError);
+  let el = document.getElementById('auth-status-banner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'auth-status-banner';
+    Object.assign(el.style, {
+      position: 'fixed', top: '0', left: '50%', transform: 'translateX(-50%)', padding: '6px 14px',
+      fontSize: '12px', fontFamily: 'JetBrains Mono, monospace', borderRadius: '0 0 8px 8px', zIndex: 99999,
+      boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+    });
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  el.style.background = isError ? '#d1495b' : '#545f66';
+  el.style.color = '#fff';
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, isError ? 6000 : 3500);
 }
 
 /** @param {string} message @param {boolean} [isError=false] */
 function showSyncStatus(message, isError = false) {
-  showSyncToast(message, isError);
-}
-
-/** 
- * @param {HTMLElement | null} nextView 
- * @param {string} viewName
- */
-function switchView(nextView, viewName) {
-  if (!nextView) return;
-
-  // Find currently active view
-  const currentView = [calendarView, agendaView, weeklyView].find(v => v && !v.classList.contains('hidden'));
-
-  // If clicking same view, do nothing
-  if (currentView === nextView) return;
-
-  document.body.setAttribute('data-current-view', viewName);
-
-  if (currentView) {
-    currentView.classList.add('animate-out');
-    currentView.addEventListener('animationend', () => {
-      currentView.classList.add('hidden');
-      currentView.classList.remove('animate-out');
-    }, { once: true });
+  let el = document.getElementById('sync-status-banner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sync-status-banner';
+    Object.assign(el.style, {
+      position: 'fixed', bottom: '16px', left: '16px', padding: '6px 12px', fontSize: '12px',
+      fontFamily: 'JetBrains Mono, monospace', borderRadius: '8px', zIndex: 99999, boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+      maxWidth: '60vw', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+    });
+    document.body.appendChild(el);
   }
-
-  nextView.classList.remove('hidden');
-  nextView.classList.add('animate-in');
-  nextView.addEventListener('animationend', () => {
-    nextView.classList.remove('animate-in');
-  }, { once: true });
+  el.textContent = message; el.style.background = isError ? '#d1495b' : '#829399'; el.style.color = '#fff';
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, isError ? 5000 : 2200);
 }
 
 /** @returns {void} */
 function showCalendar() {
-  switchView(calendarView, 'calendar');
+  document.body.setAttribute('data-current-view', 'calendar');
+  if (calendarView) calendarView.classList.remove('hidden');
+  if (agendaView) agendaView.classList.add('hidden');
   if (calendarBtn) { calendarBtn.classList.add('active'); calendarBtn.setAttribute('aria-pressed', 'true'); }
   if (agendaBtn) { agendaBtn.classList.remove('active'); agendaBtn.setAttribute('aria-pressed', 'false'); }
-  if (weeklyBtn) { weeklyBtn.classList.remove('active'); weeklyBtn.setAttribute('aria-pressed', 'false'); }
   renderCalendar();
 }
 
 /** @returns {void} */
 function showAgenda() {
-  switchView(agendaView, 'agenda');
+  document.body.setAttribute('data-current-view', 'agenda');
+  // FORCE AGENDA VIEW TO ALWAYS BE VISIBLE
+  if (agendaView) {
+    agendaView.classList.remove('hidden');
+    agendaView.style.display = 'block';
+    agendaView.style.visibility = 'visible';
+    agendaView.style.opacity = '1';
+  }
+  if (calendarView) calendarView.classList.add('hidden');
   if (agendaBtn) { agendaBtn.classList.add('active'); agendaBtn.setAttribute('aria-pressed', 'true'); }
   if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
-  if (weeklyBtn) { weeklyBtn.classList.remove('active'); weeklyBtn.setAttribute('aria-pressed', 'false'); }
-  const monthFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
-  const statusFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
-  const priorityFilterEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
-  renderAgenda(monthFilterEl?.value || 'all', statusFilterEl?.value || 'all', priorityFilterEl?.value || 'all');
-}
-
-/** @returns {void} */
-function showWeekly() {
-  switchView(weeklyView, 'weekly');
-  if (weeklyBtn) { weeklyBtn.classList.add('active'); weeklyBtn.setAttribute('aria-pressed', 'true'); }
-  if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
-  if (agendaBtn) { agendaBtn.classList.remove('active'); agendaBtn.setAttribute('aria-pressed', 'false'); }
-  renderWeekly();
+  const monthFilterEl = document.getElementById('month-filter');
+  const statusFilterEl = document.getElementById('status-filter');
+  renderAgenda(monthFilterEl?.value || 'all', statusFilterEl?.value || 'all');
 }
 
 /** @returns {void} */
 function updateLoginButton() {
-  loginBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('login-btn'));
-  logoutBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('logout-btn'));
+  loginBtn = document.getElementById('login-btn');
+  logoutBtn = document.getElementById('logout-btn');
   userInfo = document.getElementById('user-info');
-  userAvatar = /** @type {HTMLImageElement | null} */ (document.getElementById('user-avatar'));
+  userAvatar = document.getElementById('user-avatar');
   userName = document.getElementById('user-name');
 
   if (state.userSession && (state.userSession.jwt || state.userSession.token)) {
@@ -136,7 +117,7 @@ function updateLoginButton() {
     }
     if (logoutBtn) { logoutBtn.onclick = handleLogout; logoutBtn.style.display = 'inline-block'; }
     const userStatus = document.getElementById('user-status');
-    if (userStatus && userInfo && !userStatus.querySelector('.online-indicator')) {
+    if (userStatus && !userStatus.querySelector('.online-indicator')) {
       const online = document.createElement('span'); online.className = 'online-indicator'; online.textContent = '●'; online.title = 'En línea'; userInfo.appendChild(online);
     }
   } else {
@@ -156,7 +137,6 @@ function handleLogin() {
 
 /** @returns {void} */
 function handleLogout() {
-  stopBackendSync();
   setUserSession(null);
   setUserGistId(null);
   // Clear all tasks on logout - user data is private
@@ -191,9 +171,7 @@ async function handleOAuthCallback() {
   const params = new URLSearchParams(search);
   const authCode = params.get('code');
 
-  if (authCode) {
-    // Always process fresh OAuth code — clear any stale session so we don't skip the exchange
-    if (state.userSession) setUserSession(null);
+  if (authCode && !state.userSession) {
     const returnedState = params.get('state');
     const storedState = localStorage.getItem('oauth_state');
     if (storedState && returnedState && returnedState !== storedState) {
@@ -210,33 +188,12 @@ async function handleOAuthCallback() {
         if (!res.ok) throw new Error('Auth HTTP ' + res.status);
         return res.json();
       }).then(async (data) => {
-        const jwtToken = data?.token || data?.jwt;
-        if (!data || !data.success || !jwtToken || !data.user) throw new Error('Auth payload inválido');
-        setUserSession({ jwt: jwtToken, user: data.user, loginTime: Date.now() });
+        if (!data || !data.success || !data.token || !data.user) throw new Error('Auth payload inválido');
+        setUserSession({ jwt: data.token, user: data.user, loginTime: Date.now() });
         const cleanUrl = window.location.origin + window.location.pathname; window.history.replaceState({}, document.title, cleanUrl);
         updateLoginButton();
+        await loadTasksIntoState();
         showAuthStatus('Inicio de sesión exitoso');
-        // Load tasks separately — retry up to 4 times with backoff to handle backend cold starts (503)
-        (async () => {
-          // Clear stale local tasks before loading from server to prevent ghost duplicates
-          localStorage.removeItem('calendarTasks');
-          setTasks({}, { silent: true });
-          for (let attempt = 1; attempt <= 4; attempt++) {
-            try {
-              await loadTasksIntoState({ forceClean: true });
-              notifyTasksUpdated();
-              scheduleBackendSync(); // Start polling now that we have a valid JWT
-              return;
-            } catch (e) {
-              if (attempt < 4) {
-                await new Promise(r => setTimeout(r, 1500 * attempt));
-              } else {
-                console.error('loadTasksIntoState failed after retries:', e);
-                showSyncStatus('No se pudieron cargar las tareas. Recarga la página.', true);
-              }
-            }
-          }
-        })();
       }).catch(err => {
         console.error('Code exchange failed:', err);
         showAuthStatus('Error al intercambiar el código (ver consola)', true);
@@ -261,17 +218,7 @@ async function handleOAuthCallback() {
         updateLoginButton();
         if (sess && sess.user) {
           if (sess.jwt) {
-            try {
-              await loadTasksIntoState();
-              notifyTasksUpdated(); // Ensure UI re-renders with fresh server data
-              scheduleBackendSync(); // Resume polling for returning JWT users
-            } catch (e) {
-              // JWT expired or malformed — clear stale session and prompt re-login
-              console.warn('Stored JWT invalid, clearing session:', e);
-              setUserSession(null);
-              updateLoginButton();
-              showAuthStatus('Sesión expirada. Por favor inicia sesión nuevamente.', true);
-            }
+            await loadTasksIntoState();
           } else {
             await findExistingGist();
             await loadTasksFromGist();
@@ -294,7 +241,7 @@ async function syncTasksToGist() {
   if (!state.userSession || !state.userSession.token) return;
   try {
     const gistData = {
-      description: 'Calendar10 - Tasks Data', public: false,
+      description: 'Calendario Digital - Tasks Data', public: false,
       files: { 'calendar-tasks.json': { content: JSON.stringify(getTasks(), null, 2) } }
     };
     let response;
@@ -344,7 +291,7 @@ async function findExistingGist() {
   try {
     const res = await fetch('https://api.github.com/gists?per_page=100', { headers: { 'Authorization': `token ${state.userSession.token}`, 'Accept': 'application/vnd.github.v3+json' } });
     if (!res.ok) return; const gists = await res.json();
-    const match = (gists || []).find((/** @type {any} */ g) => g.files && g.files['calendar-tasks.json']);
+    const match = (gists || []).find(g => g.files && g.files['calendar-tasks.json']);
     if (match && match.id) {
       setUserGistId(match.id);
       if (match.updated_at) setLastGistUpdatedAt(match.updated_at);
@@ -370,26 +317,6 @@ function scheduleBackgroundSync() {
   if (isLoggedInWithBackend()) return; // backend is source of truth
   if (!state.userSession || !state.userSession.token || !state.userGistId) return;
   state.backgroundSyncTimer = setInterval(checkAndPullGist, state.currentSyncIntervalMs);
-}
-
-/** Poll the backend for updated tasks (JWT users only) — enables multi-device sync */
-function scheduleBackendSync() {
-  if (state.backendSyncTimer) return;
-  if (!isLoggedInWithBackend()) return;
-  state.backendSyncTimer = setInterval(async () => {
-    if (!isLoggedInWithBackend()) return;
-    try {
-      const changed = await loadTasksIntoState();
-      if (changed) notifyTasksUpdated();
-    } catch (e) {
-      console.warn('[backend-sync] poll failed:', e);
-    }
-  }, 60000); // every 60 seconds for better multi-device sync
-}
-
-/** @returns {void} */
-function stopBackendSync() {
-  if (state.backendSyncTimer) { clearInterval(state.backendSyncTimer); state.backendSyncTimer = null; }
 }
 
 /** @returns {Promise<void>} */
@@ -443,7 +370,7 @@ function checkNotifications() {
         if (!notificationLog[key]) {
           const timeUntil = Math.ceil((taskTime - currentTime) / (60 * 60 * 1000));
           const label = timeUntil > 0 ? `en ${timeUntil} hora${timeUntil !== 1 ? 's' : ''}` : 'ahora';
-          new Notification('Recordatorio de Tarea', { body: `${task.title}\nFecha: ${date}${task.time ? ` - ${task.time}` : ''}\nProgramada ${label}`, icon: '/favicon.ico', tag: `reminder_${task.id}`, requireInteraction: true });
+          new Notification('🔔 Recordatorio de Tarea', { body: `${task.title}\n📅 ${date}${task.time ? ` ⏰ ${task.time}` : ''}\n⏳ Programada ${label}`, icon: '/favicon.ico', tag: `reminder_${task.id}`, requireInteraction: true });
           notificationLog[key] = { taskId: task.id, sentAt: currentTime, interval: intervals, taskTitle: task.title };
           hasNew = true;
         }
@@ -457,17 +384,9 @@ function checkNotifications() {
 
 /** @returns {void} */
 function testNotification() {
-  if (!('Notification' in window)) {
-    showToast('Este navegador no soporta notificaciones.', { type: 'error' });
-    return;
-  }
-  if (Notification.permission !== 'granted') {
-    showToast('Permite las notificaciones para usar recordatorios.', { type: 'warning', duration: 4200 });
-    Notification.requestPermission();
-    return;
-  }
-  new Notification('Prueba de Notificaci\u00f3n', { body: 'El sistema de recordatorios est\u00e1 funcionando correctamente.\nFecha: ' + new Date().toLocaleString(), icon: '/favicon.ico', requireInteraction: true });
-  showToast('Notificación de prueba enviada.', { type: 'success' });
+  if (!('Notification' in window)) { alert('Este navegador no soporta notificaciones'); return; }
+  if (Notification.permission !== 'granted') { alert('Por favor, permite las notificaciones primero'); Notification.requestPermission(); return; }
+  new Notification('🧪 Prueba de Notificación', { body: 'El sistema de recordatorios está funcionando correctamente.\n📅 Fecha: ' + new Date().toLocaleString(), icon: '/favicon.ico', requireInteraction: true });
 }
 
 /** @returns {void} */
@@ -475,90 +394,18 @@ function clearNotificationLog() { localStorage.removeItem('notificationLog'); }
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
-  calendarBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('calendar-btn'));
-  agendaBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('agenda-btn'));
-  loginBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('login-btn'));
-  logoutBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('logout-btn'));
+  calendarBtn = document.getElementById('calendar-btn');
+  agendaBtn = document.getElementById('agenda-btn');
+  loginBtn = document.getElementById('login-btn');
+  logoutBtn = document.getElementById('logout-btn');
   userInfo = document.getElementById('user-info');
-  userAvatar = /** @type {HTMLImageElement | null} */ (document.getElementById('user-avatar'));
+  userAvatar = document.getElementById('user-avatar');
   userName = document.getElementById('user-name');
   calendarView = document.getElementById('calendar-view');
   agendaView = document.getElementById('agenda-view');
-  weeklyBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('weekly-btn'));
-  weeklyView = document.getElementById('weekly-view');
   if (calendarBtn) calendarBtn.addEventListener('click', showCalendar);
   if (agendaBtn) agendaBtn.addEventListener('click', showAgenda);
-  if (weeklyBtn) weeklyBtn.addEventListener('click', showWeekly);
   if (loginBtn) loginBtn.addEventListener('click', handleLogin);
-
-  window.addEventListener('online', () => {
-    showSyncToast('Conexión restaurada.');
-    if (isLoggedInWithBackend()) {
-      showSyncToast('Sincronizando cambios...', false);
-      // loadTasksIntoState already pushes dirty tasks before fetching,
-      // so we just call it first, then push any remaining local-only tasks.
-      loadTasksIntoState()
-        .then(() => pushLocalTasksToBackend())
-        .then(() => loadTasksIntoState())
-        .then(() => {
-          showSyncToast('Sincronización completada.');
-          notifyTasksUpdated();
-          scheduleBackendSync(); // Restart polling after reconnect
-        })
-        .catch(err => {
-          console.error('Auto-sync failed:', err);
-          showSyncToast('Error al sincronizar.', true);
-        });
-    }
-  });
-
-  window.addEventListener('offline', () => {
-    showToast('Sin conexión. Los cambios se guardarán localmente.', {
-      type: 'warning',
-      duration: 4200
-    });
-  });
-
-  // Flush dirty tasks to backend before page close/refresh
-  window.addEventListener('beforeunload', () => {
-    if (!isLoggedInWithBackend()) return;
-    const allTasks = getTasks();
-    const dirtyTasks = Object.values(allTasks).flat().filter(t => t.dirty);
-    if (dirtyTasks.length === 0) return;
-
-    dirtyTasks.forEach(t => {
-      const sId = t.serverId ?? (typeof t.id === 'number' ? t.id : (/^\d+$/.test(String(t.id)) ? Number(t.id) : null));
-      if (sId && state.userSession && state.userSession.jwt) {
-        /** @type {Record<string, any>} */
-        const payload = { completed: !!t.completed };
-        if (t.title) payload.title = t.title;
-        if (t.description !== undefined) payload.description = t.description || null;
-        if (t.priority !== undefined) {
-          const p = parseInt(String(t.priority || '3'), 10);
-          payload.priority = p === 1 ? 'alta' : p === 2 ? 'media' : 'baja';
-        }
-
-        // Use keepalive fetch instead of sendBeacon for better header support
-        fetch(API_BASE_URL + `/api/tasks/${sId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${state.userSession.jwt}`
-          },
-          body: JSON.stringify(payload),
-          keepalive: true
-        }).catch(err => console.warn('[beforeunload] save failed', err));
-      }
-    });
-  });
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', (/** @type {MessageEvent} */ event) => {
-      if (event.data?.type === 'sync-complete') {
-        showSyncToast('Sincronización offline completada.');
-      }
-    });
-  }
 
   // Initialize the application
   initCalendar();
@@ -572,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  handleOAuthCallback().finally(hideAppLoading);
+  handleOAuthCallback();
   updateLoginButton();
   showCalendar();
   setInterval(checkNotifications, 60000);
@@ -580,28 +427,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Re-render views when tasks change
   document.addEventListener('tasksUpdated', () => {
     if (calendarView && !calendarView.classList.contains('hidden')) renderCalendar();
-    if (weeklyView && !weeklyView.classList.contains('hidden')) renderWeekly();
     if (agendaView && !agendaView.classList.contains('hidden')) {
-      const monthFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('month-filter'));
-      const statusFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
-      const priorityFilter = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
-      renderAgenda(
-        monthFilter?.value || state.filters.month || 'all',
-        statusFilter?.value || state.filters.status || 'all',
-        priorityFilter?.value || state.filters.priority || 'all'
-      );
+      const m = (document.getElementById('month-filter') || {}).value || 'all';
+      const s = (document.getElementById('status-filter') || {}).value || 'all';
+      renderAgenda(m, s);
     }
   });
 
-  document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState !== 'visible') return;
-    if (isLoggedInWithBackend()) {
-      // Pull latest tasks from backend when user returns to tab
-      try { await loadTasksIntoState(); notifyTasksUpdated(); } catch (e) { /* silent */ }
-    } else {
-      checkAndPullGist();
-    }
-  });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkAndPullGist(); });
 });
 
 // Expose for inline buttons in index.html/agenda

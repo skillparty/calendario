@@ -19,15 +19,6 @@ app.use(cors({
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json());
 
-// Prevent any caching of API responses
-app.use((req, res, next) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-  res.set('Surrogate-Control', 'no-store');
-  next();
-});
-
 // Supabase client
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(
@@ -237,30 +228,33 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
 // Get tasks - REQUIRES AUTHENTICATION
 app.get('/api/tasks', authenticate, async (req, res) => {
   try {
-    const rawLimit = parseInt(req.query.limit, 10);
-    const rawOffset = parseInt(req.query.offset, 10);
-    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 100;
-    const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+    const { group_id, limit: qLimit, offset: qOffset } = req.query;
     
     let query = supabase
       .from('tasks')
-      .select('*', { count: 'exact' })
+      .select('*')
       .eq('user_id', req.user.id);
     
-    query = query
-      .order('date', { ascending: true, nullsFirst: false })
-      .range(offset, offset + limit - 1);
+    if (group_id !== undefined) {
+      if (group_id === 'null' || group_id === '') {
+        query = query.is('group_id', null);
+      } else {
+        query = query.eq('group_id', parseInt(group_id));
+      }
+    }
+
+    const limit = parseInt(qLimit, 10);
+    const offset = parseInt(qOffset, 10);
+    if (Number.isFinite(limit) && Number.isFinite(offset) && limit > 0 && offset >= 0) {
+      query = query.range(offset, offset + limit - 1);
+    }
     
-    const { data, error, count } = await query;
+    query = query.order('date', { ascending: true, nullsFirst: false });
+    
+    const { data, error } = await query;
 
     if (error) throw error;
-    res.json({
-      success: true,
-      data: data || [],
-      count: count ?? (data || []).length,
-      limit,
-      offset
-    });
+    res.json({ success: true, data: data || [], count: (data || []).length });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -269,7 +263,7 @@ app.get('/api/tasks', authenticate, async (req, res) => {
 // Create task - REQUIRES AUTHENTICATION
 app.post('/api/tasks', authenticate, async (req, res) => {
   try {
-    const { title, description, date, time, priority, is_reminder, tags } = req.body;
+    const { title, description, date, time, priority, completed, group_id, is_reminder, tags } = req.body;
     
     const taskData = { 
       title, 
@@ -278,9 +272,10 @@ app.post('/api/tasks', authenticate, async (req, res) => {
       time: time || null, 
       priority: priority || 'media',
       user_id: req.user.id,
+      group_id: group_id || null,
       is_reminder: is_reminder !== undefined ? is_reminder : true,
       tags: tags || [],
-      completed: req.body.completed !== undefined ? Boolean(req.body.completed) : false
+      completed: completed !== undefined ? Boolean(completed) : false
     };
     
     const { data, error } = await supabase
@@ -324,34 +319,6 @@ app.put('/api/tasks/:id', authenticate, async (req, res) => {
   }
 });
 
-// Patch task - REQUIRES AUTHENTICATION
-app.patch('/api/tasks/:id', authenticate, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body;
-    
-    delete updates.id;
-    delete updates.user_id;
-    delete updates.created_at;
-    
-    const { data, error } = await supabase
-      .from('tasks')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', req.user.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    if (!data) {
-      return res.status(404).json({ error: 'Task not found or not authorized' });
-    }
-    res.json({ success: true, data });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Delete task - REQUIRES AUTHENTICATION
 app.delete('/api/tasks/:id', authenticate, async (req, res) => {
   try {
@@ -366,70 +333,6 @@ app.delete('/api/tasks/:id', authenticate, async (req, res) => {
     if (error) throw error;
     res.json({ success: true, message: 'Task deleted' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Deduplicate tasks - REQUIRES AUTHENTICATION
-app.post('/api/tasks/deduplicate', authenticate, async (req, res) => {
-  try {
-    // 1. Fetch all tasks for the user
-    const { data: tasks, error } = await supabase
-      .from('tasks')
-      .select('id, title, date, time, description, created_at')
-      .eq('user_id', req.user.id)
-      .order('created_at', { ascending: true }); // Oldest first
-
-    if (error) throw error;
-    if (!tasks || tasks.length === 0) return res.json({ success: true, deleted: 0 });
-
-    const seen = new Map();
-    const toDelete = [];
-
-    for (const task of tasks) {
-      // Create a signature for the task
-      // Normalize values to avoid slight differences
-      const title = (task.title || '').trim();
-      const date = (task.date || '').slice(0, 10); // YYYY-MM-DD
-      const time = (task.time || '').slice(0, 5); // HH:MM
-      const description = (task.description || '').trim();
-      
-      const sig = `${title}|${date}|${time}|${description}`;
-      
-      if (seen.has(sig)) {
-        toDelete.push(task.id);
-      } else {
-        seen.set(sig, task.id);
-      }
-    }
-
-    // Delete duplicates in batches
-    let deletedCount = 0;
-    if (toDelete.length > 0) {
-      const batchSize = 100;
-      for (let i = 0; i < toDelete.length; i += batchSize) {
-        const batch = toDelete.slice(i, i + batchSize);
-        const { error: delError } = await supabase
-          .from('tasks')
-          .delete()
-          .in('id', batch);
-        
-        if (delError) {
-          console.error('Error deleting batch of duplicates:', delError);
-        } else {
-          deletedCount += batch.length;
-        }
-      }
-    }
-
-    res.json({
-      success: true,
-      message: `Deduplication complete. Found ${tasks.length} tasks, deleted ${deletedCount} duplicates.`,
-      deleted: deletedCount,
-      remaining: tasks.length - deletedCount
-    });
-  } catch (error) {
-    console.error('Deduplication error:', error);
     res.status(500).json({ error: error.message });
   }
 });
