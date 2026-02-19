@@ -262,7 +262,7 @@ async function handleOAuthCallback() {
         if (sess && sess.user) {
           if (sess.jwt) {
             try {
-              await loadTasksIntoState({ forceClean: true });
+              await loadTasksIntoState();
               notifyTasksUpdated(); // Ensure UI re-renders with fresh server data
               scheduleBackendSync(); // Resume polling for returning JWT users
             } catch (e) {
