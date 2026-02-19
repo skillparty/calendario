@@ -4,6 +4,10 @@
 
 /* ========== MEJORAS HEADER MÓVIL ========== */
 @media (max-width: 768px) {
+    * {
+        -webkit-tap-highlight-color: transparent;
+    }
+
     html,
     body {
         min-height: 100svh;
@@ -23,11 +27,33 @@
         -webkit-backdrop-filter: blur(10px);
     }
 
+    .agenda-toolbar {
+        position: sticky;
+        top: calc(max(env(safe-area-inset-top), 0px) + 0.375rem);
+        z-index: 25;
+        background: var(--bg-primary);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
     #calendar-view,
     #agenda-view,
     #weekly-view {
         min-height: calc(100svh - 180px);
         min-height: calc(100dvh - 180px);
+    }
+
+    .task-list-container,
+    .weekly-grid,
+    .modal-content {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    .task-list-container {
+        max-height: calc(100svh - 260px);
+        max-height: calc(100dvh - 260px);
+        scroll-padding-top: 3.25rem;
     }
 
     .header-container {
@@ -619,6 +645,12 @@
         opacity: 0.9;
     }
 
+    .task-card:active,
+    .weekly-task:active,
+    .day:active {
+        filter: brightness(0.98);
+    }
+
     .day:active {
         transform: scale(0.98);
         opacity: 0.9;
@@ -637,6 +669,16 @@
 
     .day-content {
         min-height: 44px;
+    }
+
+    .task-action-btn,
+    .task-check-btn,
+    .weekly-nav-btn,
+    .weekly-today-btn,
+    .toolbar-btn-icon,
+    .logout-btn,
+    .theme-toggle-btn {
+        touch-action: manipulation;
     }
 
     /* Agenda-specific touch improvements */
@@ -847,6 +889,7 @@
 
     .brand-tagline {
         font-size: 0.72rem;
+        display: none;
     }
 
     .header-nav {
@@ -865,6 +908,10 @@
     .user-name {
         max-width: 32vw;
         font-size: 0.875rem;
+    }
+
+    .agenda-toolbar {
+        top: calc(max(env(safe-area-inset-top), 0px) + 0.25rem);
     }
 
     .logout-btn {
@@ -936,6 +983,10 @@
 
     .brand-tagline {
         font-size: 0.8rem;
+    }
+
+    .agenda-toolbar {
+        top: calc(max(env(safe-area-inset-top), 0px) + 0.5rem);
     }
 
     .nav-item {
