@@ -16,6 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
         agendaNavIcon.classList.add('icon');
     }
 
+    // Replace weekly nav icon
+    const weeklyNavIcon = document.querySelector('#weekly-btn .nav-icon');
+    if (weeklyNavIcon) {
+        weeklyNavIcon.innerHTML = icons.weekly;
+        weeklyNavIcon.classList.add('icon');
+    }
+
     // Replace user icon
     const loginIcon = document.getElementById('login-icon');
     if (loginIcon) {

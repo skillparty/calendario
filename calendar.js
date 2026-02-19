@@ -176,8 +176,54 @@ function setupCalendarGestures() {
 export function initCalendar() {
   setupCalendarGestures();
 
+  let longPressTimer = /** @type {number | null} */ (null);
+  let longPressActivated = false;
+
+  const clearLongPress = () => {
+    if (longPressTimer) {
+      window.clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  };
+
+  document.addEventListener('touchstart', (e) => {
+    const target = /** @type {HTMLElement} */ (e.target);
+    const day = /** @type {HTMLElement | null} */ (target?.closest?.('.day[data-date]:not(.other-month)'));
+    const calendarView = document.getElementById('calendar-view');
+    if (!day || !calendarView || calendarView.classList.contains('hidden')) return;
+
+    longPressActivated = false;
+    clearLongPress();
+    const date = day.dataset.date;
+    if (!date) return;
+
+    longPressTimer = window.setTimeout(() => {
+      longPressActivated = true;
+      showDayTasks(date);
+    }, 450);
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    clearLongPress();
+  }, { passive: true });
+
+  document.addEventListener('touchcancel', () => {
+    clearLongPress();
+  }, { passive: true });
+
+  document.addEventListener('touchmove', () => {
+    clearLongPress();
+  }, { passive: true });
+
   // Event delegation for calendar interactions
   document.addEventListener('click', (e) => {
+    if (longPressActivated) {
+      longPressActivated = false;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     const target = /** @type {HTMLElement} */ (e.target);
     const addBtn = target?.closest('.day-add-btn');
     if (addBtn) {

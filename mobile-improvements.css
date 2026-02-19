@@ -222,6 +222,12 @@
         border-radius: 8px;
     }
 
+    .calendar-grid > .day:nth-child(1),
+    .calendar-grid > .day:nth-child(7) {
+        color: #d1495b !important;
+        font-weight: 700;
+    }
+
     .day-content {
         padding: var(--spacing-xs);
     }
@@ -649,6 +655,14 @@
         -webkit-line-clamp: 2;
         line-clamp: 2;
         -webkit-box-orient: vertical;
+    }
+
+    .weekly-day-header[data-day-index="0"] .weekly-day-name,
+    .weekly-day-header[data-day-index="0"] .weekly-day-number,
+    .weekly-day-header[data-day-index="6"] .weekly-day-name,
+    .weekly-day-header[data-day-index="6"] .weekly-day-number {
+        color: #d1495b !important;
+        font-weight: 700;
     }
 }
 
