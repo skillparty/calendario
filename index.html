@@ -249,7 +249,8 @@
         // Register Service Worker for offline functionality
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                // Add timestamp to force update of the service worker file itself
+                navigator.serviceWorker.register('./sw.js?v=' + Date.now())
                     .then(registration => {
                         // SW registered
                         

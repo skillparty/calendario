@@ -247,6 +247,27 @@ function handleAgendaActionClick(event) {
     return;
   }
 
+  if (action === 'manual-sync') {
+    event.preventDefault();
+    const btn = /** @type {HTMLElement} */ (target);
+    btn.classList.add('spinning');
+    import('./api.js').then(({ loadTasksIntoState, isLoggedInWithBackend }) => {
+      if (!isLoggedInWithBackend()) {
+        import('./utils/UIFeedback.js').then(({ showToast }) => showToast('Inicia sesión para sincronizar', { type: 'warning' }));
+        btn.classList.remove('spinning');
+        return;
+      }
+      import('./utils/UIFeedback.js').then(({ showSyncToast }) => showSyncToast('Sincronizando...'));
+      loadTasksIntoState().then(() => {
+        import('./state.js').then(({ notifyTasksUpdated }) => notifyTasksUpdated());
+        import('./utils/UIFeedback.js').then(({ showSyncToast }) => showSyncToast('Sincronizado'));
+      }).catch(() => {
+        import('./utils/UIFeedback.js').then(({ showToast }) => showToast('Error al sincronizar', { type: 'error' }));
+      }).finally(() => btn.classList.remove('spinning'));
+    });
+    return;
+  }
+
   if (action === 'filter-status') {
     event.preventDefault();
     event.stopPropagation();
@@ -338,6 +359,10 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
                 </div>
                 
                 <div class="toolbar-filters">
+                     <button type="button" data-action="manual-sync" class="toolbar-btn-icon" title="Sincronizar ahora">
+                        ${icons.refresh || '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>'}
+                     </button>
+
                      <select id="month-filter" class="toolbar-select" title="Filtrar por Mes">
                         <option value="all"${filterMonth === 'all' ? ' selected' : ''}>Mes: Todos</option>
                         <option value="0"${filterMonth === '0' ? ' selected' : ''}>Enero</option>
