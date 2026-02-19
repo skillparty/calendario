@@ -698,6 +698,14 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
 
   agendaView.innerHTML = html;
 
+  // Remove animation class after it finishes to prevent stacking context issues with fixed elements (FAB)
+  const container = agendaView.querySelector('.agenda-container');
+  if (container && animationClass) {
+    container.addEventListener('animationend', () => {
+      container.classList.remove('animate-entry');
+    }, { once: true });
+  }
+
   // Restore scroll position if it existed (Immediate)
   const newScrollContainer = agendaView.querySelector('.task-list-container');
   if (newScrollContainer && previousScrollTop > 0) {
