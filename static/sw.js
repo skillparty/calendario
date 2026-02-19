@@ -7,7 +7,7 @@
 
 const sw = /** @type {any} */ (self);
 
-const CACHE_VERSION = 'v2026.02.18-fixes-v1';
+const CACHE_VERSION = 'v2026.02.18-fixes-v3';
 const CACHE_NAME = `calendar10-${CACHE_VERSION}`;
 const API_CACHE = `calendar10-api-${CACHE_VERSION}`;
 const DB_NAME = 'Calendar10DB';
@@ -38,8 +38,8 @@ sw.addEventListener('install', (/** @type {any} */ event) => {
   installEvent.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        // Caching static assets
-        return cache.addAll(APP_SHELL);
+        // Caching static assets - ensure we get fresh versions
+        return cache.addAll(APP_SHELL.map(url => new Request(url, {cache: 'reload'})));
       })
       .then(() => sw.skipWaiting())
       .catch(error => {

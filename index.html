@@ -250,7 +250,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 // Add timestamp to force update of the service worker file itself
-                navigator.serviceWorker.register('./sw.js?v=' + Date.now())
+                navigator.serviceWorker.register('./sw.js')
                     .then(registration => {
                         // SW registered
                         
@@ -275,9 +275,9 @@
                         console.error('SW registration failed:', err);
                     });
                     
-                // Reload when new service worker takes control
+                // Log when new service worker takes control (no reload)
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    window.location.reload();
+                    console.log('New service worker took control');
                 });
             });
         }
