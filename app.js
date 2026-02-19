@@ -58,10 +58,10 @@ function showSyncStatus(message, isError = false) {
  */
 function switchView(nextView, viewName) {
   if (!nextView) return;
-  
+
   // Find currently active view
   const currentView = [calendarView, agendaView, weeklyView].find(v => v && !v.classList.contains('hidden'));
-  
+
   // If clicking same view, do nothing
   if (currentView === nextView) return;
 
@@ -510,6 +510,34 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast('Sin conexión. Los cambios se guardarán localmente.', {
       type: 'warning',
       duration: 4200
+    });
+  });
+
+  // Flush dirty tasks to backend before page close/refresh
+  window.addEventListener('beforeunload', () => {
+    if (!isLoggedInWithBackend()) return;
+    const allTasks = getTasks();
+    const dirtyTasks = Object.values(allTasks).flat().filter(t => t.dirty);
+    if (dirtyTasks.length === 0) return;
+
+    dirtyTasks.forEach(t => {
+      const sId = t.serverId ?? (typeof t.id === 'number' ? t.id : (/^\d+$/.test(String(t.id)) ? Number(t.id) : null));
+      if (sId && state.userSession && state.userSession.jwt) {
+        /** @type {Record<string, any>} */
+        const payload = { completed: !!t.completed };
+        if (t.title) payload.title = t.title;
+        if (t.description !== undefined) payload.description = t.description || null;
+        if (t.priority !== undefined) {
+          const p = parseInt(String(t.priority || '3'), 10);
+          payload.priority = p === 1 ? 'alta' : p === 2 ? 'media' : 'baja';
+        }
+
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        navigator.sendBeacon(
+          API_BASE_URL + `/api/tasks/${sId}?_method=PUT&token=${encodeURIComponent(state.userSession.jwt)}`,
+          blob
+        );
+      }
     });
   });
 

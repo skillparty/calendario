@@ -37,11 +37,11 @@ function handleValidationErrors(req, res, next) {
 
 // GET /api/tasks - Obtener todas las tareas del usuario
 router.get('/', asyncHandler(async (req, res) => {
-  const { date, start_date, end_date, completed, month, year } = req.query;
+  const { date, start_date, end_date, completed, month, year, limit: qLimit, offset: qOffset } = req.query;
 
   let query = supabase
     .from('tasks')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('user_id', req.user.id)
     .order('date', { ascending: true });
 
@@ -50,7 +50,14 @@ router.get('/', asyncHandler(async (req, res) => {
   if (start_date && end_date) query = query.gte('date', start_date).lte('date', end_date);
   if (completed !== undefined) query = query.eq('completed', completed === 'true');
 
-  const { data, error } = await query;
+  // Pagination
+  if (qLimit || qOffset) {
+    const limit = parseInt(qLimit) || 100;
+    const offset = parseInt(qOffset) || 0;
+    query = query.range(offset, offset + limit - 1);
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
     logger.error('Error fetching tasks:', error);
@@ -60,7 +67,55 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: data || [],
-    count: data?.length || 0
+    count: count || data?.length || 0
+  });
+}));
+
+// POST /api/tasks/deduplicate - Eliminar tareas duplicadas
+router.post('/deduplicate', asyncHandler(async (req, res) => {
+  // 1. Fetch all tasks for the user (without pagination)
+  const { data: tasks, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', req.user.id)
+    .order('created_at', { ascending: true }); // Keep the oldest, delete newer duplicates
+
+  if (error) throw new AppError('Failed to fetch tasks for deduplication', 500);
+  if (!tasks || tasks.length === 0) return res.json({ success: true, deleted: 0 });
+
+  const seen = new Map();
+  const toDelete = [];
+
+  for (const task of tasks) {
+    // Create a signature for the task
+    const sig = `${task.title}|${task.date}|${task.time || ''}|${task.description || ''}`;
+
+    if (seen.has(sig)) {
+      toDelete.push(task.id);
+    } else {
+      seen.set(sig, task.id);
+    }
+  }
+
+  // Delete duplicates in batches
+  if (toDelete.length > 0) {
+    const batchSize = 100;
+    for (let i = 0; i < toDelete.length; i += batchSize) {
+      const batch = toDelete.slice(i, i + batchSize);
+      const { error: delError } = await supabase
+        .from('tasks')
+        .delete()
+        .in('id', batch);
+
+      if (delError) logger.error('Error deleting batch of duplicates:', delError);
+    }
+  }
+
+  res.json({
+    success: true,
+    message: `Deduplication complete. Found ${tasks.length} tasks, deleted ${toDelete.length} duplicates.`,
+    deleted: toDelete.length,
+    remaining: tasks.length - toDelete.length
   });
 }));
 
@@ -145,7 +200,7 @@ router.put('/:id', updateTaskValidation, handleValidationErrors, asyncHandler(as
     date,
     time,
     completed,
-    priority: normalizePriority(priority),
+    priority: priority !== undefined ? normalizePriority(priority) : undefined,
     is_reminder,
     tags
   };

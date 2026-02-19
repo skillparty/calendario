@@ -263,6 +263,12 @@ export async function loadTasksIntoState() {
     }
   });
 
+  // Log server data summary for debugging sync issues
+  const allMapped = Object.values(byDate).flat();
+  const completedCount = allMapped.filter(t => t.completed).length;
+  console.log(`[loadTasksIntoState] Server returned ${allMapped.length} tasks (${completedCount} completed). Unique from server: ${uniqueList.length}`);
+  uniqueList.forEach(t => console.log(`  [server] id=${t.id} completed=${t.completed} title="${t.title}"`));
+
   setTasks(byDate);
 
   // If we have local-only tasks, push them to the server
@@ -470,9 +476,16 @@ export async function createTaskOnBackend(payload) {
 
 /** @param {number|string} serverId @param {Partial<{title:string;description:string|null;date:string|null;time:string|null;completed:boolean;is_reminder:boolean;priority:number;tags:string[];recurrence:string|null;recurrence_id:string|null}>} payload */
 export async function updateTaskOnBackend(serverId, payload) {
-  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload), keepalive: true });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
+  console.log('[updateTaskOnBackend] PUT /api/tasks/' + serverId, payload);
+  const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload) });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    console.error('[updateTaskOnBackend] FAILED:', res.status, errText);
+    throw new Error('HTTP ' + res.status + ': ' + errText);
+  }
+  const json = await res.json();
+  console.log('[updateTaskOnBackend] SUCCESS:', json);
+  return json;
 }
 
 /** @param {number|string} serverId */

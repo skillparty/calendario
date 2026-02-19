@@ -149,8 +149,16 @@ export function toggleTask(id, options = {}) {
       const promise = serverId ? updateTaskOnBackend(serverId, { completed: /** @type {import('../types').Task} */ (found).completed }) : pushLocalTasksToBackend();
       
       Promise.resolve(promise)
-        .then((res) => {
-           console.log('[toggleTask] sync OK for', id, 'serverId:', serverId, 'response:', res);
+        .then((result) => {
+           console.log('[toggleTask] sync OK for', id, 'serverId:', serverId, 'result:', result);
+           // Verify server actually persisted the value
+           const serverCompleted = result?.data?.completed;
+           const expectedCompleted = /** @type {import('../types').Task} */ (found).completed;
+           if (serverCompleted !== undefined && serverCompleted !== expectedCompleted) {
+             console.error('[toggleTask] SERVER MISMATCH! server:', serverCompleted, 'expected:', expectedCompleted);
+             showToast(`Error: servidor no guardó el cambio (server=${serverCompleted})`, { type: 'error', duration: 5000 });
+             return;
+           }
            // Clear dirty flag on success
            if (serverId) {
              updateTasks(draft => {
@@ -160,10 +168,11 @@ export function toggleTask(id, options = {}) {
                });
              }, { silent: true });
            }
+           showToast('Guardado ✓', { type: 'success', duration: 1500 });
         })
         .catch(err => {
         console.error('[toggleTask] sync FAILED for', id, 'serverId:', serverId, 'error:', err);
-        showToast('Sincronización pendiente. Se reintentará automáticamente.', { type: 'warning' });
+        showToast('Error al sincronizar: ' + (err?.message || err), { type: 'error', duration: 5000 });
       });
     } else {
       console.warn('[toggleTask] task not found in state after update:', id);

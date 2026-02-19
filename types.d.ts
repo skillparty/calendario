@@ -95,6 +95,7 @@ export interface AppState {
   userGistId: string | null;
   lastGistUpdatedAt: string | null;
   backgroundSyncTimer: any; // setInterval handle
+  backendSyncTimer: any; // setInterval handle for backend polling
   baseSyncIntervalMs: number;
   currentSyncIntervalMs: number;
   maxSyncIntervalMs: number;

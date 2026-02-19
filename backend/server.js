@@ -33,6 +33,18 @@ app.use(helmet({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Method override for sendBeacon (always sends POST, but we need PUT for task updates)
+app.use((req, res, next) => {
+  if (req.query._method && req.method === 'POST') {
+    req.method = String(req.query._method).toUpperCase();
+  }
+  // Support Bearer token in query param for sendBeacon (can't set custom headers)
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+});
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -80,8 +92,8 @@ app.get('/', (req, res) => {
 
 // Legacy health check (keep for backward compatibility)
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     version: '2.0.0',
     database: 'Supabase'

@@ -49,6 +49,7 @@ export const state = {
   userGistId: safeGetItem('userGistId') || null,
   lastGistUpdatedAt: safeGetItem('lastGistUpdatedAt') || null,
   backgroundSyncTimer: null,
+  backendSyncTimer: null,
   baseSyncIntervalMs: 120000, // 2 minutes
   currentSyncIntervalMs: 120000,
   maxSyncIntervalMs: 600000,
