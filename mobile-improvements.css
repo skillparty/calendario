@@ -1243,3 +1243,151 @@
         gap: 4px;
     }
 }
+
+/* ========== FINAL MOBILE COMPACT OVERRIDES (REAL DEVICE TUNING) ========== */
+@media (max-width: 768px) {
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+
+    .header-container {
+        padding: 0.4rem 0.6rem !important;
+        gap: 0.35rem !important;
+    }
+
+    .brand-logo {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 10px !important;
+    }
+
+    .brand-name {
+        font-size: 1.15rem !important;
+    }
+
+    .brand-tagline,
+    .user-name {
+        display: none !important;
+    }
+
+    .header-right {
+        gap: 0.4rem !important;
+    }
+
+    #user-info {
+        justify-content: center !important;
+    }
+
+    .logout-btn {
+        min-height: 34px !important;
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.95rem;
+    }
+
+    #weekly-view {
+        padding: 0.5rem !important;
+        overflow-x: auto;
+    }
+
+    .weekly-nav {
+        position: sticky;
+        top: 0;
+        z-index: 15;
+        background: var(--bg-secondary);
+        padding-bottom: 0.35rem;
+    }
+
+    .weekly-grid {
+        grid-template-columns: 40px repeat(7, 1fr) !important;
+        gap: 2px !important;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .weekly-day-name {
+        font-size: 0.58rem !important;
+    }
+
+    .weekly-day-number {
+        font-size: 0.72rem !important;
+    }
+
+    .weekly-time-label,
+    .weekly-cell {
+        min-height: 44px !important;
+        font-size: 0.56rem !important;
+    }
+
+    .weekly-task {
+        font-size: 0.56rem !important;
+        padding: 2px 3px !important;
+        gap: 2px !important;
+    }
+
+    .weekly-task-time {
+        display: none !important;
+    }
+
+    .weekly-task-title {
+        -webkit-line-clamp: 1 !important;
+        line-clamp: 1 !important;
+    }
+
+    .footer-minimal {
+        padding: 0.5rem 0 0.75rem !important;
+    }
+
+    .footer-container {
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    .footer-content {
+        gap: 0.4rem !important;
+    }
+
+    .footer-brand {
+        flex-direction: row !important;
+        gap: 0.5rem !important;
+    }
+
+    .footer-logo {
+        width: 34px !important;
+        height: 34px !important;
+    }
+
+    .footer-name {
+        font-size: 0.95rem !important;
+    }
+
+    .footer-links {
+        flex-direction: row !important;
+        justify-content: center;
+        max-width: none !important;
+        width: auto !important;
+        gap: 0.4rem !important;
+    }
+
+    .footer-link {
+        width: 40px !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
+        padding: 0.35rem !important;
+        border-radius: 0.5rem !important;
+    }
+
+    .footer-bottom {
+        padding-top: 0.4rem !important;
+    }
+
+    .footer-copyright p {
+        font-size: 0.72rem !important;
+        line-height: 1.2 !important;
+    }
+
+    .fab-add-task {
+        width: 3rem !important;
+        height: 3rem !important;
+        right: 1rem !important;
+    }
+}
