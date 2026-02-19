@@ -175,22 +175,38 @@ export async function loadTasksIntoState() {
   // Build a set of all server task IDs for quick lookup
   const serverIdSet = new Set(list.map(t => String(t.id)));
 
-  // Identify local-only tasks that have NEVER been synced
-  const localOnlyTasks = Object.values(currentAll).flat().filter(t => {
+  // Identify local-only tasks and "orphaned" tasks (synced locally but missing from server)
+  // We preserve both to ensure no data loss.
+  const tasksToPreserve = Object.values(currentAll).flat().filter(t => {
+    // 1. Task was created locally and never got a server ID
     if (!t.serverId && String(t.id).startsWith('local_')) return true;
+
+    // 2. Task has a server ID (was synced) but is NOT in the current server list
+    // This happens if server lost data or previous sync was partial. We want to RECOVER these.
+    // Note: We checking if the *server ID* is in the fetched set.
+    const sId = String(t.serverId || t.id);
+    if ((t.serverId || (t.id && !String(t.id).startsWith('local_'))) && !serverIdSet.has(sId)) {
+      return true;
+    }
     return false;
   });
 
-  // Deduplication
+  // DEDUPLICATION LOGIC
+  // Group tasks by signature to find duplicates
   const seenSignatures = new Map();
   const duplicatesToDelete = [];
   const uniqueList = [];
+
+  // Sort list by ID (assuming lower ID = older = original)
   list.sort((a, b) => a.id - b.id);
 
   for (const t of list) {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
+    // Signature: title + date + time + description
     const signature = `${t.title}|${dateKey}|${t.time || ''}|${t.description || ''}`;
+
     if (seenSignatures.has(signature)) {
+      // This is a duplicate!
       duplicatesToDelete.push(t.id);
     } else {
       seenSignatures.set(signature, t.id);
@@ -198,12 +214,16 @@ export async function loadTasksIntoState() {
     }
   }
 
+  // If duplicates found, trigger background cleanup
   if (duplicatesToDelete.length > 0) {
+    console.warn(`Found ${duplicatesToDelete.length} duplicate tasks. cleaning up...`);
+    // Delete in background to not block UI
     (async () => {
       for (let i = 0; i < duplicatesToDelete.length; i += 5) {
         const chunk = duplicatesToDelete.slice(i, i + 5);
         await Promise.allSettled(chunk.map((/** @type {number|string} */ id) => deleteTaskOnBackend(id).catch(() => { })));
       }
+      console.log('Duplicate cleanup complete');
     })();
   }
 
@@ -241,7 +261,7 @@ export async function loadTasksIntoState() {
         if (typeof serverTask.priority === 'number') return serverTask.priority;
         if (serverTask.priority === 'alta') return 1;
         if (serverTask.priority === 'media') return 2;
-        return 3;
+        return 3; // baja or default
       })(),
       tags: serverTask.tags || [],
       recurrence: serverTask.recurrence || undefined,
@@ -251,21 +271,45 @@ export async function loadTasksIntoState() {
     addTaskToState(mapped);
   });
 
-  // 5. Add local-only tasks (if not dirty, they generally shouldn't exist here if older, but keep to be safe)
-  // Dirty local-only tasks are also preserved here
-  localOnlyTasks.forEach(t => {
-    const dateKey = t.date || 'undated';
+  // 5. Add local-only tasks and RECOVER orphaned tasks
+  // If a task exists locally with a serverId but isn't in the server list,
+  // we treat it as an upload failure/data loss and RE-UPLOAD it (Self-Repair).
+  const timestamp = Date.now();
+  tasksToPreserve.forEach(t => {
+    // If it was an orphaned server task (has serverId/id but not in set), strip it to re-sync
+    let taskToAdd = t;
+    if (t.serverId || (t.id && !String(t.id).startsWith('local_'))) {
+      console.warn('[sync] Recovering orphaned task:', t.id, t.title);
+      // Check if it's actually a duplicate of a valid server task we just received
+      const dateKey = t.date || 'undated';
+      const signature = `${t.title}|${t.date ? t.date.slice(0, 10) : ''}|${t.time || ''}|${t.description || ''}`;
+      if (seenSignatures.has(signature)) {
+        console.log('[sync] Orphaned task matches existing server task, linking...', seenSignatures.get(signature));
+        return; // Already exists, just ignore orphan
+      }
+
+      // It's truly missing. Convert to new local task to force push.
+      taskToAdd = {
+        ...t,
+        id: `local_recovered_${timestamp}_${Math.random().toString(36).substr(2, 9)}`,
+        serverId: undefined,
+        dirty: true // FORCE PUSH
+      };
+    }
+
+    const dateKey = taskToAdd.date || 'undated';
     if (!finalState[dateKey]) finalState[dateKey] = [];
-    // Avoid duplicates if somehow ID clashes with server ID (unlikely due to local_ prefix)
-    if (!finalState[dateKey].find(existing => String(existing.id) === String(t.id))) {
-      finalState[dateKey].push(t);
+
+    // Avoid exact ID duplicates in state
+    if (!finalState[dateKey].find(existing => String(existing.id) === String(taskToAdd.id))) {
+      finalState[dateKey].push(taskToAdd);
     }
   });
 
   // 6. Push state - this now respects dirty concurrent edits
   setTasks(finalState);
 
-  if (localOnlyTasks.length > 0) {
+  if (tasksToPreserve.length > 0) {
     pushLocalTasksToBackend().catch(err => console.error('Background push failed:', err));
   }
 
