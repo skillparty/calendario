@@ -65,7 +65,7 @@ function handleInlineTitleEdit(titleEl, taskId) {
   input.type = 'text';
   input.className = 'inline-title-input';
   input.value = currentTitle;
-  
+
   const save = () => {
     const newTitle = input.value.trim();
     if (newTitle && newTitle !== currentTitle) {
@@ -81,11 +81,11 @@ function handleInlineTitleEdit(titleEl, taskId) {
         }
       });
       notifyTasksUpdated();
-      
+
       // Backend sync
       if (isLoggedInWithBackend()) {
         const task = document.querySelector(`[data-task-id="${taskId}"]`);
-        const serverId = getServerTaskId(/** @type {Task} */ ({ id: taskId, serverId: task ? Number(/** @type {HTMLElement} */ (task).dataset.serverId) : undefined }));
+        const serverId = getServerTaskId(/** @type {Task} */({ id: taskId, serverId: task ? Number(/** @type {HTMLElement} */(task).dataset.serverId) : undefined }));
         if (serverId) {
           updateTaskOnBackend(serverId, { title: newTitle }).catch(err => {
             console.error('Title update failed:', err);
@@ -93,7 +93,7 @@ function handleInlineTitleEdit(titleEl, taskId) {
             showToast('Error al actualizar. Cambios revertidos.', { type: 'error' });
           });
         } else {
-          pushLocalTasksToBackend().catch(() => {/* offline/retry handled internally usually, but could revert here too if critical */});
+          pushLocalTasksToBackend().catch(() => {/* offline/retry handled internally usually, but could revert here too if critical */ });
         }
       }
     }
@@ -114,7 +114,7 @@ function handleInlineTitleEdit(titleEl, taskId) {
   input.addEventListener('blur', save);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); 
+      e.preventDefault();
       input.blur();
     } else if (e.key === 'Escape') {
       cancel();
@@ -136,7 +136,7 @@ function handleInlinePriorityCycle(badgeEl, taskId, currentPriority) {
   // Cycle: 1(High) -> 2(Medium) -> 3(Low) -> 1(High)
   const newPriority = currentPriority >= 3 ? 1 : currentPriority + 1;
   const previousState = JSON.parse(JSON.stringify(getTasks()));
-  
+
   updateTasks(draft => {
     for (const date in draft) {
       const task = draft[date].find(t => t.id === taskId);
@@ -151,8 +151,8 @@ function handleInlinePriorityCycle(badgeEl, taskId, currentPriority) {
   // Backend sync
   if (isLoggedInWithBackend()) {
     const task = document.querySelector(`[data-task-id="${taskId}"]`);
-    const serverId = getServerTaskId(/** @type {Task} */ ({ id: taskId }));
-    
+    const serverId = getServerTaskId(/** @type {Task} */({ id: taskId }));
+
     // Note: We might need to find the real serverId if not in DOM, but typically loadTasksIntoState populates it.
     // For now rely on robust sync or DOM data if added.
     // Actually, let's look up the task properly
@@ -162,18 +162,18 @@ function handleInlinePriorityCycle(badgeEl, taskId, currentPriority) {
       realTask = allTasks[date].find(t => t.id === taskId);
       if (realTask) break;
     }
-    
+
     if (realTask) {
-        const sid = getServerTaskId(realTask);
-        if (sid) {
-          updateTaskOnBackend(sid, { priority: newPriority }).catch(err => {
-            console.error('Priority update failed:', err);
-            setTasks(previousState);
-            showToast('Error al actualizar. Cambios revertidos.', { type: 'error' });
-          });
-        } else {
-          pushLocalTasksToBackend();
-        }
+      const sid = getServerTaskId(realTask);
+      if (sid) {
+        updateTaskOnBackend(sid, { priority: newPriority }).catch(err => {
+          console.error('Priority update failed:', err);
+          setTasks(previousState);
+          showToast('Error al actualizar. Cambios revertidos.', { type: 'error' });
+        });
+      } else {
+        pushLocalTasksToBackend();
+      }
     }
   }
 }
@@ -268,6 +268,20 @@ function handleAgendaActionClick(event) {
     return;
   }
 
+  if (action === 'hard-reset') {
+    event.preventDefault();
+    const msg = '¿Problemas de sincronización?\n\nEsto borrará los datos LOCALES y descargará todo del servidor nuevamente.\n\n¿Continuar?';
+    if (confirm(msg)) {
+      try {
+        localStorage.removeItem('calendarTasks');
+        location.reload();
+      } catch (e) {
+        alert('Error al limpiar caché: ' + e);
+      }
+    }
+    return;
+  }
+
   if (action === 'filter-status') {
     event.preventDefault();
     event.stopPropagation();
@@ -335,7 +349,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
   const previousScrollTop = previousScrollContainer ? previousScrollContainer.scrollTop : 0;
   const previousWindowScroll = window.scrollY;
   const hasPreviousContent = agendaView.querySelector('.task-card') !== null;
-  
+
   // Animation class - only for initial entry
   const animationClass = hasPreviousContent ? '' : ' animate-entry';
 
@@ -361,6 +375,10 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
                 <div class="toolbar-filters">
                      <button type="button" data-action="manual-sync" class="toolbar-btn-icon" title="Sincronizar ahora">
                         ${icons.refresh || '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>'}
+                     </button>
+                     
+                     <button type="button" data-action="hard-reset" class="toolbar-btn-icon" title="Resetear datos (Solucionar problemas)" style="color: var(--error);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                      </button>
 
                      <select id="month-filter" class="toolbar-select" title="Filtrar por Mes">
@@ -448,10 +466,10 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
   /** @param {string|null} dateString */
   function getColorByDay(dateString) {
     if (!dateString) return { bg: 'var(--day-none-bg)', border: 'var(--day-none-border)', text: 'var(--day-none-text)' };
-    
+
     const date = new Date(dateString + 'T00:00:00');
     const dayOfWeek = date.getDay(); // 0 = Domingo, 1 = Lunes, etc.
-    
+
     /** @type {Record<number, {bg: string, border: string, text: string}>} */
     const dayColors = {
       0: { bg: 'var(--day-sun-bg)', border: 'var(--day-sun-border)', text: 'var(--day-sun-text)' },
@@ -462,13 +480,13 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
       5: { bg: 'var(--day-fri-bg)', border: 'var(--day-fri-border)', text: 'var(--day-fri-text)' },
       6: { bg: 'var(--day-sat-bg)', border: 'var(--day-sat-border)', text: 'var(--day-sat-text)' }
     };
-    
+
     return dayColors[dayOfWeek];
   }
 
   // Actualizar badges de estadísticas
   // const totalTasks = allTasks.length; // REMOVED: Now calculated before filters
-  
+
   if (allTasks.length === 0) {
     html += `
       <div class="empty-state">
@@ -483,8 +501,8 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
         <h3 class="empty-state-title">No hay tareas que mostrar</h3>
         <p class="empty-state-description">
           ${filterMonth !== 'all' || filterStatus !== 'all' || filterPriority !== 'all'
-            ? 'No se encontraron tareas con los filtros actuales. Prueba ajustando los filtros o crea una nueva tarea.'
-            : '¡Comienza agregando tu primera tarea del día!'}
+        ? 'No se encontraron tareas con los filtros actuales. Prueba ajustando los filtros o crea una nueva tarea.'
+        : '¡Comienza agregando tu primera tarea del día!'}
         </p>
         <button type="button" data-action="open-task-modal" class="btn-primary empty-state-btn">
           ${getIcon('plus', 'btn-icon')}
@@ -498,7 +516,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
     const tasksByDate = {};
     /** @type {Task[]} */
     const undatedTasks = [];
-    
+
     allTasks.forEach(task => {
       if (task.date) {
         if (!tasksByDate[task.date]) {
@@ -509,7 +527,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
         undatedTasks.push(task);
       }
     });
-    
+
     // Renderizar tareas sin fecha primero si existen
     if (undatedTasks.length > 0) {
       html += `
@@ -521,14 +539,14 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
           </div>
           <ul class="date-group-tasks">
       `;
-      
+
       undatedTasks.forEach(task => {
         html += renderTaskCard(task, filterMonth, filterStatus);
       });
-      
+
       html += `</ul></li>`;
     }
-    
+
     // Renderizar tareas agrupadas por fecha
     Object.keys(tasksByDate).sort().forEach(date => {
       const tasksForDate = tasksByDate[date];
@@ -539,16 +557,16 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const isTomorrow = dateObj.toDateString() === tomorrow.toDateString();
-      
+
       let dateLabel = formatDateForDisplay(date);
       if (isToday) dateLabel = 'Hoy';
       else if (isTomorrow) dateLabel = 'Mañana';
-      
+
       const dayColors = getColorByDay(date);
-      
+
       // Agregar ID único para la fecha de hoy para hacer scroll automático
       const todayId = isToday ? ' id="today-group"' : '';
-      
+
       html += `
         <li class="task-date-group"${todayId}>
           <div class="date-group-header" style="border-left: 4px solid ${dayColors.border}; background-color: ${dayColors.bg};">
@@ -558,15 +576,15 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
           </div>
           <ul class="date-group-tasks">
       `;
-      
+
       tasksForDate.forEach(task => {
         html += renderTaskCard(task, filterMonth, filterStatus);
       });
-      
+
       html += `</ul></li>`;
     });
   }
-  
+
   /** @param {Task} task @param {string} filterMonth @param {string} filterStatus */
   function renderTaskCard(task, filterMonth, filterStatus) {
     const completedClass = task.completed ? ' completed' : '';
@@ -576,9 +594,9 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
     const priorityLabel = task.priority === 1 ? 'Alta' : task.priority === 2 ? 'Media' : 'Baja';
     const priorityIcon = task.priority === 1 ? icons.priorityHigh : task.priority === 2 ? icons.priorityMedium : icons.priorityLow;
     const reminderIcon = task.isReminder ? icons.bell : '';
-    
+
     const dayColors = getColorByDay(task.date);
-    
+
     return `
       <li class="task-card${completedClass}" data-task-id="${task.id}" data-priority="${task.priority}">
         <div class="task-card-content">
@@ -639,7 +657,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
       </li>
     `;
   }
-  
+
   /** @param {string} dateString */
   function formatDateShort(dateString) {
     const date = new Date(dateString + 'T00:00:00');
@@ -759,7 +777,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
 
   if (!agendaView.dataset.actionsBound) {
     agendaView.addEventListener('click', (event) => {
-      handleAgendaActionClick(/** @type {MouseEvent} */ (event));
+      handleAgendaActionClick(/** @type {MouseEvent} */(event));
 
       // Inline edit title
       const target = /** @type {HTMLElement} */ (event.target);
@@ -767,7 +785,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
       if (titleEl && !titleEl.classList.contains('editing') && !titleEl.classList.contains('completed')) {
         const card = titleEl.closest('.task-card');
         const taskId = card instanceof HTMLElement ? card.dataset.taskId : null;
-        if (taskId) handleInlineTitleEdit(/** @type {HTMLElement} */ (titleEl), taskId);
+        if (taskId) handleInlineTitleEdit(/** @type {HTMLElement} */(titleEl), taskId);
       }
 
       // Inline priority cycle
@@ -776,10 +794,10 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
         const card = badgeEl.closest('.task-card');
         const taskId = card instanceof HTMLElement ? card.dataset.taskId : null;
         const currentPriority = parseInt(card instanceof HTMLElement ? (card.dataset.priority || '3') : '3', 10);
-        if (taskId) handleInlinePriorityCycle(/** @type {HTMLElement} */ (badgeEl), taskId, currentPriority);
+        if (taskId) handleInlinePriorityCycle(/** @type {HTMLElement} */(badgeEl), taskId, currentPriority);
       }
     });
-    agendaView.addEventListener('keydown', (event) => handleAgendaActionKeydown(/** @type {KeyboardEvent} */ (event)));
+    agendaView.addEventListener('keydown', (event) => handleAgendaActionKeydown(/** @type {KeyboardEvent} */(event)));
 
     // Delegated change handler for filters (prevents accumulating listeners)
     agendaView.addEventListener('change', (event) => {
@@ -821,20 +839,20 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
   requestAnimationFrame(() => {
     const todayGroup = document.getElementById('today-group');
     const taskListContainer = document.querySelector('.task-list-container');
-    
+
     // Solo hacer auto-scroll si es la carga inicial (no hay contenido previo)
     if (!hasPreviousContent && todayGroup && taskListContainer) {
       // Calcular posición con offset para dejar espacio arriba
       const containerTop = /** @type {HTMLElement} */ (taskListContainer).offsetTop;
       const todayGroupTop = /** @type {HTMLElement} */ (todayGroup).offsetTop;
       const offset = 100; // Espacio superior para mejor visualización
-      
+
       // Hacer scroll suave hacia la fecha actual
       taskListContainer.scrollTo({
         top: todayGroupTop - offset,
         behavior: 'smooth'
       });
-      
+
       // Agregar animación de highlight temporal a la fecha de hoy
       const todayHeader = /** @type {HTMLElement | null} */ (todayGroup.querySelector('.date-group-header'));
       if (todayHeader) {
@@ -848,7 +866,7 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
   const statusSel = /** @type {HTMLSelectElement | null} */ (document.getElementById('status-filter'));
   const prioritySel = /** @type {HTMLSelectElement | null} */ (document.getElementById('priority-filter'));
   const searchInput = /** @type {HTMLInputElement | null} */ (document.getElementById('search-filter'));
-  
+
   if (monthSel) monthSel.value = filterMonth;
   if (statusSel) statusSel.value = filterStatus;
   if (prioritySel) prioritySel.value = filterPriority;
@@ -938,10 +956,10 @@ function toggleTaskWithAnimation(id, filterMonth, filterStatus, filterPriority =
 function updateStatBadges() {
   const monthFilterEl = document.getElementById('month-filter');
   const filterMonth = monthFilterEl instanceof HTMLSelectElement ? monthFilterEl.value : 'all';
-  
+
   // Calculate from data, not DOM, to be independent of view filters
   let allTasks = Object.entries(getTasks()).flatMap(([date, list]) => (list || []).map(t => ({ ...t, date: date === 'undated' ? null : date })));
-  
+
   if (filterMonth !== 'all') {
     const targetMonth = parseInt(filterMonth);
     allTasks = allTasks.filter(task => {
@@ -954,8 +972,8 @@ function updateStatBadges() {
   // Filter by search term if active (matches render logic)
   if (agendaSearchTerm.trim()) {
     const term = agendaSearchTerm.trim().toLowerCase();
-    allTasks = allTasks.filter(t => 
-      (t.title?.toLowerCase() || '').includes(term) || 
+    allTasks = allTasks.filter(t =>
+      (t.title?.toLowerCase() || '').includes(term) ||
       (t.description?.toLowerCase() || '').includes(term)
     );
   }
@@ -971,19 +989,19 @@ function updateStatBadges() {
    * @param {number} totalCount 
    */
   const updateStatItem = (id, value, totalCount) => {
-      const el = document.getElementById(id);
-      if (el) {
-          const valEl = el.querySelector('.stat-value');
-          if (valEl) valEl.textContent = String(value);
-          const barEl = /** @type {HTMLElement | null} */ (el.querySelector('.progress-bar'));
-          if (barEl) {
-              const pct = totalCount > 0 ? (value / totalCount * 100) : 0;
-              barEl.style.width = `${pct}%`;
-          }
+    const el = document.getElementById(id);
+    if (el) {
+      const valEl = el.querySelector('.stat-value');
+      if (valEl) valEl.textContent = String(value);
+      const barEl = /** @type {HTMLElement | null} */ (el.querySelector('.progress-bar'));
+      if (barEl) {
+        const pct = totalCount > 0 ? (value / totalCount * 100) : 0;
+        barEl.style.width = `${pct}%`;
       }
+    }
   };
 
-  updateStatItem('total-tasks-stat', total, total); 
+  updateStatItem('total-tasks-stat', total, total);
   updateStatItem('completed-tasks-stat', completed, total);
   updateStatItem('pending-tasks-stat', pending, total);
 }
