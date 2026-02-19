@@ -134,12 +134,20 @@ export async function fetchAllTasksFromBackend(limit = 100) {
   return aggregate;
 }
 
+// Notify UI about sync status (for debug/user feedback)
+export function notifySyncStatus(status, details = {}) {
+  window.dispatchEvent(new CustomEvent('sync-status-changed', {
+    detail: { status, timestamp: new Date(), ...details }
+  }));
+}
+
 // Load all tasks from backend and place into state in { dateKey: Task[] } form
 // IMPORTANT: The backend is the source of truth, BUT we must not overwrite
 // local "dirty" changes that happened while the fetch was in progress.
 /** @param {{ forceClean?: boolean }} [options]
  * @returns {Promise<boolean>} */
 export async function loadTasksIntoState(options = {}) {
+  notifySyncStatus('syncing', { method: 'loadTasksIntoState' });
   const { forceClean = false } = options;
   if (!isLoggedInWithBackend()) return false;
 
@@ -288,9 +296,13 @@ export async function loadTasksIntoState(options = {}) {
   console.log(`[sync] State updated: ${Object.values(finalState).flat().length} tasks loaded from server${forceClean ? ' (forceClean)' : ''}`);
 
   if (!forceClean && tasksToPreserve.length > 0) {
-    pushLocalTasksToBackend().catch(err => console.error('Background push failed:', err));
+    pushLocalTasksToBackend().catch(err => {
+      console.error('Background push failed:', err);
+      notifySyncStatus('error', { error: 'Push failed' });
+    });
   }
 
+  notifySyncStatus('synced', { count: Object.values(finalState).flat().length });
   return true;
 }
 

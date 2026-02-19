@@ -344,6 +344,9 @@ export function renderAgenda(filterMonth = 'all', filterStatus = 'all', filterPr
   const agendaView = document.getElementById('agenda-view');
   if (!agendaView) return;
 
+  // Initialize sync status listener
+  setupSyncStatusListener();
+
   // Capture previous scroll position to restore it after render
   const previousScrollContainer = agendaView.querySelector('.task-list-container');
   const previousScrollTop = previousScrollContainer ? previousScrollContainer.scrollTop : 0;
@@ -1014,4 +1017,45 @@ if (typeof window !== 'undefined') {
   window.confirmDeleteTask = confirmDeleteTask;
   window.deleteTask = deleteTask;
   window.showTaskInputModal = showTaskInputModal;
+}
+
+// --- Sync Status Indicator ---
+function setupSyncStatusListener() {
+  const container = document.querySelector('.agenda-header-row');
+  if (!container) return; // Might not be rendered yet if called too early, but renderAgenda calls it too
+
+  let statusEl = document.getElementById('sync-status-indicator');
+  if (!statusEl) {
+    statusEl = document.createElement('div');
+    statusEl.id = 'sync-status-indicator';
+    statusEl.className = 'sync-status-badge';
+    statusEl.style.cssText = 'font-size: 0.75rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; margin-left: auto;';
+    container.appendChild(statusEl);
+  }
+
+  window.addEventListener('sync-status-changed', (e) => {
+    const { status, count, error } = e.detail;
+    if (!statusEl) {
+      statusEl = document.getElementById('sync-status-indicator');
+      if (!statusEl) return;
+    }
+
+    if (status === 'syncing') {
+      statusEl.innerHTML = '<span class="spinning">⟳</span> Sincronizando...';
+      statusEl.style.color = 'var(--text-muted)';
+    } else if (status === 'synced') {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      statusEl.innerHTML = `✓ Sincronizado (${time})`;
+      statusEl.style.color = 'var(--success)';
+      // Fade out success message after 3s
+      setTimeout(() => {
+        if (statusEl.innerText.includes('Sincronizado')) {
+          statusEl.style.color = 'var(--text-muted)';
+        }
+      }, 3000);
+    } else if (status === 'error') {
+      statusEl.innerHTML = '⚠ Error de sincronización';
+      statusEl.style.color = 'var(--error)';
+    }
+  });
 }
