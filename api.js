@@ -135,6 +135,10 @@ export async function fetchAllTasksFromBackend(limit = 100) {
 }
 
 // Load all tasks from backend and place into state in { dateKey: Task[] } form
+// IMPORTANT: The backend is the source of truth for multi-device sync.
+// Only local-only tasks (never synced) are preserved; all server-known tasks
+// use the server version to prevent stale localStorage from overriding changes
+// made on other devices.
 /** @returns {Promise<boolean>} */
 export async function loadTasksIntoState() {
   if (!isLoggedInWithBackend()) return false;
@@ -143,78 +147,54 @@ export async function loadTasksIntoState() {
   // Get current local state
   const currentAll = getTasks();
   
-  // 1. Identify unsynced local tasks (local_*)
-  const unsynced = Object.values(currentAll).flat().filter(t => 
-    !t.serverId && String(t.id).startsWith('local_')
-  );
+  // Build a set of all server task IDs for quick lookup
+  const serverIdSet = new Set(list.map(t => String(t.id)));
 
-  // 2. Identify dirty tasks (modified but not confirmed synced)
-  const dirtyTasks = Object.values(currentAll).flat().filter(t => t.dirty);
-  const dirtyMap = new Map();
-  dirtyTasks.forEach(t => {
-    dirtyMap.set(String(t.id), t);
-    if (t.serverId) dirtyMap.set(String(t.serverId), t);
+  // Identify local-only tasks that have NEVER been synced to the server
+  // These are tasks with local_ prefix IDs and no serverId
+  const localOnlyTasks = Object.values(currentAll).flat().filter(t => {
+    // Task was created locally and never got a server ID
+    if (!t.serverId && String(t.id).startsWith('local_')) return true;
+    // Task has a serverId but it doesn't exist on server (was deleted remotely?) — skip these
+    return false;
   });
 
   /** @type {TasksByDate} */
   const byDate = {};
-  const processedDirtyIds = new Set(); // Track which dirty tasks were merged with backend items
   
-  // Add backend tasks
+  // 1. Add ALL backend tasks — server is source of truth
   list.forEach(t => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
     
-    // Check if we have a dirty local version of this task
-    const dirtyLocal = dirtyMap.get(String(t.id)) || dirtyMap.get(String(t.serverId)); // serverId check redundant but safe
-
-    if (dirtyLocal) {
-      // Use the local dirty version
-      // Ensure serverId is set if missing (it should match)
-      if (!dirtyLocal.serverId) dirtyLocal.serverId = Number(t.id);
-      byDate[dateKey].push(dirtyLocal);
-      processedDirtyIds.add(dirtyLocal.id);
-    } else {
-      // Map server task to local format
-      /** @type {Task} */
-      const mapped = {
-        id: String(t.id),
-        serverId: Number(t.id),
-        title: t.title,
-        description: t.description || '',
-        date: dateKey === 'undated' ? null : dateKey,
-        time: t.time || null,
-        completed: !!t.completed,
-        isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
-        priority: (function() {
-          if (typeof t.priority === 'number') return t.priority;
-          if (t.priority === 'alta') return 1;
-          if (t.priority === 'media') return 2;
-          return 3; // baja or default
-        })(),
-        tags: t.tags || []
-      };
-      byDate[dateKey].push(mapped);
-    }
+    /** @type {Task} */
+    const mapped = {
+      id: String(t.id),
+      serverId: Number(t.id),
+      title: t.title,
+      description: t.description || '',
+      date: dateKey === 'undated' ? null : dateKey,
+      time: t.time || null,
+      completed: !!t.completed,
+      isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
+      priority: (function() {
+        if (typeof t.priority === 'number') return t.priority;
+        if (t.priority === 'alta') return 1;
+        if (t.priority === 'media') return 2;
+        return 3; // baja or default
+      })(),
+      tags: t.tags || [],
+      recurrence: t.recurrence || undefined,
+      recurrenceId: t.recurrence_id || undefined
+    };
+    byDate[dateKey].push(mapped);
   });
 
-  // 3. Add any dirty tasks that weren't matched in the backend list (e.g. not returned by pagination yet)
-  dirtyTasks.forEach(t => {
-    if (!processedDirtyIds.has(t.id)) {
-      const dateKey = t.date || 'undated';
-      if (!byDate[dateKey]) byDate[dateKey] = [];
-      // Avoid duplicates if unsynced array also catches it (though dirty usually implies sync attempted)
-      if (!byDate[dateKey].find(existing => String(existing.id) === String(t.id))) {
-        byDate[dateKey].push(t);
-      }
-    }
-  });
-
-  // Merge unsynced tasks back in
-  unsynced.forEach(t => {
+  // 2. Add local-only tasks (never synced) back in so they aren't lost
+  localOnlyTasks.forEach(t => {
     const dateKey = t.date || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
-    // Only add if ID doesn't conflict
+    // Avoid duplicates
     if (!byDate[dateKey].find(existing => String(existing.id) === String(t.id))) {
       byDate[dateKey].push(t);
     }
@@ -222,8 +202,8 @@ export async function loadTasksIntoState() {
 
   setTasks(byDate);
 
-  // If we have dirty tasks, trigger a push to ensure they sync
-  if (dirtyTasks.length > 0) {
+  // If we have local-only tasks, push them to the server
+  if (localOnlyTasks.length > 0) {
     pushLocalTasksToBackend().catch(err => console.error('Background push failed:', err));
   }
 

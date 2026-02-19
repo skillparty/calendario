@@ -742,26 +742,37 @@ export function saveTaskFromModal(originalDate, existingTaskId) {
 
   const tasksToCreate = [task];
 
-  // Generate recurrence instances if needed
+  // Generate recurrence instances if needed (with reduced, safer limits)
   if (recurrence && taskDate) {
-    const limit = recurrence === 'daily' ? 60 : recurrence === 'weekly' ? 26 : recurrence === 'monthly' ? 12 : 5;
-    const baseDate = new Date(taskDate + 'T00:00:00');
-    
-    for (let i = 1; i < limit; i++) {
-      const nextDate = new Date(baseDate);
-      if (recurrence === 'daily') nextDate.setDate(baseDate.getDate() + i);
-      else if (recurrence === 'weekly') nextDate.setDate(baseDate.getDate() + i * 7);
-      else if (recurrence === 'monthly') nextDate.setMonth(baseDate.getMonth() + i);
-      else if (recurrence === 'yearly') nextDate.setFullYear(baseDate.getFullYear() + i);
-      
-      const nextDateStr = formatDateLocal(nextDate);
-      tasksToCreate.push({
-        ...task,
-        id: createLocalTaskId() + '_' + i,
-        date: nextDateStr,
-        // Keep time if set
-        time: task.time
-      });
+    const limit = recurrence === 'daily' ? 14 : recurrence === 'weekly' ? 12 : recurrence === 'monthly' ? 12 : 5;
+    const recurrenceLabels = { daily: 'diarias', weekly: 'semanales', monthly: 'mensuales', yearly: 'anuales' };
+    const label = recurrenceLabels[recurrence] || recurrence;
+
+    // Confirm before creating multiple tasks
+    const confirmed = window.confirm(
+      `Se crearán ${limit} copias ${label} de esta tarea.\n¿Deseas continuar?`
+    );
+    if (!confirmed) {
+      // User cancelled recurrence — save only the single task without recurrence
+      task.recurrence = undefined;
+      task.recurrenceId = undefined;
+    } else {
+      const baseDate = new Date(taskDate + 'T00:00:00');
+      for (let i = 1; i < limit; i++) {
+        const nextDate = new Date(baseDate);
+        if (recurrence === 'daily') nextDate.setDate(baseDate.getDate() + i);
+        else if (recurrence === 'weekly') nextDate.setDate(baseDate.getDate() + i * 7);
+        else if (recurrence === 'monthly') nextDate.setMonth(baseDate.getMonth() + i);
+        else if (recurrence === 'yearly') nextDate.setFullYear(baseDate.getFullYear() + i);
+        
+        const nextDateStr = formatDateLocal(nextDate);
+        tasksToCreate.push({
+          ...task,
+          id: createLocalTaskId() + '_' + i,
+          date: nextDateStr,
+          time: task.time
+        });
+      }
     }
   }
 
