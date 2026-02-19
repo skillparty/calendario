@@ -62,7 +62,7 @@ export async function apiFetch(path, options = {}, retries = 3) {
   if (state.userSession && state.userSession.jwt) {
     headers['Authorization'] = `Bearer ${state.userSession.jwt}`;
   }
-  const init = Object.assign({}, options, { headers });
+  const init = Object.assign({}, options, { headers, cache: 'no-store' });
   const fetchPath = path;
 
   if (DEBUG) console.log('API Request:', { url: API_BASE_URL + fetchPath, method: init.method || 'GET' });
@@ -149,14 +149,26 @@ export async function loadTasksIntoState() {
   const currentAll = getTasks();
   const dirtyTasks = Object.values(currentAll).flat().filter(t => t.dirty);
   if (dirtyTasks.length > 0) {
-    await Promise.allSettled(dirtyTasks.map(async (t) => {
+    console.log('[sync] Pushing', dirtyTasks.length, 'dirty tasks before fetch');
+    const results = await Promise.allSettled(dirtyTasks.map(async (t) => {
       const sId = t.serverId ?? (typeof t.id === 'number' ? t.id : (/^\d+$/.test(String(t.id)) ? Number(t.id) : null));
       if (sId) {
         try {
-          await updateTaskOnBackend(sId, { completed: !!t.completed });
-        } catch (e) { console.warn('[sync] dirty-push failed for', sId, e); }
+          // Send all mutable fields so any pending change is captured
+          /** @type {Record<string, any>} */
+          const payload = { completed: !!t.completed };
+          if (t.title) payload.title = t.title;
+          if (t.description !== undefined) payload.description = t.description || null;
+          if (t.priority !== undefined) payload.priority = mapPriorityToServer(t.priority);
+          console.log('[sync] dirty-push task', sId, payload);
+          await updateTaskOnBackend(sId, payload);
+          console.log('[sync] dirty-push OK for', sId);
+        } catch (e) { console.warn('[sync] dirty-push FAILED for', sId, e); }
+      } else {
+        console.warn('[sync] dirty task has no serverId, skipping:', t.id, t.title);
       }
     }));
+    console.log('[sync] dirty-push results:', results.map(r => r.status));
   }
 
   const list = await fetchAllTasksFromBackend(100);

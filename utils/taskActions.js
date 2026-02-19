@@ -145,10 +145,12 @@ export function toggleTask(id, options = {}) {
     });
     if (found) {
       const serverId = getServerTaskIdLocal(found);
+      console.log('[toggleTask] task:', id, 'serverId:', serverId, 'completed:', found.completed);
       const promise = serverId ? updateTaskOnBackend(serverId, { completed: /** @type {import('../types').Task} */ (found).completed }) : pushLocalTasksToBackend();
       
       Promise.resolve(promise)
-        .then(() => {
+        .then((res) => {
+           console.log('[toggleTask] sync OK for', id, 'serverId:', serverId, 'response:', res);
            // Clear dirty flag on success
            if (serverId) {
              updateTasks(draft => {
@@ -157,13 +159,14 @@ export function toggleTask(id, options = {}) {
                  if (t) t.dirty = false;
                });
              }, { silent: true });
-             // Silent update to avoid re-rendering list and losing scroll position
            }
         })
         .catch(err => {
-        console.error('Toggle task sync failed:', err);
+        console.error('[toggleTask] sync FAILED for', id, 'serverId:', serverId, 'error:', err);
         showToast('Sincronización pendiente. Se reintentará automáticamente.', { type: 'warning' });
       });
+    } else {
+      console.warn('[toggleTask] task not found in state after update:', id);
     }
   }
 }

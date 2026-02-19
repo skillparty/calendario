@@ -257,6 +257,7 @@ async function handleOAuthCallback() {
           if (sess.jwt) {
             try {
               await loadTasksIntoState();
+              notifyTasksUpdated(); // Ensure UI re-renders with fresh server data
               scheduleBackendSync(); // Resume polling for returning JWT users
             } catch (e) {
               // JWT expired or malformed — clear stale session and prompt re-login
