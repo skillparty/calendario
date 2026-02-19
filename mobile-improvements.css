@@ -1133,3 +1133,113 @@
         min-height: 52px;
     }
 }
+
+/* ========== ADAPTIVE MOBILE SYSTEM (VIEWPORT-FIRST) ========== */
+@media (max-width: 768px) {
+    :root {
+        --mobile-pad-x: clamp(0.5rem, 2.2vw, 0.875rem);
+        --mobile-pad-y: clamp(0.45rem, 1.8vw, 0.75rem);
+        --mobile-gap: clamp(0.35rem, 1.7vw, 0.65rem);
+        --mobile-logo: clamp(42px, 12vw, 58px);
+        --mobile-title: clamp(1.15rem, 5.8vw, 1.7rem);
+        --mobile-nav-text: clamp(0.66rem, 2.5vw, 0.82rem);
+        --mobile-button-h: clamp(40px, 9.5vw, 48px);
+        --mobile-card-pad: clamp(0.6rem, 2.5vw, 0.85rem);
+        --mobile-week-col: clamp(46px, 11vw, 56px);
+        --mobile-week-day-min: clamp(84px, 20vw, 104px);
+    }
+
+    .header-container {
+        padding: var(--mobile-pad-y) var(--mobile-pad-x);
+        gap: var(--mobile-gap);
+    }
+
+    .brand-logo {
+        width: var(--mobile-logo) !important;
+        height: var(--mobile-logo) !important;
+    }
+
+    .brand-name {
+        font-size: var(--mobile-title);
+    }
+
+    .header-nav {
+        gap: max(4px, calc(var(--mobile-gap) - 2px));
+    }
+
+    .nav-item {
+        min-height: var(--mobile-button-h);
+        padding: 0.42rem 0.3rem;
+    }
+
+    .nav-text {
+        font-size: var(--mobile-nav-text);
+    }
+
+    .theme-toggle-btn,
+    .calendar-nav button,
+    .weekly-nav-btn,
+    .weekly-today-btn {
+        min-width: var(--mobile-button-h);
+        min-height: var(--mobile-button-h);
+        width: var(--mobile-button-h);
+        height: var(--mobile-button-h);
+    }
+
+    #calendar-view,
+    #weekly-view,
+    .agenda-container {
+        padding-left: var(--mobile-pad-x);
+        padding-right: var(--mobile-pad-x);
+    }
+
+    .agenda-container {
+        gap: var(--mobile-gap);
+    }
+
+    .task-card {
+        padding: var(--mobile-card-pad);
+    }
+
+    .weekly-grid {
+        grid-template-columns: var(--mobile-week-col) repeat(7, minmax(var(--mobile-week-day-min), 1fr));
+    }
+}
+
+/* Compact-height phones: preserve first fold and avoid oversized header */
+@media (max-width: 768px) and (max-height: 780px) {
+    .brand-tagline {
+        display: none;
+    }
+
+    .header-container {
+        gap: 0.35rem;
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+    }
+
+    .agenda-toolbar {
+        top: calc(max(env(safe-area-inset-top), 0px) + 0.2rem);
+    }
+
+    .task-list-container {
+        max-height: calc(100svh - 235px);
+        max-height: calc(100dvh - 235px);
+    }
+}
+
+/* Tall phones: give breathing room while keeping controls reachable */
+@media (max-width: 768px) and (min-height: 900px) {
+    .header-container {
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+    }
+
+    .agenda-container {
+        padding-top: 0.75rem;
+    }
+
+    .weekly-grid {
+        gap: 4px;
+    }
+}
