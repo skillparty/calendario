@@ -7,7 +7,7 @@
 
 const sw = /** @type {any} */ (self);
 
-const CACHE_VERSION = 'v2026.02.18-fixes-v3';
+const CACHE_VERSION = 'v2026.02.19-mobile-weekly-v1';
 const CACHE_NAME = `calendar10-${CACHE_VERSION}`;
 const API_CACHE = `calendar10-api-${CACHE_VERSION}`;
 const DB_NAME = 'Calendar10DB';
@@ -100,6 +100,14 @@ sw.addEventListener('fetch', (/** @type {any} */ event) => {
     return;
   }
 
+  // Navigation/HTML requests - Network first to avoid stale app shell
+  const acceptHeader = request.headers.get('accept') || '';
+  const isNavigation = request.mode === 'navigate' || acceptHeader.includes('text/html');
+  if (isNavigation) {
+    fetchEvent.respondWith(pageNetworkFirstStrategy(request));
+    return;
+  }
+
   // Static assets - Cache first, fallback to network
   if (isStaticAsset(url.pathname)) {
     fetchEvent.respondWith(cacheFirstStrategy(request));
@@ -142,6 +150,37 @@ async function cacheFirstStrategy(request) {
     console.error('[SW] Fetch failed:', error);
     const appShell = await cache.match('./index.html');
     return appShell || new Response('Offline', { status: 503 });
+  }
+}
+
+/**
+ * Network first strategy for app pages
+ * @param {Request} request
+ * @returns {Promise<Response>}
+ */
+async function pageNetworkFirstStrategy(request) {
+  const cache = await caches.open(CACHE_NAME);
+
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+
+    if (response && response.ok) {
+      cache.put(request, response.clone());
+      return response;
+    }
+
+    const cachedPage = await cache.match(request);
+    if (cachedPage) return cachedPage;
+    const appShell = await cache.match('./index.html');
+    return appShell || response;
+  } catch (error) {
+    const cachedPage = await cache.match(request);
+    if (cachedPage) return cachedPage;
+
+    const appShell = await cache.match('./index.html');
+    if (appShell) return appShell;
+
+    return new Response('Offline', { status: 503 });
   }
 }
 

@@ -222,7 +222,15 @@
         // Register Service Worker for offline functionality
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                const registerServiceWorker = async () => {
+                    try {
+                        return await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+                    } catch (primaryError) {
+                        return navigator.serviceWorker.register('./static/sw.js', { updateViaCache: 'none' });
+                    }
+                };
+
+                registerServiceWorker()
                     .then(registration => {
                         console.log('ServiceWorker registrado:', registration.scope);
                         
