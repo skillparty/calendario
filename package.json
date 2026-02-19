@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:mobile": "playwright test tests/e2e/responsive.mobile.spec.js",
+    "test:e2e:mobile:headed": "playwright test tests/e2e/responsive.mobile.spec.js --headed"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

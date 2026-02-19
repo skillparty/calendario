@@ -69,6 +69,42 @@ FRONTEND_URL=http://localhost:8000
 - `api.js` contiene la URL base del backend en producción.
 - Nunca expongas `GITHUB_CLIENT_SECRET` ni `SUPABASE_SERVICE_KEY` en frontend.
 
+## QA Responsive Móvil
+
+### Ejecutar matriz E2E mobile
+
+```bash
+npm run test:e2e:mobile
+```
+
+Modo visible (debug visual):
+
+```bash
+npm run test:e2e:mobile:headed
+```
+
+La matriz valida viewports representativos:
+
+- 360x740 (compacto)
+- 390x844 (estándar)
+- 412x915 (grande)
+
+Y cubre en cada uno:
+
+- Navegación de módulos (`Calendario`, `Agenda`, `Semanal`)
+- Layout usable de Calendario
+- Presencia de `Acciones Rápidas` y `Próximas` en Agenda móvil
+- Navegación y grilla de Semanal
+
+### Checklist rápida antes de release móvil
+
+1. Ejecutar `npm run test:e2e:mobile` y confirmar verde.
+2. Probar manualmente en un dispositivo real Android y uno iOS.
+3. Verificar que header no tape contenido en first-fold.
+4. Verificar que `Acciones Rápidas` y `Próximas` se muestran en Agenda móvil.
+5. Verificar navegación mensual/semanal y toques de botones (44px mínimo).
+6. Validar que no haya scroll horizontal no deseado.
+
 ## Licencia
 
 Proyecto de uso personal/educativo.
