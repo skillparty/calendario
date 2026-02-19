@@ -142,10 +142,24 @@ export async function fetchAllTasksFromBackend(limit = 100) {
 /** @returns {Promise<boolean>} */
 export async function loadTasksIntoState() {
   if (!isLoggedInWithBackend()) return false;
-  const list = await fetchAllTasksFromBackend(100);
-  
-  // Get current local state
+
+  // ── Push dirty local changes to the server BEFORE fetching ──
+  // This ensures that toggled completed status, edits made right before refresh,
+  // etc. reach the server so the subsequent fetch returns up-to-date data.
   const currentAll = getTasks();
+  const dirtyTasks = Object.values(currentAll).flat().filter(t => t.dirty);
+  if (dirtyTasks.length > 0) {
+    await Promise.allSettled(dirtyTasks.map(async (t) => {
+      const sId = t.serverId ?? (typeof t.id === 'number' ? t.id : (/^\d+$/.test(String(t.id)) ? Number(t.id) : null));
+      if (sId) {
+        try {
+          await updateTaskOnBackend(sId, { completed: !!t.completed });
+        } catch (e) { console.warn('[sync] dirty-push failed for', sId, e); }
+      }
+    }));
+  }
+
+  const list = await fetchAllTasksFromBackend(100);
   
   // Build a set of all server task IDs for quick lookup
   const serverIdSet = new Set(list.map(t => String(t.id)));
@@ -159,11 +173,48 @@ export async function loadTasksIntoState() {
     return false;
   });
 
+  // DEDUPLICATION LOGIC
+  // Group tasks by signature to find duplicates
+  const seenSignatures = new Map();
+  const duplicatesToDelete = [];
+  const uniqueList = [];
+
+  // Sort list by ID (assuming lower ID = older = original)
+  list.sort((a, b) => a.id - b.id);
+
+  for (const t of list) {
+    const dateKey = (t.date || '').slice(0, 10) || 'undated';
+    // Signature: title + date + time + description
+    const signature = `${t.title}|${dateKey}|${t.time || ''}|${t.description || ''}`;
+
+    if (seenSignatures.has(signature)) {
+      // This is a duplicate!
+      duplicatesToDelete.push(t.id);
+    } else {
+      seenSignatures.set(signature, t.id);
+      uniqueList.push(t);
+    }
+  }
+
+  // If duplicates found, trigger background cleanup
+  if (duplicatesToDelete.length > 0) {
+    console.warn(`Found ${duplicatesToDelete.length} duplicate tasks. cleaning up...`);
+    // Delete in background to not block UI
+    (async () => {
+      // Process in chunks of 5 to avoid overwhelming the server
+      for (let i = 0; i < duplicatesToDelete.length; i += 5) {
+        const chunk = duplicatesToDelete.slice(i, i + 5);
+        await Promise.allSettled(chunk.map(id => deleteTaskOnBackend(id).catch(e => console.error(`Failed to delete duplicate ${id}`, e))));
+      }
+      console.log('Duplicate cleanup complete');
+    })();
+  }
+
   /** @type {TasksByDate} */
   const byDate = {};
   
-  // 1. Add ALL backend tasks — server is source of truth
-  list.forEach(t => {
+  // 1. Add ALL unique backend tasks — server is source of truth
+  uniqueList.forEach(t => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
     
@@ -319,13 +370,9 @@ export async function pushLocalTasksToBackend() {
 
   await Promise.allSettled(syncPromises);
 
-  // Delete tasks removed locally — run in parallel (skip if auth failed)
-  if (!authFailed) {
-    const deletePromises = server
-      .filter(s => !localServerIds.has(String(s.id)))
-      .map(s => apiFetch(`/api/tasks/${s.id}`, { method: 'DELETE' }));
-    await Promise.allSettled(deletePromises);
-  }
+  // NOTE: We intentionally do NOT delete server tasks that are missing locally.
+  // Other devices may have created tasks that this device hasn't fetched yet.
+  // Task deletion is handled explicitly by deleteTask() / deleteTaskOnBackend().
 
   if (idReplacements.length > 0 || tasksToClearDirty.size > 0) {
     updateTasks((draft) => {

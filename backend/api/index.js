@@ -271,7 +271,7 @@ app.post('/api/tasks', authenticate, async (req, res) => {
       user_id: req.user.id,
       is_reminder: is_reminder !== undefined ? is_reminder : true,
       tags: tags || [],
-      completed: false
+      completed: req.body.completed !== undefined ? Boolean(req.body.completed) : false
     };
     
     const { data, error } = await supabase
@@ -315,6 +315,34 @@ app.put('/api/tasks/:id', authenticate, async (req, res) => {
   }
 });
 
+// Patch task - REQUIRES AUTHENTICATION
+app.patch('/api/tasks/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) {
+      return res.status(404).json({ error: 'Task not found or not authorized' });
+    }
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Delete task - REQUIRES AUTHENTICATION
 app.delete('/api/tasks/:id', authenticate, async (req, res) => {
   try {
@@ -329,6 +357,70 @@ app.delete('/api/tasks/:id', authenticate, async (req, res) => {
     if (error) throw error;
     res.json({ success: true, message: 'Task deleted' });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Deduplicate tasks - REQUIRES AUTHENTICATION
+app.post('/api/tasks/deduplicate', authenticate, async (req, res) => {
+  try {
+    // 1. Fetch all tasks for the user
+    const { data: tasks, error } = await supabase
+      .from('tasks')
+      .select('id, title, date, time, description, created_at')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: true }); // Oldest first
+
+    if (error) throw error;
+    if (!tasks || tasks.length === 0) return res.json({ success: true, deleted: 0 });
+
+    const seen = new Map();
+    const toDelete = [];
+
+    for (const task of tasks) {
+      // Create a signature for the task
+      // Normalize values to avoid slight differences
+      const title = (task.title || '').trim();
+      const date = (task.date || '').slice(0, 10); // YYYY-MM-DD
+      const time = (task.time || '').slice(0, 5); // HH:MM
+      const description = (task.description || '').trim();
+      
+      const sig = `${title}|${date}|${time}|${description}`;
+      
+      if (seen.has(sig)) {
+        toDelete.push(task.id);
+      } else {
+        seen.set(sig, task.id);
+      }
+    }
+
+    // Delete duplicates in batches
+    let deletedCount = 0;
+    if (toDelete.length > 0) {
+      const batchSize = 100;
+      for (let i = 0; i < toDelete.length; i += batchSize) {
+        const batch = toDelete.slice(i, i + batchSize);
+        const { error: delError } = await supabase
+          .from('tasks')
+          .delete()
+          .in('id', batch);
+        
+        if (delError) {
+          console.error('Error deleting batch of duplicates:', delError);
+        } else {
+          deletedCount += batch.length;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Deduplication complete. Found ${tasks.length} tasks, deleted ${deletedCount} duplicates.`,
+      deleted: deletedCount,
+      remaining: tasks.length - deletedCount
+    });
+  } catch (error) {
+    console.error('Deduplication error:', error);
     res.status(500).json({ error: error.message });
   }
 });

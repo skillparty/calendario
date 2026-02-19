@@ -18,7 +18,7 @@ import { showAuthToast, showSyncToast, showToast } from './utils/UIFeedback.js';
 const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
 const GITHUB_REDIRECT_URI = (typeof window !== 'undefined' && window.location && window.location.origin)
   ? window.location.origin
-  : 'https://your-frontend.vercel.app';
+  : (import.meta.env.VITE_OAUTH_REDIRECT_URI || 'https://calendario-frontend-ashy.vercel.app');
 const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user,gist&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 const GITHUB_DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const GITHUB_DEVICE_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -153,6 +153,7 @@ function handleLogin() {
 
 /** @returns {void} */
 function handleLogout() {
+  stopBackendSync();
   setUserSession(null);
   setUserGistId(null);
   // Clear all tasks on logout - user data is private
@@ -187,7 +188,9 @@ async function handleOAuthCallback() {
   const params = new URLSearchParams(search);
   const authCode = params.get('code');
 
-  if (authCode && !state.userSession) {
+  if (authCode) {
+    // Always process fresh OAuth code — clear any stale session so we don't skip the exchange
+    if (state.userSession) setUserSession(null);
     const returnedState = params.get('state');
     const storedState = localStorage.getItem('oauth_state');
     if (storedState && returnedState && returnedState !== storedState) {
@@ -216,6 +219,7 @@ async function handleOAuthCallback() {
             try {
               await loadTasksIntoState();
               notifyTasksUpdated();
+              scheduleBackendSync(); // Start polling now that we have a valid JWT
               return;
             } catch (e) {
               if (attempt < 4) {
@@ -253,6 +257,7 @@ async function handleOAuthCallback() {
           if (sess.jwt) {
             try {
               await loadTasksIntoState();
+              scheduleBackendSync(); // Resume polling for returning JWT users
             } catch (e) {
               // JWT expired or malformed — clear stale session and prompt re-login
               console.warn('Stored JWT invalid, clearing session:', e);
@@ -360,6 +365,26 @@ function scheduleBackgroundSync() {
   state.backgroundSyncTimer = setInterval(checkAndPullGist, state.currentSyncIntervalMs);
 }
 
+/** Poll the backend for updated tasks (JWT users only) — enables multi-device sync */
+function scheduleBackendSync() {
+  if (state.backendSyncTimer) return;
+  if (!isLoggedInWithBackend()) return;
+  state.backendSyncTimer = setInterval(async () => {
+    if (!isLoggedInWithBackend()) return;
+    try {
+      const changed = await loadTasksIntoState();
+      if (changed) notifyTasksUpdated();
+    } catch (e) {
+      console.warn('[backend-sync] poll failed:', e);
+    }
+  }, 120000); // every 2 minutes
+}
+
+/** @returns {void} */
+function stopBackendSync() {
+  if (state.backendSyncTimer) { clearInterval(state.backendSyncTimer); state.backendSyncTimer = null; }
+}
+
 /** @returns {Promise<void>} */
 async function checkAndPullGist() {
   if (!state.userSession || !state.userSession.token || !state.userGistId) return;
@@ -463,11 +488,15 @@ document.addEventListener('DOMContentLoaded', () => {
     showSyncToast('Conexión restaurada.');
     if (isLoggedInWithBackend()) {
       showSyncToast('Sincronizando cambios...', false);
-      pushLocalTasksToBackend()
+      // loadTasksIntoState already pushes dirty tasks before fetching,
+      // so we just call it first, then push any remaining local-only tasks.
+      loadTasksIntoState()
+        .then(() => pushLocalTasksToBackend())
         .then(() => loadTasksIntoState())
         .then(() => {
           showSyncToast('Sincronización completada.');
           notifyTasksUpdated();
+          scheduleBackendSync(); // Restart polling after reconnect
         })
         .catch(err => {
           console.error('Auto-sync failed:', err);
@@ -524,7 +553,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkAndPullGist(); });
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible') return;
+    if (isLoggedInWithBackend()) {
+      // Pull latest tasks from backend when user returns to tab
+      try { await loadTasksIntoState(); notifyTasksUpdated(); } catch (e) { /* silent */ }
+    } else {
+      checkAndPullGist();
+    }
+  });
 });
 
 // Expose for inline buttons in index.html/agenda
