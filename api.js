@@ -53,7 +53,7 @@ function mapPriorityToServer(raw) {
  */
 export async function apiFetch(path, options = {}, retries = 3) {
   /** @type {Record<string, string>} */
-  const headers = /** @type {any} */ (Object.assign({ 
+  const headers = /** @type {any} */ (Object.assign({
     'Content-Type': 'application/json',
     'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
     'Pragma': 'no-cache',
@@ -135,72 +135,62 @@ export async function fetchAllTasksFromBackend(limit = 100) {
 }
 
 // Load all tasks from backend and place into state in { dateKey: Task[] } form
-// IMPORTANT: The backend is the source of truth for multi-device sync.
-// Only local-only tasks (never synced) are preserved; all server-known tasks
-// use the server version to prevent stale localStorage from overriding changes
-// made on other devices.
+// IMPORTANT: The backend is the source of truth, BUT we must not overwrite
+// local "dirty" changes that happened while the fetch was in progress.
 /** @returns {Promise<boolean>} */
 export async function loadTasksIntoState() {
   if (!isLoggedInWithBackend()) return false;
 
-  // ── Push dirty local changes to the server BEFORE fetching ──
-  // This ensures that toggled completed status, edits made right before refresh,
-  // etc. reach the server so the subsequent fetch returns up-to-date data.
-  const currentAll = getTasks();
-  const dirtyTasks = Object.values(currentAll).flat().filter(t => t.dirty);
+  // 1. Push dirty local changes to the server BEFORE fetching
+  const preFetchState = getTasks();
+  const dirtyTasks = Object.values(preFetchState).flat().filter(t => t.dirty);
+
   if (dirtyTasks.length > 0) {
     console.log('[sync] Pushing', dirtyTasks.length, 'dirty tasks before fetch');
-    const results = await Promise.allSettled(dirtyTasks.map(async (t) => {
+    await Promise.allSettled(dirtyTasks.map(async (t) => {
       const sId = t.serverId ?? (typeof t.id === 'number' ? t.id : (/^\d+$/.test(String(t.id)) ? Number(t.id) : null));
       if (sId) {
         try {
-          // Send all mutable fields so any pending change is captured
           /** @type {Record<string, any>} */
           const payload = { completed: !!t.completed };
           if (t.title) payload.title = t.title;
           if (t.description !== undefined) payload.description = t.description || null;
           if (t.priority !== undefined) payload.priority = mapPriorityToServer(t.priority);
-          console.log('[sync] dirty-push task', sId, payload);
           await updateTaskOnBackend(sId, payload);
-          console.log('[sync] dirty-push OK for', sId);
         } catch (e) { console.warn('[sync] dirty-push FAILED for', sId, e); }
-      } else {
-        console.warn('[sync] dirty task has no serverId, skipping:', t.id, t.title);
       }
     }));
-    console.log('[sync] dirty-push results:', results.map(r => r.status));
   }
 
+  // 2. Fetch latest from server
   const list = await fetchAllTasksFromBackend(100);
-  
+
+  // 3. Merging Logic: Re-read state in case it changed during fetch/push
+  const currentAll = getTasks();
+  const currentDirtyMap = new Map();
+  Object.values(currentAll).flat().forEach(t => {
+    if (t.dirty) currentDirtyMap.set(String(t.id), t);
+  });
+
   // Build a set of all server task IDs for quick lookup
   const serverIdSet = new Set(list.map(t => String(t.id)));
 
-  // Identify local-only tasks that have NEVER been synced to the server
-  // These are tasks with local_ prefix IDs and no serverId
+  // Identify local-only tasks that have NEVER been synced
   const localOnlyTasks = Object.values(currentAll).flat().filter(t => {
-    // Task was created locally and never got a server ID
     if (!t.serverId && String(t.id).startsWith('local_')) return true;
-    // Task has a serverId but it doesn't exist on server (was deleted remotely?) — skip these
     return false;
   });
 
-  // DEDUPLICATION LOGIC
-  // Group tasks by signature to find duplicates
+  // Deduplication
   const seenSignatures = new Map();
   const duplicatesToDelete = [];
   const uniqueList = [];
-
-  // Sort list by ID (assuming lower ID = older = original)
   list.sort((a, b) => a.id - b.id);
 
   for (const t of list) {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
-    // Signature: title + date + time + description
     const signature = `${t.title}|${dateKey}|${t.time || ''}|${t.description || ''}`;
-
     if (seenSignatures.has(signature)) {
-      // This is a duplicate!
       duplicatesToDelete.push(t.id);
     } else {
       seenSignatures.set(signature, t.id);
@@ -208,70 +198,73 @@ export async function loadTasksIntoState() {
     }
   }
 
-  // If duplicates found, trigger background cleanup
   if (duplicatesToDelete.length > 0) {
-    console.warn(`Found ${duplicatesToDelete.length} duplicate tasks. cleaning up...`);
-    // Delete in background to not block UI
     (async () => {
-      // Process in chunks of 5 to avoid overwhelming the server
       for (let i = 0; i < duplicatesToDelete.length; i += 5) {
         const chunk = duplicatesToDelete.slice(i, i + 5);
-        await Promise.allSettled(chunk.map(id => deleteTaskOnBackend(id).catch(e => console.error(`Failed to delete duplicate ${id}`, e))));
+        await Promise.allSettled(chunk.map((/** @type {number|string} */ id) => deleteTaskOnBackend(id).catch(() => { })));
       }
-      console.log('Duplicate cleanup complete');
     })();
   }
 
   /** @type {TasksByDate} */
-  const byDate = {};
-  
-  // 1. Add ALL unique backend tasks — server is source of truth
-  uniqueList.forEach(t => {
+  const finalState = {};
+
+  // Helper to add task to state
+  const addTaskToState = (t) => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
-    if (!byDate[dateKey]) byDate[dateKey] = [];
-    
-    /** @type {Task} */
+    if (!finalState[dateKey]) finalState[dateKey] = [];
+    finalState[dateKey].push(t);
+  };
+
+  // 4. Process valid server tasks
+  uniqueList.forEach(serverTask => {
+    const sId = String(serverTask.id);
+
+    // If we have a local dirty version of this task, PRESERVE IT (race condition handling)
+    if (currentDirtyMap.has(sId)) {
+      addTaskToState(currentDirtyMap.get(sId));
+      return;
+    }
+
+    // Otherwise use server version
     const mapped = {
-      id: String(t.id),
-      serverId: Number(t.id),
-      title: t.title,
-      description: t.description || '',
-      date: dateKey === 'undated' ? null : dateKey,
-      time: t.time || null,
-      completed: !!t.completed,
-      isReminder: t.is_reminder !== undefined ? t.is_reminder : true,
-      priority: (function() {
-        if (typeof t.priority === 'number') return t.priority;
-        if (t.priority === 'alta') return 1;
-        if (t.priority === 'media') return 2;
-        return 3; // baja or default
+      id: sId,
+      serverId: Number(serverTask.id),
+      title: serverTask.title,
+      description: serverTask.description || '',
+      date: (serverTask.date || '').slice(0, 10) || null,
+      time: serverTask.time || null,
+      completed: !!serverTask.completed,
+      isReminder: serverTask.is_reminder !== undefined ? serverTask.is_reminder : true,
+      priority: (function () {
+        if (typeof serverTask.priority === 'number') return serverTask.priority;
+        if (serverTask.priority === 'alta') return 1;
+        if (serverTask.priority === 'media') return 2;
+        return 3;
       })(),
-      tags: t.tags || [],
-      recurrence: t.recurrence || undefined,
-      recurrenceId: t.recurrence_id || undefined
+      tags: serverTask.tags || [],
+      recurrence: serverTask.recurrence || undefined,
+      recurrenceId: serverTask.recurrence_id || undefined,
+      dirty: false // Explicitly clear dirty since we just fetched it (unless we used local override)
     };
-    byDate[dateKey].push(mapped);
+    addTaskToState(mapped);
   });
 
-  // 2. Add local-only tasks (never synced) back in so they aren't lost
+  // 5. Add local-only tasks (if not dirty, they generally shouldn't exist here if older, but keep to be safe)
+  // Dirty local-only tasks are also preserved here
   localOnlyTasks.forEach(t => {
     const dateKey = t.date || 'undated';
-    if (!byDate[dateKey]) byDate[dateKey] = [];
-    // Avoid duplicates
-    if (!byDate[dateKey].find(existing => String(existing.id) === String(t.id))) {
-      byDate[dateKey].push(t);
+    if (!finalState[dateKey]) finalState[dateKey] = [];
+    // Avoid duplicates if somehow ID clashes with server ID (unlikely due to local_ prefix)
+    if (!finalState[dateKey].find(existing => String(existing.id) === String(t.id))) {
+      finalState[dateKey].push(t);
     }
   });
 
-  // Log server data summary for debugging sync issues
-  const allMapped = Object.values(byDate).flat();
-  const completedCount = allMapped.filter(t => t.completed).length;
-  console.log(`[loadTasksIntoState] Server returned ${allMapped.length} tasks (${completedCount} completed). Unique from server: ${uniqueList.length}`);
-  uniqueList.forEach(t => console.log(`  [server] id=${t.id} completed=${t.completed} title="${t.title}"`));
+  // 6. Push state - this now respects dirty concurrent edits
+  setTasks(finalState);
 
-  setTasks(byDate);
-
-  // If we have local-only tasks, push them to the server
   if (localOnlyTasks.length > 0) {
     pushLocalTasksToBackend().catch(err => console.error('Background push failed:', err));
   }
@@ -397,21 +390,21 @@ export async function pushLocalTasksToBackend() {
       Object.keys(draft).forEach((dateKey) => {
         draft[dateKey] = (draft[dateKey] || []).map((task) => {
           let updatedTask = task;
-          
+
           const replacement = idReplacements.find((entry) => entry.oldId === String(task.id));
           if (replacement) {
             updatedTask = { ...task, id: replacement.newId, serverId: replacement.serverId };
           }
-          
+
           // Clear dirty flag if it was successfully verified/synced
           // Check against old ID (t.id) because that's what we tracked in the loop
           // Note: if replacement occurred, it means we created it, so it is synced.
           if (tasksToClearDirty.has(String(task.id))) {
-             if (updatedTask.dirty) {
-                 updatedTask.dirty = false;
-             }
+            if (updatedTask.dirty) {
+              updatedTask.dirty = false;
+            }
           }
-          
+
           return updatedTask;
         });
       });

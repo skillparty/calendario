@@ -14,6 +14,9 @@ import { renderWeekly } from './weekly.js';
 import { showPdfExportModal } from './pdf.js';
 import { showAuthToast, showSyncToast, showToast } from './utils/UIFeedback.js';
 
+console.log('Calendar10 App v2.1.2 - Fixes Loaded (Sync/Mobile/Keepalive)');
+
+
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
 const GITHUB_REDIRECT_URI = (typeof window !== 'undefined' && window.location && window.location.origin)
@@ -532,11 +535,16 @@ document.addEventListener('DOMContentLoaded', () => {
           payload.priority = p === 1 ? 'alta' : p === 2 ? 'media' : 'baja';
         }
 
-        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-        navigator.sendBeacon(
-          API_BASE_URL + `/api/tasks/${sId}?_method=PUT&token=${encodeURIComponent(state.userSession.jwt)}`,
-          blob
-        );
+        // Use keepalive fetch instead of sendBeacon for better header support
+        fetch(API_BASE_URL + `/api/tasks/${sId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${state.userSession.jwt}`
+          },
+          body: JSON.stringify(payload),
+          keepalive: true
+        }).catch(err => console.warn('[beforeunload] save failed', err));
       }
     });
   });
