@@ -142,6 +142,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden; /* Prevent horizontal scroll on mobile */
 }
 
 /* ========== MODERN HEADER DESIGN (Legacy - Replaced by header-minimal) ========== */
