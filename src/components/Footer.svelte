@@ -1,7 +1,3 @@
-<script lang="ts">
-    import loquitoImg from "../assets/loquito.png";
-</script>
-
 <footer class="footer-minimal">
     <div class="footer-container">
         <div class="footer-content">
