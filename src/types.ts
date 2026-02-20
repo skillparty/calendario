@@ -69,6 +69,7 @@ export interface UserProfile {
   username?: string;
   name?: string;
   avatar_url?: string;
+  user_metadata?: { name?: string; avatar_url?: string;[key: string]: any };
   [key: string]: unknown;
 }
 
@@ -132,4 +133,4 @@ declare global {
   }
 }
 
-export {};
+export { };

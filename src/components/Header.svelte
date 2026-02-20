@@ -19,7 +19,7 @@
     <div class="header-container">
         <div class="header-left">
             <div class="brand-section">
-                <img src="public/app.png" alt="Calendar10" class="brand-logo" />
+                <img src="/app.png" alt="Calendar10" class="brand-logo" />
                 <div class="brand-text">
                     <h1 class="brand-name">Calendar10</h1>
                     <span class="brand-tagline">development by RollanSoft.</span
@@ -73,13 +73,14 @@
                         on:click={() => (showUserInfo = !showUserInfo)}
                     >
                         <img
-                            src={$userSessionStore.avatarUrl ||
-                                "public/avatar.png"}
+                            src={$userSessionStore.user?.avatar_url ||
+                                "/app.png"}
                             alt="Avatar"
                             class="user-avatar"
                         />
                         <span class="user-name"
                             >{$userSessionStore.user?.user_metadata?.name ||
+                                $userSessionStore.user?.name ||
                                 "Usuario"}</span
                         >
                         <span class="online-indicator" title="En línea">●</span>
