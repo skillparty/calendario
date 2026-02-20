@@ -387,10 +387,9 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    position: sticky;
-    top: 145px;
-    /* Stay below the toolbar */
-    z-index: 10;
+    position: relative;
+    top: auto;
+    z-index: 1;
     background: var(--glass-bg, rgba(255, 255, 255, 0.9));
     backdrop-filter: var(--glass-blur, blur(12px));
     -webkit-backdrop-filter: var(--glass-blur, blur(12px));
@@ -398,7 +397,6 @@
     border-radius: var(--radius-md, 12px);
     margin-bottom: 0.75rem;
     border: 1px solid var(--border-color);
-    pointer-events: none;
 }
 
 .date-group-icon {

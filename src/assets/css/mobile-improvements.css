@@ -814,6 +814,10 @@
 }
 
 @media (max-width: 768px) {
+    .header-minimal .online-indicator {
+        display: none !important;
+    }
+
     .header-minimal .user-btn.login-github-btn {
         min-width: 40px !important;
         min-height: 40px !important;
@@ -1020,10 +1024,7 @@
     }
 
     .fab-add-task {
-        width: 3.15rem !important;
-        height: 3.15rem !important;
-        right: 0.95rem !important;
-        bottom: calc(max(env(safe-area-inset-bottom), 0px) + 5.6rem) !important;
+        display: none !important;
     }
 }
 
@@ -1767,8 +1768,6 @@
     }
 
     .fab-add-task {
-        width: 3rem !important;
-        height: 3rem !important;
-        right: 1rem !important;
+        display: none !important;
     }
 }
