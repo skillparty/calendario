@@ -110,22 +110,6 @@ declare global {
     generatePDF?: () => void;
     toggleExportOptions?: () => void;
 
-    handleLogin?: () => void;
-    handleLogout?: () => void;
-    testNotification?: () => void;
-
-    showTaskInputModal?: (date?: string | null, existingTask?: Task | null) => void;
-    saveTaskFromModal?: (originalDate: string, existingTaskId: string | null) => void;
-    showDayTasks?: (date: string) => void;
-    addTask?: (date: string) => void;
-
-    renderAgenda?: (...args: any[]) => void;
-    toggleTask?: (id: string) => void;
-    toggleTaskWithAnimation?: (id: string, filterMonth: string, filterStatus: string, filterPriority?: string) => void;
-    confirmDeleteTask?: (id: string, title: string) => void;
-    deleteTaskConfirmed?: (id: string, filterMonth: string, filterStatus: string) => void;
-    deleteTask?: (id: string) => void;
-
     enhancedState?: unknown;
     jspdf?: {
       jsPDF: new () => any;

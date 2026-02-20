@@ -4,8 +4,8 @@
  * @typedef {import('../types').Task} Task
  */
 
-import { state, getTasks } from '../store/state.js';
-import { showToast } from '../utils/UIFeedback.js';
+import { state, getTasks } from '../store/state';
+import { showToast } from '../utils/UIFeedback';
 import { openModal, closeModal } from '../utils/modal.js';
 
 /** @returns {void} */

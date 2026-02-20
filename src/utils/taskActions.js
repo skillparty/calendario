@@ -1,6 +1,6 @@
-import { state, getTasks, setTasks, updateTasks, notifyTasksUpdated } from '../store/state.js';
-import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLocalTasksToBackend, createTaskOnBackend } from '../services/api.js';
-import { showUndoToast, showToast } from './UIFeedback.js';
+import { state, getTasks, setTasks, updateTasks, notifyTasksUpdated } from '../store/state';
+import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLocalTasksToBackend, createTaskOnBackend } from '../services/api';
+import { showUndoToast, showToast } from './UIFeedback';
 
 /**
  * @param {{ id?: string|number; serverId?: number|string } | null | undefined} task

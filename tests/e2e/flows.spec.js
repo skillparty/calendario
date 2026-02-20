@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  */
 async function createTask(page, title) {
   // Ensure we are on calendar view
-  if (await page.locator('#calendar-view').isHidden()) {
+  if (!(await page.locator('#calendar-view').isVisible())) {
     await page.locator('#calendar-btn').click();
   }
   
@@ -23,11 +23,11 @@ async function createTask(page, title) {
     await page.locator('#add-task-modal-btn').click();
   }
 
-  const modal = page.locator('.modal[data-modal-type="task-input"]');
+  const modal = page.locator('.task-input-modal-content');
   await expect(modal).toBeVisible();
   
   await modal.locator('#task-title-input').fill(title);
-  await modal.locator('button[data-action="save-task-modal"]').click();
+  await modal.locator('.task-input-save-btn').click();
   await expect(modal).not.toBeVisible();
   
   // Verify it appears in grid immediately
@@ -62,16 +62,17 @@ test.describe('Calendar10 Critical Flows', () => {
     await page.locator('#agenda-btn').click();
     await expect(page.locator('#agenda-view')).toBeVisible();
 
-    // Find task card
-    const cardTitle = page.locator('.task-card-title', { hasText: 'Initial Title' }).first();
-    await expect(cardTitle).toBeVisible();
+    // Find task card and open edit modal
+    const card = page.locator('.task-card', { hasText: 'Initial Title' }).first();
+    await expect(card).toBeVisible();
+    await card.locator('button[title="Editar"]').click();
 
-    // Inline edit title
-    await cardTitle.click();
-    const input = page.locator('.inline-title-input');
-    await expect(input).toBeVisible();
-    await input.fill('Edited Title E2E');
-    await input.press('Enter');
+    // Edit title in modal
+    const editModal = page.locator('.task-input-modal-content');
+    await expect(editModal).toBeVisible();
+    await editModal.locator('#task-title-input').fill('Edited Title E2E');
+    await editModal.locator('.task-input-save-btn').click();
+    await expect(editModal).not.toBeVisible();
 
     // Verify change
     await expect(page.locator('.task-card-title', { hasText: 'Edited Title E2E' })).toBeVisible();
@@ -90,11 +91,10 @@ test.describe('Calendar10 Critical Flows', () => {
     await expect(card).toBeVisible();
     
     // Click toggle button
-    const toggleBtn = card.locator('.task-check-btn');
+    const toggleBtn = card.locator('.task-checkbox');
     await toggleBtn.click();
     
     // Verify UI updates immediately
-    await expect(toggleBtn).toHaveClass(/checked/);
     await expect(card).toHaveClass(/completed/);
     
     // Reload page to test persistence
@@ -104,7 +104,7 @@ test.describe('Calendar10 Critical Flows', () => {
     // Verify still completed
     const cardAfter = page.locator('.task-card', { hasText: 'Completion Test' }).first();
     await expect(cardAfter).toHaveClass(/completed/);
-    await expect(cardAfter.locator('.task-check-btn')).toHaveClass(/checked/);
+    await expect(cardAfter.locator('.task-checkbox .icon-completed')).toBeVisible();
   });
 
   test('should delete task from Day Modal', async ({ page }) => {
@@ -115,17 +115,15 @@ test.describe('Calendar10 Critical Flows', () => {
     const todayCellContent = page.locator('.day.today .day-content');
     await todayCellContent.locator('.day-number').click();
     
-    const dayModal = page.locator('#day-modal');
+    const dayModal = page.locator('.modal-content', { has: page.locator('#add-task-modal-btn') });
     await expect(dayModal).toBeVisible();
     
-    const taskItem = dayModal.locator('.modal-task', { hasText: 'Day Delete' });
+    const taskItem = dayModal.locator('.task-card', { hasText: 'Day Delete' });
     await expect(taskItem).toBeVisible();
     
-    const deleteBtn = taskItem.locator('button[data-action="delete-task"]');
+    const deleteBtn = taskItem.locator('button[title="Eliminar"]');
+    page.once('dialog', dialog => dialog.accept());
     await deleteBtn.click();
-    
-    // Modal closes on delete (to show toast)
-    await expect(dayModal).not.toBeVisible();
     
     // Verify toast using accessible role
     const toast = page.getByRole('alert');
@@ -135,9 +133,7 @@ test.describe('Calendar10 Critical Flows', () => {
     // Undo
     await toast.locator('button', { hasText: 'Deshacer' }).click();
     
-    // Re-open Day Modal to verify task restoration
-    await todayCellContent.locator('.day-number').click();
-    await expect(dayModal).toBeVisible();
-    await expect(dayModal.locator('.modal-task', { hasText: 'Day Delete' })).toBeVisible();
+    // Verify task restoration in the same day modal
+    await expect(dayModal.locator('.task-card', { hasText: 'Day Delete' })).toBeVisible();
   });
 });

@@ -1,10 +1,10 @@
 # Calendar10
 
-Aplicación web de calendario y agenda con frontend en JavaScript modular y backend en Node.js + Supabase.
+Aplicación web de calendario y agenda con frontend en Svelte + Vite y backend en Node.js + Supabase.
 
 ## Stack actual
 
-- Frontend: HTML, CSS, JavaScript (ES modules)
+- Frontend: Svelte 5 + Vite + TypeScript (gradual)
 - Backend: Express serverless en Vercel (`backend/api/index.js`)
 - Base de datos: Supabase PostgreSQL
 - Auth: GitHub OAuth + JWT
@@ -14,10 +14,11 @@ Aplicación web de calendario y agenda con frontend en JavaScript modular y back
 ### 1) Frontend
 
 ```bash
-python3 -m http.server 8000
+npm install
+npm run dev
 ```
 
-Abrir: `http://localhost:8000`
+Abrir: `http://localhost:3000`
 
 ### 2) Backend
 
@@ -42,7 +43,7 @@ SUPABASE_SERVICE_KEY=tu-service-role-key
 GITHUB_CLIENT_ID=tu-client-id
 GITHUB_CLIENT_SECRET=tu-client-secret
 JWT_SECRET=tu-jwt-secret
-FRONTEND_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:3000
 ```
 
 ## Configuración de GitHub OAuth
@@ -66,7 +67,7 @@ FRONTEND_URL=http://localhost:8000
 
 ## Notas
 
-- `api.js` contiene la URL base del backend en producción.
+- `src/services/api.ts` contiene la URL base del backend en producción.
 - Nunca expongas `GITHUB_CLIENT_SECRET` ni `SUPABASE_SERVICE_KEY` en frontend.
 
 ## QA Responsive Móvil
@@ -93,7 +94,7 @@ Y cubre en cada uno:
 
 - Navegación de módulos (`Calendario`, `Agenda`, `Semanal`)
 - Layout usable de Calendario
-- Presencia de `Acciones Rápidas` y `Próximas` en Agenda móvil
+- Presencia de `Acciones Rápidas` y `Resumen` en Agenda móvil
 - Navegación y grilla de Semanal
 
 ### Checklist rápida antes de release móvil
@@ -101,7 +102,7 @@ Y cubre en cada uno:
 1. Ejecutar `npm run test:e2e:mobile` y confirmar verde.
 2. Probar manualmente en un dispositivo real Android y uno iOS.
 3. Verificar que header no tape contenido en first-fold.
-4. Verificar que `Acciones Rápidas` y `Próximas` se muestran en Agenda móvil.
+4. Verificar que `Acciones Rápidas` y `Resumen` se muestran en Agenda móvil.
 5. Verificar navegación mensual/semanal y toques de botones (44px mínimo).
 6. Validar que no haya scroll horizontal no deseado.
 

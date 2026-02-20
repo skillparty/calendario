@@ -353,8 +353,8 @@ sw.addEventListener('push', (/** @type {any} */ event) => {
   const pushEvent = /** @type {any} */ (event);
   const options = {
     body: pushEvent.data ? pushEvent.data.text() : 'Nueva notificación',
-    icon: '/loquito.png',
-    badge: '/loquito.png',
+    icon: '/app.png',
+    badge: '/app.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),

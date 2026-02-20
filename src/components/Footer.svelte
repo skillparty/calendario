@@ -12,7 +12,7 @@
                 <span class="footer-separator">•</span>
                 <div class="footer-developer">
                     <img
-                        src="/loquito.png"
+                        src="/app.png"
                         alt="Alejandro Rollano"
                         class="developer-avatar"
                         style="width:28px;height:28px;max-width:28px;max-height:28px;border-radius:6px;"

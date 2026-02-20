@@ -9,8 +9,9 @@
     import { escapeHtml } from "../utils/helpers";
     import { confirmDeleteTask, toggleTask } from "../utils/taskActions";
     import TaskCard from "../components/TaskCard.svelte";
-    import { isLoggedInWithBackend } from "../services/api";
+    import { isLoggedInWithBackend, loadTasksIntoState } from "../services/api";
     import { showToast, showSyncToast } from "../utils/UIFeedback";
+    import { showPdfExportModal } from "./pdf.js";
 
     let agendaSearchTerm = "";
     let syncing = false;
@@ -152,33 +153,27 @@
 
     function handleManualSync() {
         syncing = true;
-        import("../services/api").then(
-            ({ loadTasksIntoState, isLoggedInWithBackend }) => {
-                if (!isLoggedInWithBackend()) {
-                    showToast("Inicia sesión para sincronizar", {
-                        type: "warning",
-                    });
-                    syncing = false;
-                    return;
-                }
-                showSyncToast("Sincronizando...");
-                loadTasksIntoState()
-                    .then(() => {
-                        notifyTasksUpdated();
-                        showSyncToast("Sincronizado");
-                    })
-                    .catch(() => {
-                        showToast("Error al sincronizar", { type: "error" });
-                    })
-                    .finally(() => (syncing = false));
-            },
-        );
+        if (!isLoggedInWithBackend()) {
+            showToast("Inicia sesión para sincronizar", {
+                type: "warning",
+            });
+            syncing = false;
+            return;
+        }
+        showSyncToast("Sincronizando...");
+        loadTasksIntoState()
+            .then(() => {
+                notifyTasksUpdated();
+                showSyncToast("Sincronizado");
+            })
+            .catch(() => {
+                showToast("Error al sincronizar", { type: "error" });
+            })
+            .finally(() => (syncing = false));
     }
 
     function handlePdfExport() {
-        if (typeof (window as any).showPdfExportModal === "function") {
-            (window as any).showPdfExportModal();
-        }
+        showPdfExportModal();
     }
 
     function handleTestNotification() {
@@ -213,7 +208,7 @@
         }
     }
 
-    function openTaskModal(task = null) {
+    function openTaskModal(task: any = null) {
         window.dispatchEvent(
             new CustomEvent("openTaskModal", {
                 detail: { date: task?.date || null, task },

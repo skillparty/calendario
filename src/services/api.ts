@@ -1,5 +1,5 @@
 import type { Task, APITask, TasksByDate } from '../types';
-import { state, setTasks, getTasks, updateTasks, notifyTasksUpdated } from '../store/state.js';
+import { state, setTasks, getTasks, updateTasks, notifyTasksUpdated } from '../store/state';
 
 function unwrapTaskPayload(payload: unknown): Record<string, any> | null {
   if (!payload || typeof payload !== 'object') return null;

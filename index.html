@@ -1,187 +1,20 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-    <meta name="theme-color" content="#edae49">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Calendar10">
-    <link rel="apple-touch-icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23edae49'/><text y='70' font-size='70' text-anchor='middle' x='50'>📅</text></svg>">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="theme-color" content="#edae49" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Calendar10" />
+    <link rel="apple-touch-icon" href="/app.png" />
+    <link rel="icon" type="image/png" href="/app.png" />
+    <link rel="manifest" href="/manifest.json" />
     <title>Calendar10 - Gestiona tus tareas y eventos</title>
-    <link rel="icon" type="image/x-icon" href="./favicon.ico">
-    <link rel="stylesheet" href="./src/assets/css/styles.css">
-    <link rel="stylesheet" href="./src/assets/css/calendar-navigation.css">
-    <link rel="stylesheet" href="./src/assets/css/agenda-professional.css">
-    <link rel="stylesheet" href="./src/assets/css/dark-mode.css">
-    <link rel="stylesheet" href="./src/assets/css/mobile-improvements.css">
-
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="./manifest.json">
-
-    <!-- Preload critical resources -->
 </head>
-
 <body>
-    <!-- Svelte App Mounting Point -->
     <div id="app"></div>
-
-    <!-- Legacy Modals (will be ported to Svelte later) -->
-    <div id="pdf-export-modal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn" title="Cerrar">&times;</span>
-            <h3>📄 Exportar Tareas a PDF</h3>
-            <div style="margin: 20px 0;">
-                <h4>Selecciona el tipo de exportación:</h4>
-                <div style="margin: 15px 0;">
-                    <label style="display: block; margin: 10px 0;">
-                        <input type="radio" name="export-type" value="all" checked style="margin-right: 8px;">
-                        Todas las tareas (ordenadas por fecha)
-                    </label>
-                    <label style="display: block; margin: 10px 0;">
-                        <input type="radio" name="export-type" value="month" style="margin-right: 8px;">
-                        Tareas de un mes específico
-                    </label>
-                    <label style="display: block; margin: 10px 0;">
-                        <input type="radio" name="export-type" value="custom" style="margin-right: 8px;">
-                        Rango de fechas personalizado
-                    </label>
-                </div>
-
-                <div id="month-selection" class="export-option hidden" style="margin: 15px 0;">
-                    <label>Selecciona el mes:</label>
-                    <select id="pdf-month-select" style="margin-left: 10px; padding: 5px;">
-                        <option value="0">Enero</option>
-                        <option value="1">Febrero</option>
-                        <option value="2">Marzo</option>
-                        <option value="3">Abril</option>
-                        <option value="4">Mayo</option>
-                        <option value="5">Junio</option>
-                        <option value="6">Julio</option>
-                        <option value="7">Agosto</option>
-                        <option value="8">Septiembre</option>
-                        <option value="9">Octubre</option>
-                        <option value="10">Noviembre</option>
-                        <option value="11">Diciembre</option>
-                    </select>
-                    <select id="pdf-year-select" style="margin-left: 10px; padding: 5px;">
-                        <option value="2023">2023</option>
-                        <option value="2024">2024</option>
-                        <option value="2025" selected>2025</option>
-                        <option value="2026">2026</option>
-                        <option value="2027">2027</option>
-                    </select>
-                </div>
-
-                <div id="custom-range" class="export-option hidden" style="margin: 15px 0;">
-                    <div style="margin: 10px 0;">
-                        <label>Fecha de inicio:</label>
-                        <input type="date" id="start-date" style="margin-left: 10px; padding: 5px;">
-                    </div>
-                    <div style="margin: 10px 0;">
-                        <label>Fecha de fin:</label>
-                        <input type="date" id="end-date" style="margin-left: 10px; padding: 5px;">
-                    </div>
-                </div>
-
-                <div style="margin: 20px 0;">
-                    <h4>Opciones adicionales:</h4>
-                    <label style="display: block; margin: 10px 0;">
-                        <input type="checkbox" id="include-completed" checked style="margin-right: 8px;">
-                        Incluir tareas completadas
-                    </label>
-                    <label style="display: block; margin: 10px 0;">
-                        <input type="checkbox" id="include-pending" checked style="margin-right: 8px;">
-                        Incluir tareas pendientes
-                    </label>
-                </div>
-
-                <div style="margin: 20px 0; text-align: center;">
-                    <button onclick="generatePDF()"
-                        style="background: #FF5722; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; margin-right: 10px;">
-                        📄 Generar PDF
-                    </button>
-                    <button onclick="closePdfExportModal()"
-                        style="background: #757575; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px;">
-                        Cancelar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sonner Toasts will attach to body natively -->
     <ol id="sonner-toast-container" position="bottom-right" rich-colors="true" close-button="true"></ol>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-    <!-- Service Worker Registration -->
-    <script>
-        // Register Service Worker for offline functionality
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const registerServiceWorker = async () => {
-                    try {
-                        return await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
-                    } catch (primaryError) {
-                        return navigator.serviceWorker.register('./static/sw.js', { updateViaCache: 'none' });
-                    }
-                };
-
-                registerServiceWorker()
-                    .then(registration => {
-                        console.log('ServiceWorker registrado:', registration.scope);
-
-                        // Check for updates periodically
-                        setInterval(() => {
-                            registration.update();
-                        }, 3600000); // Every hour
-
-                        // Handle updates
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New service worker available
-                                    if (confirm('Nueva versión disponible. ¿Actualizar ahora?')) {
-                                        newWorker.postMessage({ type: 'skip-waiting' });
-                                    }
-                                }
-                            });
-                        });
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker registro falló:', err);
-                    });
-
-                // Reload when new service worker takes control
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    window.location.reload();
-                });
-            });
-        }
-
-        // Check online/offline status
-        window.addEventListener('online', () => {
-            console.log('Conexión restaurada');
-            document.body.classList.remove('offline');
-        });
-
-        window.addEventListener('offline', () => {
-            console.log('Sin conexión - Modo offline');
-            document.body.classList.add('offline');
-        });
-
-        console.log('Aplicación Calendar10 cargada correctamente');
-    </script>
-
-
-
-    <!-- Main Application Module -->
-    <script type="module" src="./src/main.ts"></script>
+    <script type="module" src="/src/main.ts"></script>
 </body>
-
 </html>

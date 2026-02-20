@@ -26,10 +26,10 @@ async function openHome(page) {
  * @param {import('@playwright/test').Page} page
  */
 async function assertCoreMobileNav(page) {
-  await expect(page.locator('#calendar-btn')).toBeVisible();
-  await expect(page.locator('#agenda-btn')).toBeVisible();
-  await expect(page.locator('#weekly-btn')).toBeVisible();
-  await expect(page.locator('#calendar-btn')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#bottom-calendar-btn')).toBeVisible();
+  await expect(page.locator('#bottom-agenda-btn')).toBeVisible();
+  await expect(page.locator('#bottom-weekly-btn')).toBeVisible();
+  await expect(page.locator('#bottom-calendar-btn')).toHaveAttribute('aria-pressed', 'true');
 
   const header = page.locator('.header-minimal');
   const headerBox = await header.boundingBox();
@@ -47,7 +47,7 @@ for (const viewport of MOBILE_VIEWPORTS) {
 
     test('calendar mobile layout is usable', async ({ page }) => {
       await assertCoreMobileNav(page);
-      await page.locator('#calendar-btn').click();
+      await page.locator('#bottom-calendar-btn').click();
       await expect(page.locator('#calendar-view')).toBeVisible();
       await expect(page.locator('.calendar-nav h2')).toBeVisible();
       await expect(page.locator('#prev-month')).toBeVisible();
@@ -55,26 +55,26 @@ for (const viewport of MOBILE_VIEWPORTS) {
 
     });
 
-    test('agenda mobile shows quick-actions and upcoming blocks', async ({ page }) => {
+    test('agenda mobile shows quick-actions and stats blocks', async ({ page }) => {
       await assertCoreMobileNav(page);
-      await page.locator('#agenda-btn').click({ force: true });
-      await expect(page.locator('#agenda-btn')).toHaveAttribute('aria-pressed', 'true');
+      await page.locator('#bottom-agenda-btn').click({ force: true });
+      await expect(page.locator('#bottom-agenda-btn')).toHaveAttribute('aria-pressed', 'true');
       await expect(page.locator('#agenda-view')).toBeVisible();
 
       const quickActions = page.locator('.quick-actions-block');
-      const upcoming = page.locator('.upcoming-block');
+      const stats = page.locator('.stats-block');
 
       await expect(quickActions).toBeVisible();
-      await expect(upcoming).toBeVisible();
+      await expect(stats).toBeVisible();
       await expect(quickActions.locator('.btn-action').first()).toBeVisible();
-      await expect(upcoming.locator('.upcoming-task, .no-upcoming').first()).toBeVisible();
+      await expect(stats.locator('.stat-item').first()).toBeVisible();
 
     });
 
     test('weekly mobile keeps navigation and grid visible', async ({ page }) => {
       await assertCoreMobileNav(page);
-      await page.locator('#weekly-btn').click({ force: true });
-      await expect(page.locator('#weekly-btn')).toHaveAttribute('aria-pressed', 'true');
+      await page.locator('#bottom-weekly-btn').click({ force: true });
+      await expect(page.locator('#bottom-weekly-btn')).toHaveAttribute('aria-pressed', 'true');
       await expect(page.locator('#weekly-view')).toBeVisible();
       await expect(page.locator('.weekly-nav')).toBeVisible();
       await expect(page.locator('#prev-week')).toBeVisible();

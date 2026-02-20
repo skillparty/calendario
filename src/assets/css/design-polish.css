@@ -1,0 +1,217 @@
+/* =========================================================
+   DESIGN POLISH LAYER (safe visual refresh)
+   Uses existing design tokens and component classes only.
+   ========================================================= */
+
+:root {
+  --content-max-width: 1320px;
+}
+
+/* Shared surface rhythm */
+main {
+  width: 100%;
+}
+
+#calendar-view,
+#agenda-view,
+#weekly-view {
+  width: min(var(--content-max-width), 100% - 2.5rem);
+  margin: 0 auto;
+}
+
+/* ---------- Calendar ---------- */
+.calendar-nav {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 0.65rem 0.9rem;
+}
+
+.calendar-nav h2 {
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.calendar-grid {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.day {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.day:not(.past-date):hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.day.today {
+  box-shadow: inset 0 0 0 2px var(--app-accent);
+}
+
+.task-preview-item {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.day-add-btn {
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Agenda ---------- */
+.agenda-container {
+  width: 100%;
+  margin: 0 auto;
+}
+
+.agenda-toolbar {
+  background: var(--glass-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.toolbar-search .search-input,
+.toolbar-select {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.toolbar-btn-add,
+.btn-action.primary {
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-block,
+.task-list-container {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.date-group-header {
+  border-radius: var(--radius-md);
+}
+
+.stat-item {
+  border-radius: var(--radius-md);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Task Card ---------- */
+.task-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.task-checkbox,
+.btn-icon-small {
+  border-radius: var(--radius-sm);
+}
+
+.badge,
+.task-time-pill {
+  border-radius: var(--radius-pill);
+}
+
+/* ---------- Weekly ---------- */
+.weekly-nav {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 0.5rem 0.65rem;
+}
+
+.weekly-grid {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.weekly-day-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.weekly-day-header.weekly-day-today {
+  background: var(--bg-tertiary);
+  box-shadow: inset 0 -2px 0 var(--app-accent);
+}
+
+.weekly-cell {
+  transition: background-color 0.2s ease;
+}
+
+.weekly-cell:not(.weekly-cell-past):hover {
+  background: var(--bg-secondary);
+}
+
+.weekly-task {
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Inputs / focus ---------- */
+input,
+select,
+textarea,
+button {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Modal polish ---------- */
+.modal-content {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-floating);
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 768px) {
+  #calendar-view,
+  #agenda-view,
+  #weekly-view {
+    width: calc(100% - 1rem);
+  }
+
+  .agenda-toolbar,
+  .weekly-nav,
+  .calendar-nav {
+    border-radius: var(--radius-md);
+  }
+}

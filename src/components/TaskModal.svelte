@@ -295,7 +295,7 @@
             </div>
 
             <div class="task-input-form-group">
-                <label id="priority-label">Prioridad</label>
+                <p id="priority-label">Prioridad</p>
                 <div
                     class="priority-selector"
                     role="radiogroup"
