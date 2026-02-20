@@ -1,16 +1,24 @@
 <script lang="ts">
+    import loquitoImg from "../assets/loquito.png";
 </script>
 
 <footer class="footer-minimal">
     <div class="footer-container">
         <div class="footer-content">
             <div class="footer-brand">
-                <img
-                    src="/public/loquito.png"
-                    alt="Calendar10"
-                    class="footer-logo"
-                />
+                <img src="/loquito.png" alt="Calendar10" class="footer-logo" />
                 <span class="footer-name">Calendar10</span>
+                <span class="footer-separator">•</span>
+                <div class="footer-developer">
+                    <img
+                        src="https://avatars.githubusercontent.com/u/108253106?v=4"
+                        alt="Alejandro Rollano"
+                        class="developer-avatar"
+                    />
+                    <span class="developer-name"
+                        >Desarrollado por Alejandro Rollano</span
+                    >
+                </div>
             </div>
 
             <div class="footer-links">

@@ -1724,6 +1724,32 @@ main {
     animation: modalFadeIn 0.2s ease-out;
 }
 
+.bottom-nav {
+    display: none;
+    /* Hidden on desktop by default */
+}
+
+@media (max-width: 768px) {
+    .bottom-nav {
+        display: flex;
+        /* Visible only on mobile */
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: var(--bottom-nav-height);
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        z-index: 1000;
+        justify-content: space-around;
+        align-items: center;
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    }
+}
+
 .modal.hidden {
     display: none !important;
 }
