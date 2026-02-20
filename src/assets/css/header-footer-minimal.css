@@ -522,6 +522,12 @@
     }
 }
 
+@media (max-width: 768px) {
+    .footer-minimal {
+        display: none;
+    }
+}
+
 /* Smooth scrolling for sticky header */
 html {
     scroll-behavior: smooth;

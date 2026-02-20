@@ -570,12 +570,15 @@
     }
 
     .header-left {
-        width: 100%;
+        width: auto;
+        min-width: 0;
+        flex: 1;
     }
 
     .brand-section {
-        justify-content: center;
-        gap: 0.625rem;
+        justify-content: flex-start;
+        gap: 0.5rem;
+        min-width: 0;
     }
 
     .brand-logo {
@@ -590,9 +593,13 @@
     }
 
     .brand-name {
-        font-size: clamp(1.2rem, 6vw, 1.5rem);
+        font-size: clamp(1rem, 4.8vw, 1.2rem);
         line-height: 1.05;
         margin: 0;
+        max-width: 34vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .brand-tagline {
@@ -619,10 +626,11 @@
     }
 
     .header-right {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
+        display: flex;
         align-items: center;
-        gap: 0.5rem;
+        justify-content: flex-end;
+        gap: 0.35rem;
+        flex: 0 0 auto;
     }
 
     .theme-toggle-btn {
@@ -635,6 +643,17 @@
     .user-section {
         min-width: 0;
         justify-content: flex-start;
+    }
+
+    .login-github-btn {
+        min-height: 40px;
+        min-width: 40px;
+        padding: 0.4rem 0.55rem;
+        gap: 0;
+    }
+
+    .login-github-btn .user-text {
+        display: none;
     }
 
     #user-info {
@@ -791,6 +810,220 @@
     .weekly-day-header[data-day-index="6"] .weekly-day-number {
         color: #d1495b !important;
         font-weight: 700;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-minimal .user-btn.login-github-btn {
+        min-width: 40px !important;
+        min-height: 40px !important;
+        padding: 0.42rem !important;
+        border-radius: 0.7rem !important;
+    }
+
+    .header-minimal .user-btn.login-github-btn .user-text {
+        display: none !important;
+    }
+
+    .header-minimal .user-btn.login-github-btn .user-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    .header-minimal .theme-toggle-btn {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
+    }
+
+    .task-card {
+        padding: 0.875rem 0.75rem;
+        border-radius: 0.75rem;
+    }
+
+    .task-card.completed {
+        opacity: 0.78;
+    }
+
+    .tasks-section {
+        padding: 0.65rem;
+        min-height: auto;
+        border-radius: 0.8rem;
+    }
+
+    .task-list-container {
+        max-height: none;
+        padding-right: 0;
+    }
+
+    .task-date-group {
+        margin-bottom: 0.8rem;
+    }
+
+    .date-group-header {
+        padding: 0.62rem 0.72rem;
+        border-radius: 0.72rem;
+        margin-bottom: 0.55rem;
+        border: 1px solid var(--border-color);
+        background: var(--bg-primary);
+    }
+
+    .date-group-title {
+        font-size: 0.98rem;
+        line-height: 1.25;
+    }
+
+    .date-group-count {
+        min-width: 1.45rem;
+        height: 1.45rem;
+        font-size: 0.75rem;
+    }
+
+    .date-group-tasks {
+        gap: 0.5rem;
+    }
+
+    .task-card-header {
+        display: flex !important;
+        grid-template-columns: none !important;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .task-card-title-group {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .task-checkbox {
+        width: 2.4rem;
+        height: 2.4rem;
+        min-width: 2.4rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.7rem;
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .circle-empty {
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid var(--border-color-dark);
+        border-radius: 999px;
+    }
+
+    .task-card-title {
+        min-width: 0;
+        font-size: 1rem;
+        line-height: 1.35;
+        color: var(--text-primary);
+    }
+
+    .task-time-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex: 0 0 auto;
+        align-self: flex-start;
+        white-space: nowrap;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-pill);
+        padding: 0.28rem 0.55rem;
+    }
+
+    .sync-status.dirty {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1rem;
+        height: 1rem;
+        margin-top: 0.2rem;
+        color: var(--text-muted);
+    }
+
+    .task-time-pill .icon {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .task-card-description {
+        font-size: 0.86rem;
+        line-height: 1.45;
+        color: var(--text-secondary);
+        margin: 0.2rem 0 0.45rem;
+    }
+
+    .task-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .task-metadata {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        min-width: 0;
+    }
+
+    .task-priority.badge {
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 0.22rem 0.55rem;
+    }
+
+    .task-tag.badge {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+    }
+
+    .task-actions-menu {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-left: auto;
+    }
+
+    .btn-icon-small {
+        width: 2.35rem;
+        height: 2.35rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.65rem;
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-icon-small.danger {
+        color: var(--error);
+    }
+
+    .fab-add-task {
+        width: 3.15rem !important;
+        height: 3.15rem !important;
+        right: 0.95rem !important;
+        bottom: calc(max(env(safe-area-inset-bottom), 0px) + 5.6rem) !important;
     }
 }
 
