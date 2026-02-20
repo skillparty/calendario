@@ -2,14 +2,20 @@
     <div class="footer-container">
         <div class="footer-content">
             <div class="footer-brand">
-                <img src="/loquito.png" alt="Calendar10" class="footer-logo" />
+                <img
+                    src="/app.png"
+                    alt="Calendar10"
+                    class="footer-logo"
+                    style="width:36px;height:36px;max-width:36px;max-height:36px;"
+                />
                 <span class="footer-name">Calendar10</span>
                 <span class="footer-separator">•</span>
                 <div class="footer-developer">
                     <img
-                        src="https://avatars.githubusercontent.com/u/108253106?v=4"
+                        src="/loquito.png"
                         alt="Alejandro Rollano"
                         class="developer-avatar"
+                        style="width:28px;height:28px;max-width:28px;max-height:28px;border-radius:6px;"
                     />
                     <span class="developer-name"
                         >Desarrollado por Alejandro Rollano</span

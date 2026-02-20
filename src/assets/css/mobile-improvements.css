@@ -454,8 +454,8 @@
     }
 
     .footer-logo {
-        width: 90px;
-        height: 90px;
+        width: 36px;
+        height: 36px;
     }
 
     .footer-name {
@@ -492,9 +492,9 @@
     }
 
     .brand-logo {
-        width: 70px !important;
-        height: 70px !important;
-        border-radius: 18px;
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 10px;
     }
 
     .header-nav {
@@ -529,8 +529,8 @@
     }
 
     .footer-logo {
-        width: 80px;
-        height: 80px;
+        width: 32px;
+        height: 32px;
     }
 
     .footer-name {
