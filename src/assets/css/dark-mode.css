@@ -16,6 +16,15 @@
     --text-tertiary: #9ca3af;
     --text-muted: #6b7280;
     --border: #3a3a3a;
+    --border-color: #3a3a3a;
+    --border-color-dark: #4b5563;
+    --app-accent: #60a5fa;
+    --app-accent-hover: #93c5fd;
+    --primary: var(--app-accent);
+    --primary-color: var(--app-accent);
+    --success: #22c55e;
+    --warning-color: #f59e0b;
+    --error: #f87171;
     --border-light: #2d2d2d;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3);

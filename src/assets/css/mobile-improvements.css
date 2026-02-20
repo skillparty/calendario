@@ -192,6 +192,26 @@
         /* Icon only */
     }
 
+    .login-github-btn {
+        padding: 0.45rem 0.7rem;
+        min-height: 40px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--border-color);
+        background: var(--bg-primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .login-github-btn .user-text {
+        display: inline;
+        font-size: 0.8125rem;
+        font-weight: 700;
+    }
+
+    .login-github-btn .user-icon {
+        width: 16px;
+        height: 16px;
+    }
+
     #user-info {
         width: auto;
     }

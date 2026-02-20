@@ -191,6 +191,16 @@
     box-shadow: var(--shadow-sm);
 }
 
+.header-minimal .user-btn.login-github-btn {
+    border-color: var(--border-color-dark);
+    background: var(--bg-primary);
+    font-weight: 700;
+}
+
+.header-minimal .user-btn.login-github-btn .user-icon {
+    color: var(--text-primary);
+}
+
 .header-minimal .user-icon {
     display: inline-flex;
     align-items: center;
