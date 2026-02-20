@@ -3,6 +3,7 @@
   import Header from "./components/Header.svelte";
   import BottomNav from "./components/BottomNav.svelte";
   import FAB from "./components/FAB.svelte";
+  import Footer from "./components/Footer.svelte";
   import { fade } from "svelte/transition";
 
   import Calendar from "./views/Calendar.svelte";
@@ -70,6 +71,7 @@
 
   <!-- Sonner Toasts will attach to body natively -->
 
+  <Footer />
   <BottomNav bind:view={currentView} />
 
   <FAB on:click={openTaskModal} />
@@ -77,6 +79,16 @@
 
 <style>
   .svelte-app-root {
-    display: contents; /* Allows header/main/footer to slot into body grid as before */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
   }
 </style>
