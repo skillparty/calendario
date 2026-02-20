@@ -6,12 +6,9 @@
  * @typedef {import('./types').UserSession} UserSession
  */
 
-import { state, setCurrentDate, setTasks, getTasks, setUserSession, setUserGistId, setLastGistUpdatedAt, notifyTasksUpdated } from './state.js';
-import { API_BASE_URL, isLoggedInWithBackend, loadTasksIntoState, pushLocalTasksToBackend } from './api.js';
-import { renderCalendar, initCalendar, showTaskInputModal } from './calendar.js';
-import { renderAgenda } from './agenda.js';
-import { renderWeekly } from './weekly.js';
-import { showPdfExportModal } from './pdf.js';
+import { state, setCurrentDate, setTasks, getTasks, setUserSession, setUserGistId, setLastGistUpdatedAt, notifyTasksUpdated } from './store/state.js';
+import { API_BASE_URL, isLoggedInWithBackend, loadTasksIntoState, pushLocalTasksToBackend } from './services/api.js';
+import { showPdfExportModal } from './views/pdf.js';
 
 // GitHub OAuth constants
 const GITHUB_CLIENT_ID = 'Ov23liO2tcNCvR8xrHov';
@@ -24,6 +21,10 @@ const OAUTH_PROXY_URL = API_BASE_URL + '/api/auth/github';
 /** @type {HTMLButtonElement | null} */ let calendarBtn;
 /** @type {HTMLButtonElement | null} */ let agendaBtn;
 /** @type {HTMLButtonElement | null} */ let weeklyBtn;
+/** @type {HTMLButtonElement | null} */ let bottomCalendarBtn;
+/** @type {HTMLButtonElement | null} */ let bottomAgendaBtn;
+/** @type {HTMLButtonElement | null} */ let bottomWeeklyBtn;
+/** @type {HTMLButtonElement | null} */ let globalMobileFab;
 /** @type {HTMLButtonElement | null} */ let loginBtn;
 /** @type {HTMLButtonElement | null} */ let logoutBtn;
 /** @type {HTMLElement | null} */ let userInfo;
@@ -49,8 +50,8 @@ function showAuthStatus(message, isError = false) {
   el.textContent = message;
   el.style.background = isError ? '#d1495b' : '#545f66';
   el.style.color = '#fff';
-  clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, isError ? 6000 : 3500);
+  clearTimeout(/** @type {any} */(el)._hideTimer);
+  /** @type {any} */ (el)._hideTimer = setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, isError ? 6000 : 3500);
 }
 
 /** @param {string} message @param {boolean} [isError=false] */
@@ -67,60 +68,18 @@ function showSyncStatus(message, isError = false) {
     document.body.appendChild(el);
   }
   el.textContent = message; el.style.background = isError ? '#d1495b' : '#829399'; el.style.color = '#fff';
-  clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, isError ? 5000 : 2200);
+  clearTimeout(/** @type {any} */(el)._hideTimer);
+  /** @type {any} */ (el)._hideTimer = setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, isError ? 5000 : 2200);
 }
 
-/** @returns {void} */
-function showCalendar() {
-  document.body.setAttribute('data-current-view', 'calendar');
-  if (calendarView) calendarView.classList.remove('hidden');
-  if (agendaView) agendaView.classList.add('hidden');
-  if (weeklyView) weeklyView.classList.add('hidden');
-  if (calendarBtn) { calendarBtn.classList.add('active'); calendarBtn.setAttribute('aria-pressed', 'true'); }
-  if (agendaBtn) { agendaBtn.classList.remove('active'); agendaBtn.setAttribute('aria-pressed', 'false'); }
-  if (weeklyBtn) { weeklyBtn.classList.remove('active'); weeklyBtn.setAttribute('aria-pressed', 'false'); }
-  renderCalendar();
-}
-
-/** @returns {void} */
-function showAgenda() {
-  document.body.setAttribute('data-current-view', 'agenda');
-  // FORCE AGENDA VIEW TO ALWAYS BE VISIBLE
-  if (agendaView) {
-    agendaView.classList.remove('hidden');
-    agendaView.style.display = 'block';
-    agendaView.style.visibility = 'visible';
-    agendaView.style.opacity = '1';
-  }
-  if (calendarView) calendarView.classList.add('hidden');
-  if (weeklyView) weeklyView.classList.add('hidden');
-  if (agendaBtn) { agendaBtn.classList.add('active'); agendaBtn.setAttribute('aria-pressed', 'true'); }
-  if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
-  if (weeklyBtn) { weeklyBtn.classList.remove('active'); weeklyBtn.setAttribute('aria-pressed', 'false'); }
-  const monthFilterEl = document.getElementById('month-filter');
-  const statusFilterEl = document.getElementById('status-filter');
-  renderAgenda(monthFilterEl?.value || 'all', statusFilterEl?.value || 'all');
-}
-
-/** @returns {void} */
-function showWeekly() {
-  document.body.setAttribute('data-current-view', 'weekly');
-  if (weeklyView) weeklyView.classList.remove('hidden');
-  if (calendarView) calendarView.classList.add('hidden');
-  if (agendaView) agendaView.classList.add('hidden');
-  if (weeklyBtn) { weeklyBtn.classList.add('active'); weeklyBtn.setAttribute('aria-pressed', 'true'); }
-  if (calendarBtn) { calendarBtn.classList.remove('active'); calendarBtn.setAttribute('aria-pressed', 'false'); }
-  if (agendaBtn) { agendaBtn.classList.remove('active'); agendaBtn.setAttribute('aria-pressed', 'false'); }
-  renderWeekly();
-}
+// Views are managed by Svelte App.svelte
 
 /** @returns {void} */
 function updateLoginButton() {
-  loginBtn = document.getElementById('login-btn');
-  logoutBtn = document.getElementById('logout-btn');
+  loginBtn = /** @type {HTMLButtonElement} */ (document.getElementById('login-btn'));
+  logoutBtn = /** @type {HTMLButtonElement} */ (document.getElementById('logout-btn'));
   userInfo = document.getElementById('user-info');
-  userAvatar = document.getElementById('user-avatar');
+  userAvatar = /** @type {HTMLImageElement} */ (document.getElementById('user-avatar'));
   userName = document.getElementById('user-name');
 
   if (state.userSession && (state.userSession.jwt || state.userSession.token)) {
@@ -137,7 +96,7 @@ function updateLoginButton() {
     if (logoutBtn) { logoutBtn.onclick = handleLogout; logoutBtn.style.display = 'inline-block'; }
     const userStatus = document.getElementById('user-status');
     if (userStatus && !userStatus.querySelector('.online-indicator')) {
-      const online = document.createElement('span'); online.className = 'online-indicator'; online.textContent = '●'; online.title = 'En línea'; userInfo.appendChild(online);
+      const online = document.createElement('span'); online.className = 'online-indicator'; online.textContent = '●'; online.title = 'En línea'; if (userInfo) userInfo.appendChild(online);
     }
   } else {
     if (loginBtn) loginBtn.style.display = 'flex';
@@ -155,14 +114,13 @@ function handleLogin() {
 }
 
 /** @returns {void} */
-function handleLogout() {
+export function handleLogout() {
   setUserSession(null);
   setUserGistId(null);
   // Clear all tasks on logout - user data is private
   setTasks({});
   localStorage.removeItem('calendarTasks');
   updateLoginButton();
-  showCalendar();
 }
 
 /** @param {string} token */
@@ -310,7 +268,7 @@ async function findExistingGist() {
   try {
     const res = await fetch('https://api.github.com/gists?per_page=100', { headers: { 'Authorization': `token ${state.userSession.token}`, 'Accept': 'application/vnd.github.v3+json' } });
     if (!res.ok) return; const gists = await res.json();
-    const match = (gists || []).find(g => g.files && g.files['calendar-tasks.json']);
+    const match = (gists || []).find((/** @type {any} */ g) => g.files && g.files['calendar-tasks.json']);
     if (match && match.id) {
       setUserGistId(match.id);
       if (match.updated_at) setLastGistUpdatedAt(match.updated_at);
@@ -413,49 +371,26 @@ function clearNotificationLog() { localStorage.removeItem('notificationLog'); }
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
-  calendarBtn = document.getElementById('calendar-btn');
-  agendaBtn = document.getElementById('agenda-btn');
-  weeklyBtn = document.getElementById('weekly-btn');
-  loginBtn = document.getElementById('login-btn');
-  logoutBtn = document.getElementById('logout-btn');
+  loginBtn = /** @type {HTMLButtonElement} */ (document.getElementById('login-btn'));
+  logoutBtn = /** @type {HTMLButtonElement} */ (document.getElementById('logout-btn'));
   userInfo = document.getElementById('user-info');
-  userAvatar = document.getElementById('user-avatar');
+  userAvatar = /** @type {HTMLImageElement} */ (document.getElementById('user-avatar'));
   userName = document.getElementById('user-name');
-  calendarView = document.getElementById('calendar-view');
-  agendaView = document.getElementById('agenda-view');
-  weeklyView = document.getElementById('weekly-view');
-  if (calendarBtn) calendarBtn.addEventListener('click', showCalendar);
-  if (agendaBtn) agendaBtn.addEventListener('click', showAgenda);
-  if (weeklyBtn) weeklyBtn.addEventListener('click', showWeekly);
-  if (loginBtn) loginBtn.addEventListener('click', handleLogin);
 
-  // Initialize the application
-  initCalendar();
+  if (loginBtn) loginBtn.addEventListener('click', handleLogin);
 
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
       e.preventDefault();
       const today = new Date().toISOString().split('T')[0];
-      showTaskInputModal(today);
+      window.dispatchEvent(new CustomEvent('openTaskModal', { detail: { date: today, task: null } }));
     }
   });
 
   handleOAuthCallback();
   updateLoginButton();
-  showCalendar();
   setInterval(checkNotifications, 60000);
-
-  // Re-render views when tasks change
-  document.addEventListener('tasksUpdated', () => {
-    if (calendarView && !calendarView.classList.contains('hidden')) renderCalendar();
-    if (agendaView && !agendaView.classList.contains('hidden')) {
-      const m = (document.getElementById('month-filter') || {}).value || 'all';
-      const s = (document.getElementById('status-filter') || {}).value || 'all';
-      renderAgenda(m, s);
-    }
-    if (weeklyView && !weeklyView.classList.contains('hidden')) renderWeekly();
-  });
 
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkAndPullGist(); });
 });

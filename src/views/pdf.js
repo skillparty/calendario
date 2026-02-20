@@ -1,12 +1,12 @@
 // PDF generation and export modal for Calendar10
 // Depends on state for tasks, and provides UI hooks for export modal
 /**
- * @typedef {import('./types').Task} Task
+ * @typedef {import('../types').Task} Task
  */
 
-import { state, getTasks } from './state.js';
-import { showToast } from './utils/UIFeedback.js';
-import { openModal, closeModal } from './utils/modal.js';
+import { state, getTasks } from '../store/state.js';
+import { showToast } from '../utils/UIFeedback.js';
+import { openModal, closeModal } from '../utils/modal.js';
 
 /** @returns {void} */
 export function showPdfExportModal() {
@@ -76,9 +76,9 @@ export function toggleExportOptions() {
 /** @returns {Promise<any>} */
 async function loadJsPDF() {
   if (window.jspdf) return window.jspdf;
-  
+
   showToast('Cargando librería PDF...', { type: 'info', duration: 2000 });
-  
+
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -106,9 +106,9 @@ export async function generatePDF() {
         return;
       }
     }
-    
+
     if (!jsPDFLib || !jsPDFLib.jsPDF) {
-       throw new Error('jsPDF library invalid');
+      throw new Error('jsPDF library invalid');
     }
 
     const { jsPDF } = jsPDFLib;
@@ -239,7 +239,7 @@ function generatePDFContent(doc, tasks, exportType) {
   let subtitle = '';
   if (exportType === 'all') subtitle = 'Todas las tareas ordenadas por fecha';
   if (exportType === 'month') {
-    const names = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const names = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const monthSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-month-select'));
     const yearSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-year-select'));
     const m = parseInt(monthSelect?.value || '0', 10);
@@ -325,13 +325,13 @@ function formatDateForDisplay(dateString) {
 function generatePDFFilename(exportType) {
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
-  
+
   if (exportType === 'all') {
     return `Calendar10_Todas_las_Tareas_${dateStr}.pdf`;
   }
-  
+
   if (exportType === 'month') {
-    const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const monthSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-month-select'));
     const yearSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-year-select'));
     if (monthSelect && yearSelect) {
@@ -340,7 +340,7 @@ function generatePDFFilename(exportType) {
       return `Calendar10_${monthNames[month]}_${year}_${dateStr}.pdf`;
     }
   }
-  
+
   if (exportType === 'custom') {
     const startDateInput = /** @type {HTMLInputElement | null} */ (document.getElementById('start-date'));
     const endDateInput = /** @type {HTMLInputElement | null} */ (document.getElementById('end-date'));
@@ -350,7 +350,7 @@ function generatePDFFilename(exportType) {
       return `Calendar10_${startDate}_a_${endDate}_${dateStr}.pdf`;
     }
   }
-  
+
   // Fallback
   return `Calendar10_Export_${dateStr}.pdf`;
 }

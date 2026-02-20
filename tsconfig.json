@@ -1,10 +1,16 @@
 {
+  "extends": "@tsconfig/svelte/tsconfig.json",
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["DOM", "ES2020"],
-    "types": ["vite/client"],
+    "lib": [
+      "DOM",
+      "ES2020"
+    ],
+    "types": [
+      "vite/client"
+    ],
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
@@ -13,7 +19,13 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
-    "./**/*.js",
-    "./types.d.ts"
+    "./src/**/*.ts",
+    "./src/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "backend",
+    "static"
   ]
 }

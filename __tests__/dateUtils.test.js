@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@jest/globals';
-import { formatDateLocal } from '../state.js';
+import { formatDateLocal } from '../src/store/state.ts';
 
 describe('formatDateLocal (date utilities)', () => {
   test('formats YYYY-MM-DD with leading zeros', () => {

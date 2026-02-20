@@ -16,10 +16,10 @@ beforeAll(async () => {
       clear: () => { store = {}; }
     };
   })();
-  global.document = { dispatchEvent: () => {}, addEventListener: () => {} };
+  global.document = { dispatchEvent: () => { }, addEventListener: () => { } };
   global.fetch = jest.fn();
 
-  const apiMod = await import('../api.js');
+  const apiMod = await import('../src/services/api.ts?t=' + Date.now());
   pushLocalTasksToBackend = apiMod.pushLocalTasksToBackend;
   loadTasksIntoState = apiMod.loadTasksIntoState;
   fetchAllTasksFromBackend = apiMod.fetchAllTasksFromBackend;
@@ -130,7 +130,7 @@ describe('pushLocalTasksToBackend', () => {
 
 describe('apiFetch retry behavior', () => {
   test('retries on 502 and succeeds on third attempt', async () => {
-    const { apiFetch } = await import('../api.js');
+    const { apiFetch } = await import('../src/services/api.ts');
     const bad502 = { ok: false, status: 502, statusText: 'Bad Gateway', clone: () => ({ text: async () => 'Bad Gateway' }) };
     global.fetch
       .mockResolvedValueOnce(bad502)
@@ -143,7 +143,7 @@ describe('apiFetch retry behavior', () => {
   });
 
   test('throws after exhausting all retries on network error', async () => {
-    const { apiFetch } = await import('../api.js');
+    const { apiFetch } = await import('../src/services/api.ts');
     global.fetch.mockRejectedValue(new Error('Network error'));
 
     await expect(apiFetch('/api/tasks', {}, 2)).rejects.toThrow();

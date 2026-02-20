@@ -1,4 +1,10 @@
 # Ignore files not needed for Vercel deployment
 server.js
+docker-compose.yml
+Dockerfile
+nginx.conf
+fly.toml
+deploy.sh
+railway.json
 .env.local
 .env.production

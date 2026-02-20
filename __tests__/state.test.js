@@ -17,12 +17,12 @@ beforeEach(async () => {
   })();
 
   global.document = {
-    dispatchEvent: () => {},
-    addEventListener: () => {},
+    dispatchEvent: () => { },
+    addEventListener: () => { },
   };
 
   // Dynamic import to get a fresh module each time via cache busting
-  const mod = await import('../state.js?t=' + Date.now());
+  const mod = await import('../src/store/state.ts?t=' + Date.now());
   setTasks = mod.setTasks;
   getTasks = mod.getTasks;
   updateTasks = mod.updateTasks;

@@ -7,6 +7,7 @@ const { errorHandler } = require('./middleware/errorHandler.js');
 const taskRoutes = require('./routes/tasks-supabase.js');
 const authRoutes = require('./routes/auth-supabase.js');
 const cronRoutes = require('./routes/cron.js');
+const groupRoutes = require('./routes/groups.js');
 
 // Load environment variables
 dotenv.config();
@@ -32,18 +33,6 @@ app.use(helmet({
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-// Method override for sendBeacon (always sends POST, but we need PUT for task updates)
-app.use((req, res, next) => {
-  if (req.query._method && req.method === 'POST') {
-    req.method = String(req.query._method).toUpperCase();
-  }
-  // Support Bearer token in query param for sendBeacon (can't set custom headers)
-  if (req.query.token && !req.headers.authorization) {
-    req.headers.authorization = `Bearer ${req.query.token}`;
-  }
-  next();
-});
 
 // Rate limiting
 const limiter = rateLimit({
@@ -85,6 +74,7 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth/github',
       tasks: '/api/tasks',
+      groups: '/api/groups',
       cron: '/api/cron'
     }
   });
@@ -92,8 +82,8 @@ app.get('/', (req, res) => {
 
 // Legacy health check (keep for backward compatibility)
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'OK',
+  res.json({ 
+    status: 'OK', 
     timestamp: new Date().toISOString(),
     version: '2.0.0',
     database: 'Supabase'
@@ -107,6 +97,8 @@ console.log('[SERVER] Mounting task routes...');
 app.use('/api/tasks', taskRoutes);
 console.log('[SERVER] Mounting cron routes...');
 app.use('/api/cron', cronRoutes);
+console.log('[SERVER] Mounting group routes...');
+app.use('/api/groups', groupRoutes);
 console.log('[SERVER] All routes mounted');
 
 // 404 handler

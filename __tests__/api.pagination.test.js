@@ -7,7 +7,7 @@ beforeAll(async () => {
   global.window = { location: { hostname: 'localhost' } };
   global.fetch = jest.fn();
 
-  const apiModule = await import('../api.js');
+  const apiModule = await import('../src/services/api.ts?t=' + Date.now());
   fetchAllTasksFromBackend = apiModule.fetchAllTasksFromBackend;
 });
 

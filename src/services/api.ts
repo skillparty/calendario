@@ -1,32 +1,22 @@
-// API client and backend synchronization helpers for Calendar10
-// Handles JWT-authenticated calls, pagination, and CRUD helpers
-/**
- * @typedef {import('./types').Task} Task
- * @typedef {import('./types').APITask} APITask
- * @typedef {import('./types').TasksByDate} TasksByDate
- */
+import type { Task, APITask, TasksByDate } from '../types';
+import { state, setTasks, getTasks, updateTasks, notifyTasksUpdated } from '../store/state.js';
 
-import { state, setTasks, getTasks, updateTasks, notifyTasksUpdated } from './state.js';
-
-/** @param {unknown} payload @returns {Record<string, any> | null} */
-function unwrapTaskPayload(payload) {
+function unwrapTaskPayload(payload: unknown): Record<string, any> | null {
   if (!payload || typeof payload !== 'object') return null;
   if ('data' in payload && payload.data && typeof payload.data === 'object') {
-    return /** @type {Record<string, any>} */ (payload.data);
+    return payload.data as Record<string, any>;
   }
-  return /** @type {Record<string, any>} */ (payload);
+  return payload as Record<string, any>;
 }
 
-/** @param {any} priority @returns {number} */
-function normalizePriorityValue(priority) {
+function normalizePriorityValue(priority: any): number {
   if (priority === 1 || priority === '1' || priority === 'alta') return 1;
   if (priority === 2 || priority === '2' || priority === 'media') return 2;
   if (priority === 3 || priority === '3' || priority === 'baja') return 3;
   return 1;
 }
 
-/** @param {{ title?: string; description?: string | null; date?: string | null; time?: string | null }} taskLike */
-function buildTaskSignature(taskLike) {
+function buildTaskSignature(taskLike: { title?: string; description?: string | null; date?: string | null; time?: string | null }): string {
   const title = (taskLike.title || '').trim().toLowerCase();
   const description = (taskLike.description || '').trim().toLowerCase();
   const date = taskLike.date || null;
@@ -34,30 +24,21 @@ function buildTaskSignature(taskLike) {
   return `${title}|${description}|${date || ''}|${time || ''}`;
 }
 
-/** @type {string} */
 // Backend URL - actualizado con el nuevo despliegue de Vercel
-export const API_BASE_URL = window.location.hostname === 'localhost' 
+export const API_BASE_URL: string = window.location.hostname === 'localhost'
   ? 'http://localhost:3000'
   : 'https://backend-eight-zeta-snldyompdv.vercel.app';
 
-/** @returns {boolean} */
-export function isLoggedInWithBackend() {
+export function isLoggedInWithBackend(): boolean {
   return !!(state.userSession && state.userSession.jwt);
 }
 
-/**
- * @param {string} path
- * @param {RequestInit} [options]
- * @param {number} [retries=3]
- * @returns {Promise<Response>}
- */
-export async function apiFetch(path, options = {}, retries = 3) {
-  /** @type {Record<string, string>} */
-  const headers = Object.assign({ 'Content-Type': 'application/json' }, /** @type {Record<string, string>} */ (options.headers || {}));
+export async function apiFetch(path: string, options: RequestInit = {}, retries: number = 3): Promise<Response> {
+  const headers: Record<string, string> = Object.assign({ 'Content-Type': 'application/json' }, (options.headers || {}) as Record<string, string>);
   if (state.userSession && state.userSession.jwt) {
     headers['Authorization'] = `Bearer ${state.userSession.jwt}`;
   }
-  const init = Object.assign({}, options, { headers });
+  const init: RequestInit = Object.assign({}, options, { headers });
 
   console.log('API Request:', {
     url: API_BASE_URL + path,
@@ -69,18 +50,18 @@ export async function apiFetch(path, options = {}, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(API_BASE_URL + path, init);
-      
+
       console.log('API Response:', {
         status: res.status,
         statusText: res.statusText,
         url: res.url
       });
-      
+
       if (!res.ok) {
         const errorText = await res.clone().text();
         console.error('API Error Response:', errorText);
       }
-      
+
       if ((res.status === 502 || res.status === 503) && attempt < retries) {
         await new Promise(r => setTimeout(r, 1000 * attempt));
         continue;
@@ -99,14 +80,11 @@ export async function apiFetch(path, options = {}, retries = 3) {
 }
 
 // Pagination utility to retrieve all tasks from the backend
-/** @param {number} [limit=100] @returns {Promise<APITask[]>} */
-export async function fetchAllTasksFromBackend(limit = 100) {
-  const aggregate = [];
+export async function fetchAllTasksFromBackend(limit: number = 100): Promise<APITask[]> {
+  const aggregate: APITask[] = [];
   let offset = 0;
-  /** @type {Set<string>} */
-  const seenIds = new Set();
-  /** @type {string | null} */
-  let previousPageFingerprint = null;
+  const seenIds = new Set<string>();
+  let previousPageFingerprint: string | null = null;
 
   while (true) {
     const res = await apiFetch(`/api/tasks?limit=${limit}&offset=${offset}`);
@@ -114,7 +92,7 @@ export async function fetchAllTasksFromBackend(limit = 100) {
     const data = await res.json();
     const chunkRaw = Array.isArray(data.data) ? data.data : [];
 
-    const chunk = chunkRaw.filter((/** @type {any} */ task) => {
+    const chunk = chunkRaw.filter((task: any) => {
       const id = task && task.id !== undefined && task.id !== null ? String(task.id) : null;
       if (!id) return true;
       if (seenIds.has(id)) return false;
@@ -124,7 +102,7 @@ export async function fetchAllTasksFromBackend(limit = 100) {
 
     aggregate.push(...chunk);
 
-    const pageFingerprint = chunkRaw.map((/** @type {any} */ task) => String(task?.id ?? '')).join(',');
+    const pageFingerprint = chunkRaw.map((task: any) => String(task?.id ?? '')).join(',');
     if (chunkRaw.length < limit) break;
     if (pageFingerprint && previousPageFingerprint === pageFingerprint) break;
     if (chunk.length === 0) break;
@@ -136,18 +114,15 @@ export async function fetchAllTasksFromBackend(limit = 100) {
 }
 
 // Load all tasks from backend and place into state in { dateKey: Task[] } form
-/** @returns {Promise<boolean>} */
-export async function loadTasksIntoState() {
+export async function loadTasksIntoState(): Promise<boolean> {
   if (!isLoggedInWithBackend()) return false;
   const list = await fetchAllTasksFromBackend(100);
-  /** @type {TasksByDate} */
-  const byDate = {};
+  const byDate: TasksByDate = {};
   list.forEach(t => {
     const dateKey = (t.date || '').slice(0, 10) || 'undated';
     if (!byDate[dateKey]) byDate[dateKey] = [];
     const parsedServerId = Number(t.id);
-    /** @type {Task} */
-    const mapped = {
+    const mapped: Task = {
       id: String(t.id),
       serverId: Number.isFinite(parsedServerId) ? parsedServerId : undefined,
       title: t.title,
@@ -166,14 +141,12 @@ export async function loadTasksIntoState() {
 }
 
 // Reconcile local tasks with server (create/update/delete)
-/** @returns {Promise<void>} */
-export async function pushLocalTasksToBackend() {
+export async function pushLocalTasksToBackend(): Promise<void> {
   if (!isLoggedInWithBackend()) return;
   const server = await fetchAllTasksFromBackend(100);
   const serverById = new Map(server.map(t => [String(t.id), t]));
 
-  /** @type {Map<string, APITask[]>} */
-  const serverBySignature = new Map();
+  const serverBySignature = new Map<string, APITask[]>();
   for (const serverTask of server) {
     const signature = buildTaskSignature({
       title: serverTask.title,
@@ -190,16 +163,14 @@ export async function pushLocalTasksToBackend() {
     (list || []).map(t => ({ ...t, date: dateKey === 'undated' ? null : dateKey }))
   );
 
-  /** @type {Array<{ localId: string; serverId: number }>} */
-  const relinkMappings = [];
+  const relinkMappings: Array<{ localId: string; serverId: number }> = [];
 
   // Create or update
   for (const t of localList) {
     const explicitServerId = t.serverId !== undefined && t.serverId !== null ? String(t.serverId) : null;
     const numericTaskId = /^\d+$/.test(String(t.id)) ? String(t.id) : null;
 
-    /** @type {APITask | undefined} */
-    let existing = undefined;
+    let existing: APITask | undefined = undefined;
     if (explicitServerId) {
       existing = serverById.get(explicitServerId);
     }
@@ -227,33 +198,32 @@ export async function pushLocalTasksToBackend() {
     }
 
     if (!existing) {
-      /** @type {any} */
-      const payload = {
+      const payload: any = {
         title: t.title,
         completed: Boolean(t.completed),
         is_reminder: t.isReminder !== undefined ? Boolean(t.isReminder) : true,
         priority: Number(t.priority || 1),
         tags: Array.isArray(t.tags) ? t.tags : []
       };
-      
+
       // Only add description if it's not empty
       if (t.description && t.description.trim() !== '') {
         payload.description = t.description.trim();
       }
-      
+
       // Only add date if it's valid (not null, not empty, not 'undated')
       if (t.date && t.date !== 'undated' && t.date.trim() !== '') {
         const dateStr = t.date.trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
           payload.date = dateStr;
-          
+
           // Only add time if date is present and time is valid
           if (t.time && t.time.trim() !== '') {
             payload.time = t.time.trim();
           }
         }
       }
-      
+
       const createRes = await apiFetch('/api/tasks', {
         method: 'POST',
         body: JSON.stringify(payload)
@@ -266,8 +236,7 @@ export async function pushLocalTasksToBackend() {
         }
       }
     } else {
-      /** @type {Partial<APITask> & {[k: string]: any}} */
-      const diff = {};
+      const diff: Partial<APITask> & { [k: string]: any } = {};
       if (existing.title !== t.title) diff.title = t.title;
       if ((existing.description || '') !== (t.description || '')) diff.description = t.description || null;
       const exDate = (existing.date || '').slice(0, 10);
@@ -306,13 +275,11 @@ export async function pushLocalTasksToBackend() {
   }
 }
 
-/** @param {any} payload */
-export async function createTaskOnBackend(payload) {
+export async function createTaskOnBackend(payload: any): Promise<any> {
   console.log('Original payload received:', payload);
-  
+
   // Ensure payload matches backend validation exactly
-  /** @type {Record<string, any>} */
-  const cleanPayload = {
+  const cleanPayload: Record<string, any> = {
     title: payload.title || '',
     completed: Boolean(payload.completed),
     is_reminder: Boolean(payload.isReminder || payload.is_reminder),
@@ -326,17 +293,17 @@ export async function createTaskOnBackend(payload) {
   }
 
   // Only include date if it's a valid date string (not null, not empty, not undefined)
-  if (payload.date && 
-      typeof payload.date === 'string' && 
-      payload.date.trim() !== '' && 
-      payload.date !== 'null' && 
-      payload.date !== 'undefined') {
-    
+  if (payload.date &&
+    typeof payload.date === 'string' &&
+    payload.date.trim() !== '' &&
+    payload.date !== 'null' &&
+    payload.date !== 'undefined') {
+
     const dateStr = payload.date.trim();
     // Validate date format (YYYY-MM-DD)
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       cleanPayload.date = dateStr;
-      
+
       // Only include time if date is present and time is valid
       if (payload.time && typeof payload.time === 'string' && payload.time.trim() !== '') {
         cleanPayload.time = payload.time.trim();
@@ -348,7 +315,7 @@ export async function createTaskOnBackend(payload) {
 
   console.log('Clean payload to send:', cleanPayload);
   console.log('Payload keys:', Object.keys(cleanPayload));
-  
+
   const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(cleanPayload) });
   if (!res.ok) {
     const errorText = await res.text();
@@ -359,16 +326,14 @@ export async function createTaskOnBackend(payload) {
   return unwrapTaskPayload(data) || data;
 }
 
-/** @param {number|string} serverId @param {Partial<{title:string;description:string|null;date:string|null;time:string|null;completed:boolean;is_reminder:boolean;priority:number;tags:string[]}>} payload */
-export async function updateTaskOnBackend(serverId, payload) {
+export async function updateTaskOnBackend(serverId: number | string, payload: Partial<{ title: string; description: string | null; date: string | null; time: string | null; completed: boolean; is_reminder: boolean; priority: number; tags: string[]; recurrence: string | null; recurrence_id: number | string | null }>): Promise<any> {
   const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'PUT', body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
   return unwrapTaskPayload(data) || data;
 }
 
-/** @param {number|string} serverId */
-export async function deleteTaskOnBackend(serverId) {
+export async function deleteTaskOnBackend(serverId: number | string): Promise<boolean> {
   const res = await apiFetch(`/api/tasks/${serverId}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return true;

@@ -1,5 +1,5 @@
-import { state, getTasks, setTasks, updateTasks, notifyTasksUpdated } from '../state.js';
-import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLocalTasksToBackend, createTaskOnBackend } from '../api.js';
+import { state, getTasks, setTasks, updateTasks, notifyTasksUpdated } from '../store/state.js';
+import { isLoggedInWithBackend, updateTaskOnBackend, deleteTaskOnBackend, pushLocalTasksToBackend, createTaskOnBackend } from '../services/api.js';
 import { showUndoToast, showToast } from './UIFeedback.js';
 
 /**
@@ -19,7 +19,7 @@ function getServerTaskIdLocal(task) {
 /** @param {string} id */
 export function deleteTask(id) {
   const previousState = JSON.parse(JSON.stringify(getTasks()));
-  
+
   // remove from local state
   updateTasks(draft => {
     Object.keys(draft).forEach(date => {
@@ -50,7 +50,7 @@ export function deleteTask(id) {
  */
 export function confirmDeleteTask(id, title) {
   const taskCard = /** @type {HTMLElement | null} */ (document.querySelector(`.task-card[data-task-id="${id}"]`));
-  
+
   // 1. Capture task data for potential restoration
   const allTasks = getTasks();
   let taskToRestore = null;
@@ -97,7 +97,7 @@ function restoreTask(task) {
   // We keep the same ID to prevent duplicates if it was a local-only task,
   // but if it was synced, we might want to handle it carefully.
   // For simplicity, we restore it as-is. backend sync will handle upsert or re-create.
-  
+
   updateTasks(draft => {
     const dateKey = task.date || 'undated';
     if (!draft[dateKey]) draft[dateKey] = [];
@@ -105,9 +105,9 @@ function restoreTask(task) {
     draft[dateKey].push(task);
   });
   notifyTasksUpdated();
-  
+
   if (isLoggedInWithBackend()) {
-     pushLocalTasksToBackend().catch(err => console.error('Restore sync failed:', err));
+    pushLocalTasksToBackend().catch(err => console.error('Restore sync failed:', err));
   }
 }
 
@@ -119,7 +119,7 @@ function restoreTask(task) {
 export function toggleTask(id, options = {}) {
   const { silent = false } = options;
   const previousState = JSON.parse(JSON.stringify(getTasks()));
-  
+
   updateTasks(draft => {
     Object.values(draft).forEach(list => {
       const t = (list || []).find(x => String(x.id) === String(id));
@@ -130,7 +130,7 @@ export function toggleTask(id, options = {}) {
       }
     });
   }, { silent });
-  
+
   if (!silent) {
     notifyTasksUpdated(); // This triggers app-wide re-render (calendar & agenda)
   }
@@ -146,35 +146,35 @@ export function toggleTask(id, options = {}) {
     });
     if (found) {
       const serverId = getServerTaskIdLocal(found);
-      console.log('[toggleTask] task:', id, 'serverId:', serverId, 'completed:', found.completed);
+      console.log('[toggleTask] task:', id, 'serverId:', serverId, 'completed:', /** @type {import('../types').Task} */(found).completed);
       const promise = serverId ? updateTaskOnBackend(serverId, { completed: /** @type {import('../types').Task} */ (found).completed }) : pushLocalTasksToBackend();
-      
+
       Promise.resolve(promise)
         .then((result) => {
-           console.log('[toggleTask] sync OK for', id, 'serverId:', serverId, 'result:', result);
-           // Verify server actually persisted the value
-            const serverCompleted = result?.completed ?? result?.data?.completed;
-           const expectedCompleted = /** @type {import('../types').Task} */ (found).completed;
-           if (serverCompleted !== undefined && serverCompleted !== expectedCompleted) {
-             console.error('[toggleTask] SERVER MISMATCH! server:', serverCompleted, 'expected:', expectedCompleted);
-             showToast(`Error: servidor no guardó el cambio (server=${serverCompleted})`, { type: 'error', duration: 5000 });
-             return;
-           }
-           // Clear dirty flag on success
-           if (serverId) {
-             updateTasks(draft => {
-               Object.values(draft).forEach(list => {
-                 const t = (list || []).find(x => String(x.id) === String(id));
-                 if (t) t.dirty = false;
-               });
-             }, { silent: true });
-           }
-           showToast('Guardado ✓', { type: 'success', duration: 1500 });
+          console.log('[toggleTask] sync OK for', id, 'serverId:', serverId, 'result:', result);
+          // Verify server actually persisted the value
+          const serverCompleted = result?.completed ?? result?.data?.completed;
+          const expectedCompleted = /** @type {import('../types').Task} */ (found).completed;
+          if (serverCompleted !== undefined && serverCompleted !== expectedCompleted) {
+            console.error('[toggleTask] SERVER MISMATCH! server:', serverCompleted, 'expected:', expectedCompleted);
+            showToast(`Error: servidor no guardó el cambio (server=${serverCompleted})`, { type: 'error', duration: 5000 });
+            return;
+          }
+          // Clear dirty flag on success
+          if (serverId) {
+            updateTasks(draft => {
+              Object.values(draft).forEach(list => {
+                const t = (list || []).find(x => String(x.id) === String(id));
+                if (t) t.dirty = false;
+              });
+            }, { silent: true });
+          }
+          showToast('Guardado ✓', { type: 'success', duration: 1500 });
         })
         .catch(err => {
-        console.error('[toggleTask] sync FAILED for', id, 'serverId:', serverId, 'error:', err);
-        showToast('Error al sincronizar: ' + (err?.message || err), { type: 'error', duration: 5000 });
-      });
+          console.error('[toggleTask] sync FAILED for', id, 'serverId:', serverId, 'error:', err);
+          showToast('Error al sincronizar: ' + (err?.message || err), { type: 'error', duration: 5000 });
+        });
     } else {
       console.warn('[toggleTask] task not found in state after update:', id);
     }
