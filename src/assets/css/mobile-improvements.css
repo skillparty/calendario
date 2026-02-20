@@ -2,6 +2,10 @@
    Calendar10 - Optimizado para Touch Devices
    ======================================== */
 
+.bottom-nav-mobile {
+    display: none;
+}
+
 /* ========== MEJORAS HEADER MÓVIL ========== */
 @media (max-width: 768px) {
     * {
