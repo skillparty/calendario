@@ -17,9 +17,9 @@
     } from "../services/api";
     import { showToast } from "../utils/UIFeedback";
     import type { Task } from "../types";
-    import { clickOutside } from "../actions/clickOutside";
 
     export let showModal = false;
+    let justOpened = false;
 
     let date = "";
     let existingTask: Task | null = null;
@@ -63,6 +63,20 @@
 
     function close() {
         showModal = false;
+        justOpened = false;
+    }
+
+    /** Close only if user clicked directly on the backdrop overlay */
+    function handleBackdropClick(e: MouseEvent) {
+        if (justOpened) return; // guard against same-click-cycle close
+        const target = e.target as HTMLElement;
+        if (target && target.classList.contains('view-svelte-modal')) {
+            close();
+        }
+    }
+
+    function handleEscape(e: KeyboardEvent) {
+        if (e.key === 'Escape') close();
     }
 
     function handleAddTag(e: KeyboardEvent) {
@@ -203,7 +217,10 @@
             date = e.detail.date || "";
             existingTask = e.detail.task || null;
             loadForm();
+            justOpened = true;
             showModal = true;
+            // Allow backdrop clicks only after current event cycle finishes
+            requestAnimationFrame(() => { justOpened = false; });
         };
         window.addEventListener("openTaskModal", handleOpen as EventListener);
         return () =>
@@ -215,10 +232,13 @@
 </script>
 
 {#if showModal}
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
         class="modal view-svelte-modal"
         aria-hidden={!showModal}
         transition:fade={{ duration: 200 }}
+        on:click={handleBackdropClick}
+        on:keydown={handleEscape}
     >
         <div
             class="modal-content task-input-modal-content"

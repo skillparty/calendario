@@ -224,18 +224,73 @@ export function pureFilterTasksForPDF(allTasks, opts) {
 }
 
 /**
+ * Truncate text to fit a given width in mm at the current font size.
+ * Uses the doc's getStringUnitWidth to measure.
+ * @param {any} doc
+ * @param {string} text
+ * @param {number} maxWidth - max width in mm
+ * @returns {string}
+ */
+function truncateText(doc, text, maxWidth) {
+  if (!text) return '';
+  const fontSize = doc.getFontSize();
+  const ellipsis = '...';
+  const fullWidth = doc.getStringUnitWidth(text) * fontSize / doc.internal.scaleFactor;
+  if (fullWidth <= maxWidth) return text;
+  // Binary search for max chars that fit
+  let lo = 0, hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    const w = doc.getStringUnitWidth(text.substring(0, mid) + ellipsis) * fontSize / doc.internal.scaleFactor;
+    if (w <= maxWidth) lo = mid; else hi = mid - 1;
+  }
+  return text.substring(0, lo) + ellipsis;
+}
+
+/**
+ * Short date format for PDF table cells (DD/MM/YYYY)
+ * @param {string} dateString
+ * @returns {string}
+ */
+function shortDate(dateString) {
+  if (!dateString) return 'Sin fecha';
+  const d = new Date(dateString + 'T00:00:00');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+/**
  * @param {any} doc
  * @param {Task[]} tasks
  * @param {string} exportType
  * @returns {void}
  */
 function generatePDFContent(doc, tasks, exportType) {
-  doc.setFont('helvetica');
-  doc.setFontSize(20);
+  const pageWidth = doc.internal.pageSize.getWidth(); // 210 for A4
+  const left = 14;
+  const tableWidth = pageWidth - left * 2; // ~182
+
+  // Column definitions: Title, Fecha, Hora, Prioridad, Estado
+  const colRatios = [0.36, 0.18, 0.12, 0.14, 0.20];
+  const widths = colRatios.map(r => r * tableWidth);
+  const pos = [];
+  let cx = left;
+  for (const w of widths) { pos.push(cx); cx += w; }
+  const headers = ['Tarea', 'Fecha', 'Hora', 'Prioridad', 'Estado'];
+  const rowH = 8;
+  const headerH = 10;
+
+  // ── Title & subtitle ──
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
   doc.setTextColor(237, 174, 73);
-  doc.text('Calendar10 - Reporte de Tareas', 20, 25);
-  doc.setFontSize(12);
+  doc.text('Calendar10 - Reporte de Tareas', left, 22);
+  doc.setFontSize(11);
   doc.setTextColor(100, 100, 100);
+  doc.setFont('helvetica', 'normal');
+
   let subtitle = '';
   if (exportType === 'all') subtitle = 'Todas las tareas ordenadas por fecha';
   if (exportType === 'month') {
@@ -243,8 +298,8 @@ function generatePDFContent(doc, tasks, exportType) {
     const monthSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-month-select'));
     const yearSelect = /** @type {HTMLSelectElement | null} */ (document.getElementById('pdf-year-select'));
     const m = parseInt(monthSelect?.value || '0', 10);
-    const y = parseInt(yearSelect?.value || String(new Date().getFullYear()), 10);
-    subtitle = `Tareas de ${names[m]} ${y}`;
+    const yr = parseInt(yearSelect?.value || String(new Date().getFullYear()), 10);
+    subtitle = `Tareas de ${names[m]} ${yr}`;
   }
   if (exportType === 'custom') {
     const startDateInput = /** @type {HTMLInputElement | null} */ (document.getElementById('start-date'));
@@ -253,60 +308,99 @@ function generatePDFContent(doc, tasks, exportType) {
     const e = endDateInput?.value || '';
     subtitle = `Tareas del ${formatDateForDisplay(s)} al ${formatDateForDisplay(e)}`;
   }
-  doc.text(subtitle, 20, 35);
+  doc.text(subtitle, left, 31);
   const now = new Date();
-  doc.text(`Generado el: ${now.toLocaleDateString('es-ES')} a las ${now.toLocaleTimeString('es-ES')}`, 20, 45);
+  doc.setFontSize(9);
+  doc.text(`Generado: ${now.toLocaleDateString('es-ES')} – ${now.toLocaleTimeString('es-ES')}`, left, 38);
 
-  doc.setFontSize(10);
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
+  let y = 48;
 
-  let y = 60; const left = 20; const widths = [80, 35, 25, 30];
-  const pos = [left, left + widths[0], left + widths[0] + widths[1], left + widths[0] + widths[1] + widths[2]];
-  doc.rect(left, y - 5, widths.reduce((a, b) => a + b, 0), 10);
-  doc.text('Título de la Tarea', pos[0] + 2, y);
-  doc.text('Fecha', pos[1] + 2, y);
-  doc.text('Hora', pos[2] + 2, y);
-  doc.text('Estado', pos[3] + 2, y);
-  y += 10; doc.setFont('helvetica', 'normal');
+  // ── Helper to draw header row ──
+  function drawHeader() {
+    doc.setFillColor(50, 50, 60);
+    doc.rect(left, y - 5, tableWidth, headerH, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    headers.forEach((h, i) => doc.text(h, pos[i] + 2, y + 1));
+    y += headerH;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+  }
+
+  drawHeader();
+
+  const priorityLabels = { 1: 'Alta', 2: 'Media', 3: 'Baja' };
+  const priorityColors = { 1: [220, 53, 69], 2: [255, 193, 7], 3: [40, 167, 69] };
+
+  doc.setFontSize(9);
 
   tasks.forEach((task, index) => {
-    if (y > 270) {
+    if (y > 272) {
       doc.addPage();
-      y = 20; doc.setFont('helvetica', 'bold');
-      doc.rect(left, y - 5, widths.reduce((a, b) => a + b, 0), 10);
-      doc.text('Título de la Tarea', pos[0] + 2, y);
-      doc.text('Fecha', pos[1] + 2, y);
-      doc.text('Hora', pos[2] + 2, y);
-      doc.text('Estado', pos[3] + 2, y);
-      y += 10; doc.setFont('helvetica', 'normal');
+      y = 20;
+      drawHeader();
+      doc.setFontSize(9);
     }
+
+    // Zebra striping
     if (index % 2 === 0) {
-      doc.setFillColor(245, 245, 245);
-      doc.rect(left, y - 5, widths.reduce((a, b) => a + b, 0), 8, 'F');
+      doc.setFillColor(245, 246, 250);
+      doc.rect(left, y - 5, tableWidth, rowH, 'F');
     }
-    let title = task.title; if (title.length > 35) title = title.substring(0, 32) + '...';
-    doc.text(title, pos[0] + 2, y);
-    const dateText = task.date ? formatDateForDisplay(task.date) : 'Sin fecha';
-    doc.text(dateText, pos[1] + 2, y);
-    doc.text(task.time || '-', pos[2] + 2, y);
-    const statusText = task.completed ? '✓ Completada' : '○ Pendiente';
-    doc.setTextColor(task.completed ? 76 : 255, task.completed ? 175 : 152, task.completed ? 80 : 0);
-    doc.text(statusText, pos[3] + 2, y);
+
+    // Title (clipped to column width)
+    doc.setTextColor(30, 30, 30);
+    const titleText = truncateText(doc, task.title || '', widths[0] - 4);
+    doc.text(titleText, pos[0] + 2, y);
+
+    // Date (short format)
+    doc.setTextColor(80, 80, 80);
+    doc.text(shortDate(task.date), pos[1] + 2, y);
+
+    // Time
+    doc.text(task.time || '—', pos[2] + 2, y);
+
+    // Priority
+    const prio = task.priority || 3;
+    const pColor = priorityColors[prio] || [80, 80, 80];
+    doc.setTextColor(pColor[0], pColor[1], pColor[2]);
+    doc.text(priorityLabels[prio] || 'Baja', pos[3] + 2, y);
+
+    // Status
+    const statusText = task.completed ? 'Completada' : 'Pendiente';
+    doc.setTextColor(task.completed ? 40 : 200, task.completed ? 167 : 120, task.completed ? 69 : 0);
+    doc.setFont('helvetica', task.completed ? 'bold' : 'normal');
+    doc.text(statusText, pos[4] + 2, y);
+    doc.setFont('helvetica', 'normal');
+
     doc.setTextColor(0, 0, 0);
-    y += 8;
+    y += rowH;
   });
 
-  y += 10; if (y > 260) { doc.addPage(); y = 20; }
-  doc.setFont('helvetica', 'bold'); doc.text('Resumen:', left, y); y += 8;
+  // ── Summary ──
+  y += 12;
+  if (y > 265) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(50, 50, 60);
+  doc.text('Resumen', left, y);
+  y += 8;
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
   const completedCount = tasks.filter(t => t.completed).length;
   const pendingCount = tasks.filter(t => !t.completed).length;
-  doc.text(`Total de tareas: ${tasks.length}`, left, y); y += 6;
-  doc.setTextColor(76, 175, 80); doc.text(`Tareas completadas: ${completedCount}`, left, y); y += 6;
-  doc.setTextColor(255, 152, 0); doc.text(`Tareas pendientes: ${pendingCount}`, left, y);
-  doc.setTextColor(100, 100, 100); doc.setFontSize(8);
-  doc.text('Generado por Calendar10 - skillparty', left, 285);
+  doc.setTextColor(60, 60, 60);
+  doc.text(`Total de tareas: ${tasks.length}`, left, y); y += 7;
+  doc.setTextColor(40, 167, 69);
+  doc.text(`Completadas: ${completedCount}`, left, y); y += 7;
+  doc.setTextColor(255, 152, 0);
+  doc.text(`Pendientes: ${pendingCount}`, left, y);
+
+  // Footer
+  doc.setTextColor(150, 150, 150);
+  doc.setFontSize(8);
+  doc.text('Generado por Calendar10 – skillparty', left, 285);
 }
 
 /** @param {string} dateString @returns {string} */
