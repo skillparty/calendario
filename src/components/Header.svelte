@@ -13,6 +13,7 @@
     $: isLoggedIn =
         $userSessionStore && ($userSessionStore.jwt || $userSessionStore.token);
     $: displayUserName =
+        $userSessionStore?.user?.username ||
         $userSessionStore?.user?.login ||
         $userSessionStore?.user?.user_metadata?.user_name ||
         $userSessionStore?.user?.user_metadata?.preferred_username ||
