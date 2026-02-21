@@ -1,3 +1,7 @@
+<script lang="ts">
+    import { APP_VERSION } from '../constants';
+</script>
+
 <footer class="footer-minimal">
     <div class="footer-container">
         <div class="footer-content">
@@ -26,7 +30,16 @@
         <div class="footer-bottom">
             <div class="footer-copyright">
                 <p>&copy; 2025 Calendar10. Todos los derechos reservados.</p>
+                <p class="footer-version">v{APP_VERSION}</p>
             </div>
         </div>
     </div>
 </footer>
+
+<style>
+    .footer-version {
+        font-size: 0.7rem;
+        opacity: 0.5;
+        margin-top: 0.2rem;
+    }
+</style>
