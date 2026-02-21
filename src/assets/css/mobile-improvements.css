@@ -367,6 +367,16 @@
         align-items: flex-end;
     }
 
+    .modal.view-svelte-modal {
+        padding-bottom: calc(max(env(safe-area-inset-bottom), 0px) + 86px);
+        pointer-events: none;
+    }
+
+    .modal.view-svelte-modal .modal-content {
+        pointer-events: auto;
+        max-height: calc(100dvh - max(env(safe-area-inset-bottom), 0px) - 96px);
+    }
+
     .modal-content {
         width: 100%;
         max-width: none;
