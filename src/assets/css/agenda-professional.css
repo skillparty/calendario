@@ -464,6 +464,7 @@
 
 .date-group-tasks > .task-card {
     padding: 0.875rem 0.95rem;
+    min-height: 96px;
 }
 
 .date-group-tasks > .task-card .task-card-header {
@@ -504,6 +505,7 @@
 
 .date-group-tasks > .task-card .task-card-title {
     font-size: 0.98rem;
+    font-weight: 600;
     line-height: 1.35;
     margin: 0;
     min-width: 0;
@@ -528,7 +530,7 @@
     padding: 0.25rem 0.55rem;
     border-radius: var(--radius-pill);
     border: 1px solid var(--border-color);
-    background: var(--bg-secondary);
+    background: var(--bg-tertiary);
     color: var(--text-secondary);
     font-size: 0.8rem;
     font-weight: 600;
@@ -584,8 +586,8 @@
 }
 
 .date-group-tasks > .task-card .btn-icon-small {
-    width: 2rem;
-    height: 2rem;
+    width: 2.2rem;
+    height: 2.2rem;
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     background: var(--bg-primary);
@@ -593,6 +595,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+.date-group-tasks > .task-card .btn-icon-small:hover {
+    border-color: var(--border-color-dark);
+    background: var(--bg-secondary);
 }
 
 .date-group-tasks > .task-card .btn-icon-small.danger {
@@ -615,12 +622,12 @@
 }
 
 .task-card.completed {
-    opacity: 0.5;
+    opacity: 0.78;
     background: var(--bg-tertiary);
 }
 
 .task-card.completed:hover {
-    opacity: 0.75;
+    opacity: 0.9;
     background: var(--bg-secondary);
 }
 
