@@ -5,6 +5,7 @@
   import BottomNav from "./components/BottomNav.svelte";
   import FAB from "./components/FAB.svelte";
   import Footer from "./components/Footer.svelte";
+  import PdfExportModal from "./components/PdfExportModal.svelte";
   import { fade } from "svelte/transition";
   import { API_BASE_URL, loadTasksIntoState } from "./services/api";
   import { setUserSession, userSessionStore } from "./store/state";
@@ -172,6 +173,7 @@
   <!-- Modals -->
   <DayModal />
   <TaskModal />
+  <PdfExportModal />
 
   <!-- Sonner Toasts will attach to body natively -->
 

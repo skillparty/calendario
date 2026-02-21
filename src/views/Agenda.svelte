@@ -329,7 +329,7 @@
             <button
                 type="button"
                 class="toolbar-btn-add"
-                on:click={() => openTaskModal()}
+                on:click|stopPropagation={() => openTaskModal()}
             >
                 {@html getIcon("plus", "btn-icon")}
                 <span>Nueva Tarea</span>
@@ -341,7 +341,7 @@
         type="button"
         class="fab-add-task"
         aria-label="Nueva Tarea"
-        on:click={() => openTaskModal()}
+        on:click|stopPropagation={() => openTaskModal()}
     >
         <span class="icon">{@html icons.plus}</span>
     </button>
@@ -471,7 +471,7 @@
                             <button
                                 type="button"
                                 class="btn-action primary"
-                                on:click={() => openTaskModal()}
+                                on:click|stopPropagation={() => openTaskModal()}
                             >
                                 {@html getIcon("plus", "btn-icon")}
                                 <span>Nueva Tarea</span>
@@ -479,7 +479,7 @@
                             <button
                                 type="button"
                                 class="btn-action secondary"
-                                on:click={handlePdfExport}
+                                on:click|stopPropagation={handlePdfExport}
                             >
                                 {@html getIcon("fileText", "btn-icon")}
                                 <span>Exportar PDF</span>

@@ -39,4 +39,14 @@ test('agenda new-task modal stays open for logged in user', async ({ page }) => 
     await modal.locator('.close-btn').click();
     await expect(modal).not.toBeVisible();
   }
+
+  const pdfBtn = page.locator('.quick-actions-block .btn-action.secondary', { hasText: 'Exportar PDF' }).first();
+  if (await pdfBtn.isVisible()) {
+    await pdfBtn.click();
+    const pdfModal = page.locator('#pdf-export-modal');
+    await expect(pdfModal).toBeVisible();
+    await expect(pdfModal.locator('#generate-pdf-btn')).toBeVisible();
+    await pdfModal.locator('#cancel-pdf-btn').click();
+    await expect(pdfModal).not.toBeVisible();
+  }
 });
