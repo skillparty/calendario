@@ -168,7 +168,7 @@
                         <span class="user-name"
                             >{displayUserName}</span
                         >
-                        <span class="online-indicator" title="En línea">●</span>
+                        <span class="online-indicator" title="En línea"></span>
                         {#if showUserInfo}
                             <button
                                 class="logout-btn"

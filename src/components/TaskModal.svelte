@@ -227,7 +227,6 @@
             aria-labelledby="task-input-modal-title"
             in:scale={{ duration: 300, start: 0.95, easing: backOut }}
             out:scale={{ duration: 200, start: 0.95 }}
-            use:clickOutside={close}
         >
             <button
                 type="button"
