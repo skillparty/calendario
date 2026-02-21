@@ -50,6 +50,8 @@ export const taskModalRequest = writable<{ open: boolean; date: string | null; t
 /** Convenience helper – call from any component to open the task modal */
 export function requestOpenTaskModal(date: string | null = null, task: any = null): void {
   taskModalRequest.set({ open: true, date, task });
+  // Auto-reset after a tick so the same request can be triggered again
+  setTimeout(() => taskModalRequest.set({ open: false, date: null, task: null }), 50);
 }
 
 export const state: AppState = {

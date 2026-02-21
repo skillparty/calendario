@@ -4,6 +4,7 @@
         tasksStore,
         setCurrentDate,
         notifyTasksUpdated,
+        requestOpenTaskModal,
     } from "../store/state";
     import { icons } from "../components/icons";
     import { escapeHtml } from "../utils/helpers";
@@ -123,9 +124,7 @@
 
     function openTaskModal(dateKey: string, e: Event) {
         e.stopPropagation();
-        window.dispatchEvent(
-            new CustomEvent("openTaskModal", { detail: { date: dateKey } }),
-        );
+        requestOpenTaskModal(dateKey, null);
     }
 
     // Swipe Gestures (Handled by action)

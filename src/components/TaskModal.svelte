@@ -224,11 +224,11 @@
     }
 
     // PRIMARY: store-based open (reliable across lazy-loaded components)
+    let storeReady = false;
     const unsubscribe = taskModalRequest.subscribe(req => {
+        if (!storeReady) { storeReady = true; return; } // skip initial subscription fire
         if (req.open) {
             doOpen(req.date || "", req.task);
-            // Reset the store so the same request can be re-triggered
-            taskModalRequest.set({ open: false, date: null, task: null });
         }
     });
 
