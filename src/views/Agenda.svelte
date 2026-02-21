@@ -4,6 +4,7 @@
         filtersStore,
         setFilters,
         notifyTasksUpdated,
+        requestOpenTaskModal,
     } from "../store/state";
     import { icons, getIcon } from "../components/icons";
     import { escapeHtml } from "../utils/helpers";
@@ -209,11 +210,7 @@
     }
 
     function openTaskModal(task: any = null) {
-        window.dispatchEvent(
-            new CustomEvent("openTaskModal", {
-                detail: { date: task?.date || null, task },
-            }),
-        );
+        requestOpenTaskModal(task?.date || null, task);
     }
 
     function handleToggle(taskId: string) {

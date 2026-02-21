@@ -39,6 +39,19 @@ export const tasksStore = writable<TasksByDate>(initialTasks);
 export const userSessionStore = writable<UserSession | null>(initialSession);
 export const filtersStore = writable({ month: 'all', status: 'all', priority: 'all' });
 
+/**
+ * Store-based mechanism to reliably open the Task Modal from any component.
+ * Write { open: true, date, task } to trigger the modal.
+ */
+export const taskModalRequest = writable<{ open: boolean; date: string | null; task: any | null }>({
+  open: false, date: null, task: null
+});
+
+/** Convenience helper – call from any component to open the task modal */
+export function requestOpenTaskModal(date: string | null = null, task: any = null): void {
+  taskModalRequest.set({ open: true, date, task });
+}
+
 export const state: AppState = {
   get currentDate() { return get(currentDateStore); },
   set currentDate(v) { currentDateStore.set(v); },

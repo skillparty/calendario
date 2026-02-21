@@ -6,6 +6,7 @@
         tasksStore,
         notifyTasksUpdated,
         updateTasks,
+        taskModalRequest,
     } from "../store/state";
     import { icons } from "../components/icons";
     import { escapeHtml } from "../utils/helpers";
@@ -18,7 +19,7 @@
     import { showToast } from "../utils/UIFeedback";
     import type { Task } from "../types";
 
-    export let showModal = false;
+    let showModal = false;
     let justOpened = false;
 
     let date = "";
@@ -212,22 +213,38 @@
         }
     }
 
+    function doOpen(d: string, task: any) {
+        date = d || "";
+        existingTask = task || null;
+        loadForm();
+        justOpened = true;
+        showModal = true;
+        // Allow backdrop clicks only after current event cycle finishes
+        requestAnimationFrame(() => { justOpened = false; });
+    }
+
+    // PRIMARY: store-based open (reliable across lazy-loaded components)
+    const unsubscribe = taskModalRequest.subscribe(req => {
+        if (req.open) {
+            doOpen(req.date || "", req.task);
+            // Reset the store so the same request can be re-triggered
+            taskModalRequest.set({ open: false, date: null, task: null });
+        }
+    });
+
     onMount(() => {
+        // FALLBACK: custom event listener (for Ctrl+N, DayModal, etc.)
         const handleOpen = (e: CustomEvent) => {
-            date = e.detail.date || "";
-            existingTask = e.detail.task || null;
-            loadForm();
-            justOpened = true;
-            showModal = true;
-            // Allow backdrop clicks only after current event cycle finishes
-            requestAnimationFrame(() => { justOpened = false; });
+            doOpen(e.detail.date || "", e.detail.task || null);
         };
         window.addEventListener("openTaskModal", handleOpen as EventListener);
-        return () =>
+        return () => {
             window.removeEventListener(
                 "openTaskModal",
                 handleOpen as EventListener,
             );
+            unsubscribe();
+        };
     });
 </script>
 
