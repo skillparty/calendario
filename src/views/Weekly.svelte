@@ -308,7 +308,10 @@
             <div
                 class="weekly-cell {isPast
                     ? 'weekly-cell-past'
-                    : ''} {isDragOver ? 'drag-over' : ''}"
+                    : ''} {isDragOver ? 'drag-over' : ''} {hourTasks.length ===
+                0
+                    ? 'weekly-cell-empty'
+                    : ''}"
                 on:click={(e) => {
                     if (e.target === e.currentTarget) handleCellClick(dateKey);
                 }}
@@ -370,7 +373,9 @@
         <div
             class="weekly-cell weekly-allday {isPast
                 ? 'weekly-cell-past'
-                : ''} {isDragOver ? 'drag-over' : ''}"
+                : ''} {isDragOver ? 'drag-over' : ''} {dayTasks.length === 0
+                ? 'weekly-cell-empty'
+                : ''}"
             on:click={(e) => {
                 if (e.target === e.currentTarget) handleCellClick(dateKey);
             }}
@@ -416,8 +421,120 @@
 
 <style>
     @media (max-width: 768px) {
+        .weekly-nav {
+            grid-template-columns: auto 1fr auto;
+            grid-template-areas:
+                "prev title next"
+                "today today today";
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        #prev-week {
+            grid-area: prev;
+        }
+
+        #next-week {
+            grid-area: next;
+        }
+
+        #today-week {
+            grid-area: today;
+            width: 100%;
+        }
+
+        .weekly-title {
+            grid-area: title;
+            font-size: 0.92rem;
+            line-height: 1.2;
+            padding: 0 0.25rem;
+        }
+
+        .weekly-nav-btn,
+        .weekly-today-btn {
+            min-width: 42px;
+            min-height: 42px;
+            width: 42px;
+            height: 42px;
+        }
+
         .weekly-grid.mobile-three-days {
-            grid-template-columns: 48px repeat(3, minmax(92px, 1fr));
+            grid-template-columns: 44px repeat(3, minmax(0, 1fr));
+            gap: 3px;
+        }
+
+        .weekly-day-header {
+            padding: 0.4rem 0.25rem;
+        }
+
+        .weekly-day-name {
+            font-size: 0.65rem;
+        }
+
+        .weekly-day-number {
+            font-size: 0.92rem;
+            line-height: 1.1;
+        }
+
+        .weekly-time-label,
+        .weekly-cell {
+            min-height: 54px;
+        }
+
+        .weekly-cell.weekly-cell-empty {
+            min-height: 44px;
+        }
+
+        .weekly-time-label {
+            font-size: 0.62rem;
+            padding: 0.2rem;
+        }
+
+        .weekly-cell {
+            padding: 3px;
+            gap: 3px;
+        }
+
+        .weekly-task {
+            font-size: 0.64rem;
+            padding: 3px 4px;
+            gap: 3px;
+        }
+
+        .weekly-task-time {
+            font-size: 0.6rem;
+        }
+
+        .weekly-task-title {
+            white-space: normal;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+    }
+
+    @media (max-width: 390px) {
+        .weekly-grid.mobile-three-days {
+            grid-template-columns: 40px repeat(3, minmax(0, 1fr));
+        }
+
+        .weekly-time-label,
+        .weekly-cell {
+            min-height: 50px;
+        }
+
+        .weekly-cell.weekly-cell-empty {
+            min-height: 40px;
+        }
+
+        .weekly-day-name {
+            font-size: 0.61rem;
+        }
+
+        .weekly-day-number {
+            font-size: 0.86rem;
         }
     }
 </style>
