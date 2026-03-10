@@ -1,3 +1,15 @@
 // Vercel Serverless Function Entry Point
-// Reuse the same Express app definition as local runtime to keep routes in sync.
-module.exports = require('../server.js');
+let app;
+try {
+  app = require('../server.js');
+} catch (err) {
+  // If the app fails to load, expose the error for debugging
+  app = (req, res) => {
+    res.status(500).json({
+      error: 'App failed to load',
+      message: err.message,
+      stack: err.stack
+    });
+  };
+}
+module.exports = app;
