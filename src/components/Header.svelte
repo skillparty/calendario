@@ -134,6 +134,18 @@
                 <span class="nav-icon">{@html icons.weekly}</span>
                 <span class="nav-text">Semanal</span>
             </button>
+            <button
+                type="button"
+                id="groups-btn"
+                class="nav-item {view === 'groups' ? 'active' : ''}"
+                on:click={() => (view = "groups")}
+                aria-pressed={view === "groups"}
+                aria-current={view === "groups" ? "page" : undefined}
+                aria-label="Ver grupos"
+            >
+                <span class="nav-icon">{@html icons.user}</span>
+                <span class="nav-text">Grupos</span>
+            </button>
         </nav>
 
         <div class="header-right">

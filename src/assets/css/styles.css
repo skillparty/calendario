@@ -709,8 +709,8 @@ main {
         width: 100%;
     }
 
-    .weekly-grid {
-        grid-template-columns: 56px repeat(7, minmax(100px, 1fr));
+    .weekly-grid.mobile-three-days {
+        grid-template-columns: 48px repeat(3, minmax(0, 1fr));
         gap: 4px;
     }
 

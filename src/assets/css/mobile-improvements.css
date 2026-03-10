@@ -835,11 +835,6 @@
         min-width: 44px;
     }
 
-    .weekly-grid {
-        grid-template-columns: 48px repeat(7, minmax(92px, 1fr));
-        gap: 3px;
-    }
-
     .weekly-time-label,
     .weekly-cell {
         min-height: 50px;
@@ -1510,10 +1505,6 @@
         height: 2.5rem;
     }
 
-    .weekly-grid {
-        grid-template-columns: 48px repeat(7, minmax(78px, 1fr));
-    }
-
     .weekly-time-label,
     .weekly-cell {
         min-height: 48px;
@@ -1575,10 +1566,6 @@
 
     .task-card-title {
         font-size: 0.98rem;
-    }
-
-    .weekly-grid {
-        grid-template-columns: 54px repeat(7, minmax(88px, 1fr));
     }
 
     .weekly-time-label,
@@ -1654,8 +1641,8 @@
         padding: var(--mobile-card-pad);
     }
 
-    .weekly-grid {
-        grid-template-columns: var(--mobile-week-col) repeat(7, minmax(var(--mobile-week-day-min), 1fr));
+    .weekly-grid.mobile-three-days {
+        grid-template-columns: var(--mobile-week-col) repeat(3, minmax(0, 1fr));
     }
 }
 
@@ -1751,40 +1738,40 @@
         padding-bottom: 0.35rem;
     }
 
-    .weekly-grid {
-        grid-template-columns: 40px repeat(7, 1fr) !important;
-        gap: 2px !important;
-        min-width: 0 !important;
-        width: 100% !important;
+    .weekly-grid.mobile-three-days {
+        grid-template-columns: 42px repeat(3, minmax(0, 1fr));
+        gap: 2px;
+        min-width: 0;
+        width: 100%;
     }
 
     .weekly-day-name {
-        font-size: 0.58rem !important;
+        font-size: 0.62rem;
     }
 
     .weekly-day-number {
-        font-size: 0.72rem !important;
+        font-size: 0.82rem;
     }
 
     .weekly-time-label,
     .weekly-cell {
-        min-height: 44px !important;
-        font-size: 0.56rem !important;
+        min-height: 48px;
+        font-size: 0.6rem;
     }
 
     .weekly-task {
-        font-size: 0.56rem !important;
-        padding: 2px 3px !important;
-        gap: 2px !important;
+        font-size: 0.62rem;
+        padding: 3px 4px;
+        gap: 2px;
     }
 
     .weekly-task-time {
-        display: none !important;
+        font-size: 0.58rem;
     }
 
     .weekly-task-title {
-        -webkit-line-clamp: 1 !important;
-        line-clamp: 1 !important;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
     }
 
     .footer-minimal {

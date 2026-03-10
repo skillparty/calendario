@@ -92,7 +92,13 @@
 
     function goToToday() {
         weekStart = getWeekStartInfo(new Date());
-        mobileWindowStart = 0;
+        if (isMobile) {
+            const todayIndex = new Date().getDay(); // 0=Sun ... 6=Sat
+            // Center today in the 3-day window: show [today-1, today, today+1]
+            mobileWindowStart = Math.max(0, Math.min(4, todayIndex - 1));
+        } else {
+            mobileWindowStart = 0;
+        }
     }
 
     function handleSwipeLeft() {
@@ -236,6 +242,10 @@
 
     onMount(() => {
         updateViewportMode();
+        if (isMobile) {
+            const todayIndex = new Date().getDay();
+            mobileWindowStart = Math.max(0, Math.min(4, todayIndex - 1));
+        }
         window.addEventListener("resize", updateViewportMode, {
             passive: true,
         });
@@ -419,16 +429,28 @@
     {/each}
 </div>
 
+{#if isMobile}
+    <div class="swipe-indicator">
+        {#each Array(5) as _, i}
+            <span
+                class="swipe-dot {mobileWindowStart === i ? 'active' : ''}"
+            ></span>
+        {/each}
+    </div>
+{/if}
+
 <style>
+    /* ===== Mobile 3-day swipe layout ===== */
     @media (max-width: 768px) {
         .weekly-nav {
+            display: grid;
             grid-template-columns: auto 1fr auto;
             grid-template-areas:
                 "prev title next"
                 "today today today";
             gap: 0.5rem;
             margin-bottom: 0.5rem;
-            padding: 0.5rem;
+            padding: 0.5rem 0.25rem;
         }
 
         #prev-week {
@@ -446,64 +468,97 @@
 
         .weekly-title {
             grid-area: title;
-            font-size: 0.92rem;
+            font-size: 0.95rem;
             line-height: 1.2;
             padding: 0 0.25rem;
+            text-align: center;
         }
 
         .weekly-nav-btn,
         .weekly-today-btn {
-            min-width: 42px;
-            min-height: 42px;
-            width: 42px;
-            height: 42px;
+            min-width: 44px;
+            min-height: 44px;
         }
 
         .weekly-grid.mobile-three-days {
-            grid-template-columns: 44px repeat(3, minmax(0, 1fr));
-            gap: 3px;
+            grid-template-columns: 46px repeat(3, minmax(0, 1fr));
+            gap: 2px;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .weekly-corner {
+            min-height: 52px;
         }
 
         .weekly-day-header {
-            padding: 0.4rem 0.25rem;
+            padding: 0.5rem 0.25rem;
+            min-height: 52px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
         }
 
         .weekly-day-name {
-            font-size: 0.65rem;
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
         }
 
         .weekly-day-number {
-            font-size: 0.92rem;
+            font-size: 1rem;
+            font-weight: 700;
             line-height: 1.1;
         }
 
-        .weekly-time-label,
+        .weekly-day-today .weekly-day-number {
+            background: var(--app-accent, #0066cc);
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .weekly-time-label {
+            font-size: 0.6rem;
+            padding: 0.15rem 0.2rem;
+            min-height: 52px;
+        }
+
         .weekly-cell {
-            min-height: 54px;
+            min-height: 52px;
+            padding: 3px;
+            gap: 3px;
         }
 
         .weekly-cell.weekly-cell-empty {
             min-height: 44px;
         }
 
-        .weekly-time-label {
-            font-size: 0.62rem;
-            padding: 0.2rem;
-        }
-
-        .weekly-cell {
-            padding: 3px;
-            gap: 3px;
-        }
-
         .weekly-task {
-            font-size: 0.64rem;
-            padding: 3px 4px;
+            font-size: 0.68rem;
+            padding: 4px 5px;
             gap: 3px;
+            min-height: 28px;
+            border-radius: 5px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .weekly-task:active {
+            opacity: 0.8;
+            transform: scale(0.97);
         }
 
         .weekly-task-time {
             font-size: 0.6rem;
+            font-weight: 700;
         }
 
         .weekly-task-title {
@@ -512,6 +567,37 @@
             -webkit-line-clamp: 2;
             line-clamp: 2;
             -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.3;
+        }
+
+        .weekly-allday {
+            min-height: 56px;
+        }
+
+        .weekly-allday-label {
+            font-size: 0.58rem;
+        }
+
+        .swipe-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            padding: 8px 0 4px;
+        }
+
+        .swipe-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--border-color, #ccc);
+            transition: all 0.25s ease;
+        }
+
+        .swipe-dot.active {
+            background: var(--app-accent, #0066cc);
+            width: 18px;
+            border-radius: 3px;
         }
     }
 
@@ -522,7 +608,7 @@
 
         .weekly-time-label,
         .weekly-cell {
-            min-height: 50px;
+            min-height: 48px;
         }
 
         .weekly-cell.weekly-cell-empty {
@@ -530,11 +616,20 @@
         }
 
         .weekly-day-name {
-            font-size: 0.61rem;
+            font-size: 0.62rem;
         }
 
         .weekly-day-number {
-            font-size: 0.86rem;
+            font-size: 0.9rem;
+        }
+
+        .weekly-task {
+            font-size: 0.62rem;
+            padding: 3px 4px;
+        }
+
+        .weekly-task-time {
+            font-size: 0.56rem;
         }
     }
 </style>
