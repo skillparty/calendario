@@ -47,15 +47,25 @@
 
     // ── API helper ────────────────────────────────────────────────────────────
     async function apiFetch(path: string, init: RequestInit = {}) {
-        const res = await fetch(API_BASE_URL + path, {
-            ...init,
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${jwt}`,
-                ...(init.headers ?? {}),
-            },
-        });
-        const data = await res.json();
+        let res: Response;
+        try {
+            res = await fetch(API_BASE_URL + path, {
+                ...init,
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${jwt}`,
+                    ...(init.headers ?? {}),
+                },
+            });
+        } catch {
+            throw new Error("No se pudo conectar al servidor. Verifica tu conexión.");
+        }
+        let data: any;
+        try {
+            data = await res.json();
+        } catch {
+            throw new Error(`Error del servidor (${res.status})`);
+        }
         if (!res.ok) throw new Error(data?.error ?? "Error");
         return data;
     }

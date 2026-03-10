@@ -76,15 +76,25 @@
     }
 
     async function apiFetch(path: string, options: RequestInit = {}) {
-        const res = await fetch(`${API_BASE_URL}${path}`, {
-            ...options,
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${jwt}`,
-                ...(options.headers || {}),
-            },
-        });
-        const data = await res.json();
+        let res: Response;
+        try {
+            res = await fetch(`${API_BASE_URL}${path}`, {
+                ...options,
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${jwt}`,
+                    ...(options.headers || {}),
+                },
+            });
+        } catch {
+            throw new Error("No se pudo conectar al servidor. Verifica tu conexión.");
+        }
+        let data: any;
+        try {
+            data = await res.json();
+        } catch {
+            throw new Error(`Error del servidor (${res.status})`);
+        }
         if (!res.ok) throw new Error(data?.error || "Error de red");
         return data;
     }
