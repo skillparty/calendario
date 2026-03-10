@@ -28,7 +28,71 @@ export interface Task {
   lastModified?: number;
   /** Locally modified but not yet confirmed synced */
   dirty?: boolean;
+
+  // ── Phase 2: Group collaboration fields ──
+  /** Group this task belongs to (null = personal task) */
+  group_id?: number | null;
+  /** User ID this task is assigned to within a group */
+  assigned_to?: number | null;
+  /** Kanban-style task status for group tasks */
+  task_status?: 'todo' | 'in_progress' | 'done' | 'blocked' | null;
 }
+
+// ── Phase 2: Group collaboration types ──────────────────────────────────────
+
+export type GroupRole = 'owner' | 'admin' | 'member';
+export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'blocked';
+
+export interface Group {
+  id: number;
+  name: string;
+  description?: string | null;
+  owner_id: number;
+  invite_code?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  /** populated by API join */
+  my_role?: GroupRole;
+  member_count?: number;
+  joined_at?: string;
+}
+
+export interface GroupMember {
+  group_id: number;
+  user_id: number;
+  role: GroupRole;
+  joined_at?: string;
+  /** populated by API join */
+  users?: {
+    id: number;
+    username?: string;
+    name?: string;
+    avatar_url?: string;
+  };
+}
+
+/** Group-specific task (extends Task with required group fields) */
+export interface GroupTask extends Task {
+  group_id: number;
+  task_status: TaskStatus;
+  assigned_to?: number | null;
+  /** populated by API join */
+  assigned_user?: {
+    id: number;
+    username?: string;
+    name?: string;
+    avatar_url?: string;
+  } | null;
+}
+
+/** State slice for groups in the Svelte store */
+export interface GroupsState {
+  groups: Group[];
+  activeGroupId: number | null;
+  loading: boolean;
+  error: string | null;
+}
+
 
 /** A task that is assigned to a specific calendar date (YYYY-MM-DD). */
 export interface CalendarTask extends Task {
@@ -93,6 +157,8 @@ export interface AppState {
   currentDate: Date;
   tasks: TasksByDate;
   userSession: UserSession | null;
+  groups: Group[];
+  activeGroupId: number | null;
   userGistId: string | null;
   lastGistUpdatedAt: string | null;
   backgroundSyncTimer: any; // setInterval handle

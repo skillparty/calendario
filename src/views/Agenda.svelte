@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import {
         tasksStore,
         filtersStore,
@@ -16,6 +17,8 @@
 
     let agendaSearchTerm = "";
     let syncing = false;
+    let isMobileViewport = false;
+    let showMobileFilters = false;
 
     $: filterMonth = $filtersStore.month;
     $: filterStatus = $filtersStore.status;
@@ -152,6 +155,15 @@
         setFilters(filterMonth, filterStatus, filterPriority);
     }
 
+    function updateViewportMode() {
+        isMobileViewport =
+            typeof window !== "undefined" &&
+            window.matchMedia("(max-width: 768px)").matches;
+        if (!isMobileViewport) {
+            showMobileFilters = true;
+        }
+    }
+
     function handleManualSync() {
         syncing = true;
         if (!isLoggedInWithBackend()) {
@@ -222,6 +234,16 @@
             confirmDeleteTask(taskId, title);
         }
     }
+
+    onMount(() => {
+        updateViewportMode();
+        window.addEventListener("resize", updateViewportMode, {
+            passive: true,
+        });
+        return () => {
+            window.removeEventListener("resize", updateViewportMode);
+        };
+    });
 </script>
 
 <div class="agenda-container animate-entry">
@@ -278,49 +300,66 @@
                     >
                 </button>
 
-                <select
-                    class="toolbar-select"
-                    title="Filtrar por Mes"
-                    bind:value={filterMonth}
-                    on:change={handleFilterChange}
+                <button
+                    type="button"
+                    class="mobile-filter-toggle"
+                    aria-expanded={showMobileFilters}
+                    aria-controls="agenda-mobile-filters"
+                    on:click={() => (showMobileFilters = !showMobileFilters)}
                 >
-                    <option value="all">Mes: Todos</option>
-                    <option value="0">Enero</option>
-                    <option value="1">Febrero</option>
-                    <option value="2">Marzo</option>
-                    <option value="3">Abril</option>
-                    <option value="4">Mayo</option>
-                    <option value="5">Junio</option>
-                    <option value="6">Julio</option>
-                    <option value="7">Agosto</option>
-                    <option value="8">Septiembre</option>
-                    <option value="9">Octubre</option>
-                    <option value="10">Noviembre</option>
-                    <option value="11">Diciembre</option>
-                </select>
+                    Filtros
+                </button>
 
-                <select
-                    class="toolbar-select"
-                    title="Filtrar por Estado"
-                    bind:value={filterStatus}
-                    on:change={handleFilterChange}
+                <div
+                    id="agenda-mobile-filters"
+                    class="toolbar-select-filters {showMobileFilters
+                        ? 'open'
+                        : ''}"
                 >
-                    <option value="all">Estado: Todos</option>
-                    <option value="pending">Pendientes</option>
-                    <option value="completed">Completadas</option>
-                </select>
+                    <select
+                        class="toolbar-select"
+                        title="Filtrar por Mes"
+                        bind:value={filterMonth}
+                        on:change={handleFilterChange}
+                    >
+                        <option value="all">Mes: Todos</option>
+                        <option value="0">Enero</option>
+                        <option value="1">Febrero</option>
+                        <option value="2">Marzo</option>
+                        <option value="3">Abril</option>
+                        <option value="4">Mayo</option>
+                        <option value="5">Junio</option>
+                        <option value="6">Julio</option>
+                        <option value="7">Agosto</option>
+                        <option value="8">Septiembre</option>
+                        <option value="9">Octubre</option>
+                        <option value="10">Noviembre</option>
+                        <option value="11">Diciembre</option>
+                    </select>
 
-                <select
-                    class="toolbar-select"
-                    title="Filtrar por Prioridad"
-                    bind:value={filterPriority}
-                    on:change={handleFilterChange}
-                >
-                    <option value="all">Prioridad: Todas</option>
-                    <option value="1">Alta</option>
-                    <option value="2">Media</option>
-                    <option value="3">Baja</option>
-                </select>
+                    <select
+                        class="toolbar-select"
+                        title="Filtrar por Estado"
+                        bind:value={filterStatus}
+                        on:change={handleFilterChange}
+                    >
+                        <option value="all">Estado: Todos</option>
+                        <option value="pending">Pendientes</option>
+                        <option value="completed">Completadas</option>
+                    </select>
+
+                    <select
+                        class="toolbar-select"
+                        title="Filtrar por Prioridad"
+                        bind:value={filterPriority}
+                        on:change={handleFilterChange}
+                    >
+                        <option value="all">Prioridad: Todas</option>
+                        <option value="1">Alta</option>
+                        <option value="2">Media</option>
+                        <option value="3">Baja</option>
+                    </select>
+                </div>
             </div>
 
             <button
@@ -576,3 +615,62 @@
         </div>
     </main>
 </div>
+
+<style>
+    .mobile-filter-toggle {
+        display: none;
+    }
+
+    @media (min-width: 769px) {
+        .toolbar-select-filters {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .agenda-toolbar {
+            position: sticky;
+            top: calc(max(env(safe-area-inset-top), 0px) + 0.375rem);
+            z-index: 95;
+        }
+
+        .toolbar-filters {
+            width: 100%;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mobile-filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 0.5rem 0.875rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.8125rem;
+            font-weight: 600;
+        }
+
+        .toolbar-select-filters {
+            display: none;
+            width: 100%;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+
+        .toolbar-select-filters.open {
+            display: grid;
+        }
+
+        .toolbar-select {
+            width: 100%;
+            min-height: 40px;
+        }
+    }
+</style>

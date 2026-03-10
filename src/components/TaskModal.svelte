@@ -7,6 +7,7 @@
         notifyTasksUpdated,
         updateTasks,
         taskModalRequest,
+        groupsStore,
     } from "../store/state";
     import { icons } from "../components/icons";
     import { escapeHtml } from "../utils/helpers";
@@ -15,9 +16,71 @@
         createTaskOnBackend,
         updateTaskOnBackend,
         pushLocalTasksToBackend,
+        API_BASE_URL,
     } from "../services/api";
     import { showToast } from "../utils/UIFeedback";
+    import { userSessionStore } from "../store/state";
     import type { Task } from "../types";
+
+    $: myGroups = $groupsStore ?? [];
+
+    // ---- Mobile bottom-sheet keyboard handling ----
+    let modalEl: HTMLDivElement | null = null;
+    let extraBottomPad = 0;
+
+    function onViewportResize() {
+        if (typeof window === "undefined" || !window.visualViewport) return;
+        const vv = window.visualViewport!;
+        // Amount the keyboard pushes up the viewport
+        const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
+        extraBottomPad = Math.max(0, keyboardHeight);
+    }
+
+    function attachViewport() {
+        if (typeof window !== "undefined" && window.visualViewport) {
+            window.visualViewport.addEventListener("resize", onViewportResize);
+            window.visualViewport.addEventListener("scroll", onViewportResize);
+        }
+    }
+
+    function detachViewport() {
+        if (typeof window !== "undefined" && window.visualViewport) {
+            window.visualViewport.removeEventListener(
+                "resize",
+                onViewportResize,
+            );
+            window.visualViewport.removeEventListener(
+                "scroll",
+                onViewportResize,
+            );
+            extraBottomPad = 0;
+        }
+    }
+
+    // ---- Drag-to-dismiss (handle swipe down) ----
+    let dragStartY = 0;
+    let dragCurrentY = 0;
+    let dragging = false;
+
+    function onHandleTouchStart(e: TouchEvent) {
+        dragStartY = e.touches[0].clientY;
+        dragCurrentY = dragStartY;
+        dragging = true;
+    }
+
+    function onHandleTouchMove(e: TouchEvent) {
+        if (!dragging) return;
+        dragCurrentY = e.touches[0].clientY;
+    }
+
+    function onHandleTouchEnd() {
+        if (!dragging) return;
+        dragging = false;
+        const dy = dragCurrentY - dragStartY;
+        // Dismiss if swiped down > 80px
+        if (dy > 80) close();
+        dragCurrentY = dragStartY;
+    }
 
     let showModal = false;
     let justOpened = false;
@@ -35,6 +98,12 @@
     let currentTagInput = "";
     let recurrence = "";
     let isReminder = true;
+    let selectedGroupId: number | null = null; // Phase 2: group assignment
+    let selectedAssigneeId: number | null = null;
+    let groupMembers: Array<{ id: number; label: string }> = [];
+    let lastLoadedGroupId: number | null = null;
+
+    $: jwt = $userSessionStore?.jwt || $userSessionStore?.token;
 
     function resetForm() {
         title = "";
@@ -46,6 +115,10 @@
         currentTagInput = "";
         recurrence = "";
         isReminder = true;
+        selectedGroupId = null;
+        selectedAssigneeId = null;
+        groupMembers = [];
+        lastLoadedGroupId = null;
     }
 
     function loadForm() {
@@ -57,9 +130,53 @@
             priority = (existingTask.priority as 1 | 2 | 3) || 3;
             tags = existingTask.tags ? [...existingTask.tags] : [];
             isReminder = existingTask.isReminder !== false;
+            selectedGroupId = (existingTask as any).group_id ?? null;
+            selectedAssigneeId = (existingTask as any).assigned_to ?? null;
+            lastLoadedGroupId = null;
         } else {
             resetForm();
         }
+    }
+
+    async function loadGroupMembers(groupId: number) {
+        if (!jwt || !groupId || lastLoadedGroupId === groupId) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/groups/${groupId}`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${jwt}`,
+                },
+            });
+            if (!res.ok) throw new Error("No se pudieron cargar miembros");
+            const data = await res.json();
+            const members = (data?.data?.group_members || []) as any[];
+            groupMembers = members
+                .map((member) => {
+                    const userId = Number(member?.users?.id ?? member?.user_id);
+                    if (!Number.isFinite(userId)) return null;
+                    const label =
+                        member?.users?.username ||
+                        member?.users?.name ||
+                        `Usuario ${userId}`;
+                    return { id: userId, label };
+                })
+                .filter(Boolean) as Array<{ id: number; label: string }>;
+            lastLoadedGroupId = groupId;
+        } catch {
+            groupMembers = [];
+        }
+    }
+
+    function handleGroupChange(e: Event) {
+        const value = Number((e.target as HTMLSelectElement).value);
+        selectedGroupId = Number.isFinite(value) && value > 0 ? value : null;
+        selectedAssigneeId = null;
+        lastLoadedGroupId = null;
+    }
+
+    function handleAssigneeChange(e: Event) {
+        const value = Number((e.target as HTMLSelectElement).value);
+        selectedAssigneeId = Number.isFinite(value) && value > 0 ? value : null;
     }
 
     function close() {
@@ -71,13 +188,13 @@
     function handleBackdropClick(e: MouseEvent) {
         if (justOpened) return; // guard against same-click-cycle close
         const target = e.target as HTMLElement;
-        if (target && target.classList.contains('view-svelte-modal')) {
+        if (target && target.classList.contains("view-svelte-modal")) {
             close();
         }
     }
 
     function handleEscape(e: KeyboardEvent) {
-        if (e.key === 'Escape') close();
+        if (e.key === "Escape") close();
     }
 
     function handleAddTag(e: KeyboardEvent) {
@@ -138,6 +255,12 @@
             date: finalDate,
             isReminder,
             dirty: true,
+            // Phase 2: group fields
+            group_id: selectedGroupId ?? undefined,
+            assigned_to: selectedGroupId
+                ? (selectedAssigneeId ?? undefined)
+                : undefined,
+            task_status: selectedGroupId ? "todo" : undefined,
         };
         if (existingTask && existingTask.serverId) {
             taskObj.serverId = existingTask.serverId;
@@ -204,6 +327,8 @@
                     tags: taskObj.tags,
                     date: taskObj.date,
                     recurrence: taskObj.recurrence,
+                    group_id: taskObj.group_id,
+                    assigned_to: taskObj.assigned_to,
                 })
                     .then((res) => {
                         if (res) pushLocalTasksToBackend();
@@ -220,13 +345,18 @@
         justOpened = true;
         showModal = true;
         // Allow backdrop clicks only after current event cycle finishes
-        requestAnimationFrame(() => { justOpened = false; });
+        requestAnimationFrame(() => {
+            justOpened = false;
+        });
     }
 
     // PRIMARY: store-based open (reliable across lazy-loaded components)
     let storeReady = false;
-    const unsubscribe = taskModalRequest.subscribe(req => {
-        if (!storeReady) { storeReady = true; return; } // skip initial subscription fire
+    const unsubscribe = taskModalRequest.subscribe((req) => {
+        if (!storeReady) {
+            storeReady = true;
+            return;
+        } // skip initial subscription fire
         if (req.open) {
             doOpen(req.date || "", req.task);
         }
@@ -244,8 +374,24 @@
                 handleOpen as EventListener,
             );
             unsubscribe();
+            detachViewport();
         };
     });
+
+    // Attach/detach viewport listener when modal opens/closes
+    $: if (showModal) {
+        attachViewport();
+    } else {
+        detachViewport();
+    }
+
+    $: if (showModal && selectedGroupId) {
+        loadGroupMembers(selectedGroupId);
+    }
+
+    $: if (showModal && !selectedGroupId) {
+        groupMembers = [];
+    }
 </script>
 
 {#if showModal}
@@ -253,6 +399,9 @@
     <div
         class="modal view-svelte-modal"
         aria-hidden={!showModal}
+        style="padding-bottom: {extraBottomPad > 0
+            ? extraBottomPad + 'px'
+            : ''}"
         transition:fade={{ duration: 200 }}
         on:click={handleBackdropClick}
         on:keydown={handleEscape}
@@ -262,9 +411,19 @@
             role="dialog"
             aria-modal="true"
             aria-labelledby="task-input-modal-title"
+            bind:this={modalEl}
             in:scale={{ duration: 300, start: 0.95, easing: backOut }}
             out:scale={{ duration: 200, start: 0.95 }}
         >
+            <!-- Drag handle for swipe-to-dismiss on mobile -->
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div
+                class="modal-drag-handle"
+                aria-hidden="true"
+                on:touchstart={onHandleTouchStart}
+                on:touchmove={onHandleTouchMove}
+                on:touchend={onHandleTouchEnd}
+            ></div>
             <button
                 type="button"
                 class="close-btn"
@@ -418,6 +577,46 @@
                 </div>
             {/if}
 
+            {#if myGroups.length > 0}
+                <div class="task-input-form-group">
+                    <label for="task-group-input"
+                        >👥 Grupo <span class="optional">(opcional)</span
+                        ></label
+                    >
+                    <select
+                        id="task-group-input"
+                        class="task-input-control"
+                        bind:value={selectedGroupId}
+                        on:change={handleGroupChange}
+                    >
+                        <option value="">Sin grupo (tarea personal)</option>
+                        {#each myGroups as g (g.id)}
+                            <option value={g.id}>{g.name}</option>
+                        {/each}
+                    </select>
+                </div>
+            {/if}
+
+            {#if selectedGroupId && groupMembers.length > 0}
+                <div class="task-input-form-group">
+                    <label for="task-assignee-input"
+                        >Asignar a <span class="optional">(opcional)</span
+                        ></label
+                    >
+                    <select
+                        id="task-assignee-input"
+                        class="task-input-control"
+                        bind:value={selectedAssigneeId}
+                        on:change={handleAssigneeChange}
+                    >
+                        <option value="">Sin asignar</option>
+                        {#each groupMembers as member (member.id)}
+                            <option value={member.id}>{member.label}</option>
+                        {/each}
+                    </select>
+                </div>
+            {/if}
+
             <div class="task-input-form-group task-input-checkbox">
                 <label>
                     <input
@@ -452,5 +651,24 @@
     .view-svelte-modal {
         display: flex;
         z-index: 1000;
+        transition: padding-bottom 0.15s ease;
+    }
+
+    /* Drag handle — visible on mobile, decorative on desktop */
+    .modal-drag-handle {
+        width: 44px;
+        height: 5px;
+        border-radius: 3px;
+        background: var(--border-color, rgba(0, 0, 0, 0.18));
+        margin: 0 auto 12px;
+        cursor: grab;
+        flex-shrink: 0;
+    }
+
+    /* On desktop, hide the drag handle */
+    @media (min-width: 769px) {
+        .modal-drag-handle {
+            display: none;
+        }
     }
 </style>

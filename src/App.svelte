@@ -15,13 +15,19 @@
   import TaskModal from "./components/TaskModal.svelte";
 
   // Later we'll import full views here
-  let currentView: "calendar" | "agenda" | "weekly" = "calendar";
+  let currentView:
+    | "calendar"
+    | "agenda"
+    | "weekly"
+    | "groups"
+    | "group-calendar" = "calendar";
   let agendaViewModule: Promise<any> | null = null;
   let weeklyViewModule: Promise<any> | null = null;
+  let groupsViewModule: Promise<any> | null = null;
+  let groupCalendarViewModule: Promise<any> | null = null;
 
   const GITHUB_CLIENT_ID = "Ov23liO2tcNCvR8xrHov";
-  const GITHUB_REDIRECT_URI =
-    "https://calendario-frontend-ashy.vercel.app";
+  const GITHUB_REDIRECT_URI = "https://calendario-frontend-ashy.vercel.app";
 
   function handleLogin() {
     const stateToken =
@@ -98,14 +104,21 @@
       }
     };
 
+    const onNavigateTo = (e: Event) => {
+      const view = (e as CustomEvent).detail;
+      if (view) currentView = view;
+    };
+
     window.addEventListener("openLoginModal", onOpenLoginModal);
     window.addEventListener("keydown", onKeydown);
+    window.addEventListener("navigateTo", onNavigateTo);
 
     handleOAuthCallback().catch(console.error);
 
     return () => {
       window.removeEventListener("openLoginModal", onOpenLoginModal);
       window.removeEventListener("keydown", onKeydown);
+      window.removeEventListener("navigateTo", onNavigateTo);
     };
   });
 
@@ -121,6 +134,14 @@
 
   $: if (currentView === "weekly" && !weeklyViewModule) {
     weeklyViewModule = import("./views/Weekly.svelte");
+  }
+
+  $: if (currentView === "groups" && !groupsViewModule) {
+    groupsViewModule = import("./views/Groups.svelte");
+  }
+
+  $: if (currentView === "group-calendar" && !groupCalendarViewModule) {
+    groupCalendarViewModule = import("./views/GroupCalendar.svelte");
   }
 </script>
 
@@ -167,6 +188,36 @@
           {/await}
         {/if}
       </div>
+    {:else if currentView === "groups"}
+      <div
+        id="groups-view"
+        class="view"
+        in:fade={{ duration: 150, delay: 150 }}
+        out:fade={{ duration: 150 }}
+      >
+        {#if groupsViewModule}
+          {#await groupsViewModule}
+            <div class="view-loading">Cargando grupos…</div>
+          {:then module}
+            <svelte:component this={module.default} />
+          {/await}
+        {/if}
+      </div>
+    {:else if currentView === "group-calendar"}
+      <div
+        id="group-calendar-view"
+        class="view"
+        in:fade={{ duration: 150, delay: 150 }}
+        out:fade={{ duration: 150 }}
+      >
+        {#if groupCalendarViewModule}
+          {#await groupCalendarViewModule}
+            <div class="view-loading">Cargando calendario de grupo…</div>
+          {:then module}
+            <svelte:component this={module.default} />
+          {/await}
+        {/if}
+      </div>
     {/if}
   </main>
 
@@ -180,7 +231,9 @@
   <Footer />
   <BottomNav bind:view={currentView} />
 
-  <FAB on:click={openTaskModal} />
+  {#if currentView !== "groups" && currentView !== "group-calendar"}
+    <FAB on:click={openTaskModal} />
+  {/if}
 </div>
 
 <style>

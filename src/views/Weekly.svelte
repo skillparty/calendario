@@ -1,11 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { flip } from "svelte/animate";
-    import {
-        tasksStore,
-        notifyTasksUpdated,
-        updateTasks,
-    } from "../store/state";
+    import { tasksStore, notifyTasksUpdated, updateTasks } from "../store/state";
     import { icons } from "../components/icons";
     import { escapeHtml } from "../utils/helpers";
     import {
@@ -29,12 +25,26 @@
     }
 
     let weekStart = getWeekStartInfo(new Date());
+    let isMobile = false;
+    let mobileWindowStart = 0;
 
     $: daysInWeek = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(weekStart);
         d.setDate(d.getDate() + i);
         return d;
     });
+
+    $: visibleDays = isMobile
+        ? daysInWeek.slice(mobileWindowStart, mobileWindowStart + 3)
+        : daysInWeek;
+
+    $: if (!isMobile && mobileWindowStart !== 0) {
+        mobileWindowStart = 0;
+    }
+
+    $: if (isMobile && mobileWindowStart > 4) {
+        mobileWindowStart = 4;
+    }
 
     $: monthLabel =
         daysInWeek[0].getMonth() === daysInWeek[6].getMonth()
@@ -43,6 +53,13 @@
                   year: "numeric",
               })
             : `${daysInWeek[0].toLocaleDateString("es-ES", { month: "short" })} – ${daysInWeek[6].toLocaleDateString("es-ES", { month: "short", year: "numeric" })}`;
+
+    $: visibleLabel =
+        visibleDays[0] && visibleDays[visibleDays.length - 1]
+            ? `${visibleDays[0].toLocaleDateString("es-ES", { day: "numeric", month: "short" })} – ${visibleDays[visibleDays.length - 1].toLocaleDateString("es-ES", { day: "numeric", month: "short" })}`
+            : monthLabel;
+
+    $: navigationLabel = isMobile ? visibleLabel : monthLabel;
 
     const todayStr = new Date().toDateString();
 
@@ -63,16 +80,43 @@
         const d = new Date(weekStart);
         d.setDate(d.getDate() - 7);
         weekStart = d;
+        mobileWindowStart = isMobile ? 4 : 0;
     }
 
     function nextWeek() {
         const d = new Date(weekStart);
         d.setDate(d.getDate() + 7);
         weekStart = d;
+        mobileWindowStart = 0;
     }
 
     function goToToday() {
         weekStart = getWeekStartInfo(new Date());
+        mobileWindowStart = 0;
+    }
+
+    function handleSwipeLeft() {
+        if (isMobile) {
+            if (mobileWindowStart < 4) {
+                mobileWindowStart += 1;
+                return;
+            }
+            nextWeek();
+            return;
+        }
+        nextWeek();
+    }
+
+    function handleSwipeRight() {
+        if (isMobile) {
+            if (mobileWindowStart > 0) {
+                mobileWindowStart -= 1;
+                return;
+            }
+            prevWeek();
+            return;
+        }
+        prevWeek();
     }
 
     function openTaskModal(dateKey: string | null = null, task: any = null) {
@@ -91,11 +135,12 @@
         openTaskModal(dateKey);
     }
 
-    // Swipe Gestures
-    let gridContainer: HTMLElement;
-    // handled by use:swipe action
+    function updateViewportMode() {
+        isMobile =
+            typeof window !== "undefined" &&
+            window.matchMedia("(max-width: 768px)").matches;
+    }
 
-    // Drag and Drop Logic
     let dragOverCell: { date: string; hour: string | "allday" } | null = null;
 
     function handleDragStart(e: DragEvent, taskId: string, sourceDate: string) {
@@ -188,6 +233,17 @@
             }
         }
     }
+
+    onMount(() => {
+        updateViewportMode();
+        window.addEventListener("resize", updateViewportMode, {
+            passive: true,
+        });
+
+        return () => {
+            window.removeEventListener("resize", updateViewportMode);
+        };
+    });
 </script>
 
 <div class="weekly-nav">
@@ -195,36 +251,37 @@
         id="prev-week"
         class="weekly-nav-btn"
         title="Semana anterior"
-        on:click={prevWeek}>&larr;</button
-    >
-    <h2 class="weekly-title">{monthLabel}</h2>
+        on:click={prevWeek}>&larr;</button>
+    <h2 class="weekly-title">{navigationLabel}</h2>
     <button
         id="today-week"
         class="weekly-today-btn"
         title="Ir a hoy"
-        on:click={goToToday}>Hoy</button
-    >
+        on:click={goToToday}>Hoy</button>
     <button
         id="next-week"
         class="weekly-nav-btn"
         title="Semana siguiente"
-        on:click={nextWeek}>&rarr;</button
-    >
+        on:click={nextWeek}>&rarr;</button>
 </div>
 
 <div
-    class="weekly-grid"
-    bind:this={gridContainer}
-    use:swipe={{ onSwipeLeft: nextWeek, onSwipeRight: prevWeek, threshold: 50 }}
+    class="weekly-grid {isMobile ? 'mobile-three-days' : ''}"
+    use:swipe={{
+        onSwipeLeft: handleSwipeLeft,
+        onSwipeRight: handleSwipeRight,
+        threshold: 50,
+    }}
 >
     <div class="weekly-corner"></div>
 
-    {#each daysInWeek as d}
+    {#each visibleDays as d}
         {@const dateKey = formatDateLocal(d)}
         {@const isToday = d.toDateString() === todayStr}
         <div
             class="weekly-day-header {isToday ? 'weekly-day-today' : ''}"
             data-date={dateKey}
+            data-day-index={d.getDay()}
         >
             <span class="weekly-day-name">{DAY_NAMES[d.getDay()]}</span>
             <span class="weekly-day-number">{d.getDate()}</span>
@@ -233,7 +290,7 @@
 
     {#each Array.from({ length: HOURS_END - HOURS_START + 1 }, (_, i) => HOURS_START + i) as hour}
         <div class="weekly-time-label">{formatHour(hour)}</div>
-        {#each daysInWeek as d}
+        {#each visibleDays as d}
             {@const dateKey = formatDateLocal(d)}
             {@const dayTasks = $tasksStore[dateKey] || []}
             {@const hourTasks = dayTasks.filter(
@@ -298,9 +355,8 @@
         {/each}
     {/each}
 
-    <!-- All Day Tasks Row -->
     <div class="weekly-time-label weekly-allday-label">Todo el día</div>
-    {#each daysInWeek as d}
+    {#each visibleDays as d}
         {@const dateKey = formatDateLocal(d)}
         {@const dayTasks = ($tasksStore[dateKey] || []).filter((t) => !t.time)}
         {@const isPast =
@@ -357,3 +413,11 @@
         </div>
     {/each}
 </div>
+
+<style>
+    @media (max-width: 768px) {
+        .weekly-grid.mobile-three-days {
+            grid-template-columns: 48px repeat(3, minmax(92px, 1fr));
+        }
+    }
+</style>

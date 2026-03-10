@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import type { TasksByDate, UserSession, AppState } from '../types';
+import type { TasksByDate, UserSession, AppState, Group } from '../types';
 
 function safeGetItem(key: string): string | null {
   try { return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null; } catch { return null; }
@@ -61,6 +61,8 @@ export const state: AppState = {
   set tasks(v) { tasksStore.set(v); },
   get userSession() { return get(userSessionStore); },
   set userSession(v) { userSessionStore.set(v); },
+  get groups() { return get(groupsStore); },
+  get activeGroupId() { return get(activeGroupIdStore); },
   userGistId: safeGetItem('userGistId') || null,
   lastGistUpdatedAt: safeGetItem('lastGistUpdatedAt') || null,
   backgroundSyncTimer: null,
@@ -137,4 +139,45 @@ export function formatDateLocal(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+// ── Phase 2: Groups store ────────────────────────────────────────────────────
+
+/**
+ * Reactive list of all groups the current user belongs to.
+ * Updated after fetching /api/groups or after create/join/leave operations.
+ */
+export const groupsStore = writable<Group[]>([]);
+
+/**
+ * The group currently being viewed/edited in the Groups tab.
+ * null = no group selected.
+ */
+export const activeGroupIdStore = writable<number | null>(null);
+
+/** Replace the full groups list (e.g. after a fresh fetch) */
+export function setGroups(groups: Group[]): void {
+  groupsStore.set(groups || []);
+}
+
+/** Prepend a newly created group to the store */
+export function addGroup(group: Group): void {
+  groupsStore.update(list => [group, ...list.filter(g => g.id !== group.id)]);
+}
+
+/** Remove a group by id (after leave / delete) */
+export function removeGroup(groupId: number): void {
+  groupsStore.update(list => list.filter(g => g.id !== groupId));
+  activeGroupIdStore.update(current => (current === groupId ? null : current));
+}
+
+/** Set the active group id (drives detail panel) */
+export function setActiveGroup(groupId: number | null): void {
+  activeGroupIdStore.set(groupId);
+}
+
+/** Clear everything (on logout) */
+export function clearGroupsStore(): void {
+  groupsStore.set([]);
+  activeGroupIdStore.set(null);
 }

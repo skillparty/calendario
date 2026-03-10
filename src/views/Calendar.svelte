@@ -60,6 +60,7 @@
         pendingTasks: number;
         totalTasks: number;
         previewTasks: any[];
+        priorityDots: { high: boolean; med: boolean; low: boolean };
     }[] = [];
 
     $: {
@@ -94,6 +95,16 @@
                 })
                 .slice(0, 2);
 
+            // Priority dots for mobile: { high, med, low }
+            const allPending = dayTasks.filter((t) => !t.completed);
+            const priorityDots = {
+                high: allPending.filter((t) => t.priority === 1).length > 0,
+                med: allPending.filter((t) => t.priority === 2).length > 0,
+                low:
+                    allPending.filter((t) => t.priority === 3 || !t.priority)
+                        .length > 0,
+            };
+
             newDays.push({
                 date: new Date(d),
                 dateKey,
@@ -103,6 +114,7 @@
                 pendingTasks,
                 totalTasks: dayTasks.length,
                 previewTasks,
+                priorityDots,
             });
         }
         daysInGrid = newDays;
@@ -229,7 +241,7 @@
     <div class="day">Vie</div>
     <div class="day">Sáb</div>
 
-    {#each daysInGrid as { date, dateKey, isCurrentMonth, isToday, isPast, pendingTasks, totalTasks, previewTasks }}
+    {#each daysInGrid as { date, dateKey, isCurrentMonth, isToday, isPast, pendingTasks, totalTasks, previewTasks, priorityDots }}
         <div
             class="day {isCurrentMonth ? '' : 'other-month'} {isToday
                 ? 'today'
@@ -289,6 +301,21 @@
                                 >
                             </div>
                         {/each}
+                    </div>
+                    <!-- Priority dots: shown on mobile via CSS, hidden on desktop -->
+                    <div class="priority-dots" aria-hidden="true">
+                        {#if priorityDots.high}<span
+                                class="pdot pdot-high"
+                                title="Alta prioridad"
+                            ></span>{/if}
+                        {#if priorityDots.med}<span
+                                class="pdot pdot-med"
+                                title="Prioridad media"
+                            ></span>{/if}
+                        {#if priorityDots.low}<span
+                                class="pdot pdot-low"
+                                title="Baja prioridad"
+                            ></span>{/if}
                     </div>
                 {/if}
                 {#if !isPast}

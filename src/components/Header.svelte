@@ -1,11 +1,21 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { userSessionStore } from "../store/state";
-    import { setTasks, setUserGistId, setUserSession } from "../store/state";
+    import {
+        setTasks,
+        setUserGistId,
+        setUserSession,
+        clearGroupsStore,
+    } from "../store/state";
     import { icons } from "./icons";
     import { clickOutside } from "../actions/clickOutside";
 
-    export let view: "calendar" | "agenda" | "weekly" = "calendar";
+    export let view:
+        | "calendar"
+        | "agenda"
+        | "weekly"
+        | "groups"
+        | "group-calendar" = "calendar";
 
     let showUserInfo = false;
     let isDarkTheme = false;
@@ -69,6 +79,7 @@
         setUserSession(null);
         setUserGistId(null);
         setTasks({});
+        clearGroupsStore();
         showUserInfo = false;
     }
 </script>
@@ -166,9 +177,7 @@
                             alt="Avatar"
                             class="user-avatar"
                         />
-                        <span class="user-name"
-                            >{displayUserName}</span
-                        >
+                        <span class="user-name">{displayUserName}</span>
                         <span class="online-indicator" title="En línea"></span>
                         {#if showUserInfo}
                             <button
